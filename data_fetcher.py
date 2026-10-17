@@ -109,7 +109,7 @@ class SpiderDatabase:
             rows = cur.fetchall()
             if not rows:
                 return None
-            dates = pd.to_datetime([r[0] for r in rows])
+            dates = pd.to_datetime([r[0] for r in rows]).tz_localize(None).normalize()
             vals = [r[1] for r in rows]
             s = pd.Series(vals, index=dates, name=node_id)
             return s
@@ -167,7 +167,22 @@ class InstitutionalDataFetcher:
         return None
 
     def fetch_yahoo_series(self, ticker: str, period: str = "5y") -> Optional[pd.Series]:
-        """Fetch market series from Yahoo Finance v8 chart API."""
+        """Fetch market series reliably via yfinance official library."""
+        try:
+            import yfinance as yf
+            t_obj = yf.Ticker(ticker)
+            hist = t_obj.history(period=period)
+            if hist is not None and not hist.empty and "Close" in hist:
+                c = hist["Close"].dropna()
+                if len(c) > 0:
+                    idx = pd.to_datetime(c.index).tz_localize(None).normalize()
+                    s = pd.Series(c.values, index=idx, name=ticker)
+                    s = s[~s.index.duplicated(keep="last")].sort_index()
+                    return s
+        except Exception as e:
+            logger.warning(f"yfinance Ticker fetch failed for {ticker}: {e}")
+
+        # Secondary fallback: Direct Yahoo v8 chart endpoint
         try:
             enc = urllib.parse.quote(ticker)
             url = f"https://query1.finance.yahoo.com/v8/finance/chart/{enc}?range={period}&interval=1d"
@@ -185,7 +200,7 @@ class InstitutionalDataFetcher:
                         s = s[~s.index.duplicated(keep="last")].sort_index()
                         return s
         except Exception as e:
-            logger.warning(f"Yahoo fetch failed for {ticker}: {e}")
+            logger.warning(f"Yahoo chart direct fetch failed for {ticker}: {e}")
         return None
 
     def fetch_ecb_series(self, key: str, start_period: str = "2020-01-01") -> Optional[pd.Series]:
@@ -259,7 +274,10 @@ class InstitutionalDataFetcher:
         s: Optional[pd.Series] = None
 
         # 1. Market Tickers (Ring 3 Equity, Commodities, FX, VIX)
-        if node.official_ticker.startswith("^") or "=" in node.official_ticker or ".MI" in node.official_ticker:
+        if (node.official_ticker.startswith("^") or 
+            "=" in node.official_ticker or 
+            ".MI" in node.official_ticker or 
+            node_id in ["FX_DXY", "EQ_SPX", "EQ_NDX", "EQ_RUT", "EQ_DAX", "EQ_MIB", "RISK_VIX", "COM_GOLD", "COM_OIL", "COM_COPPER"]):
             s = self.fetch_yahoo_series(node.official_ticker)
 
         # 2. Calculated / Composite Node (e.g., SPREAD_BTP)

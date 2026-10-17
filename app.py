@@ -185,16 +185,16 @@ if "what_if_hy" not in st.session_state:
 
 @st.cache_data(ttl=900, show_spinner=False)
 def get_computed_engine_data(window_key: str, use_spearman: bool, refresh_id: int):
-    engine.load_and_align_data(force_refresh=(refresh_id > 0))
+    aligned_df = engine.load_and_align_data(force_refresh=(refresh_id > 0))
     node_states = engine.compute_node_states(window_key=window_key)
     link_states = engine.compute_link_states(node_states, window_key=window_key, use_spearman=use_spearman)
     core_state = engine.compute_spider_core(node_states, link_states)
-    return node_states, link_states, core_state
+    return node_states, link_states, core_state, aligned_df
 
 
 refresh_count = st.session_state.get("refresh_count", 0)
 with st.spinner("Allineamento serie storiche e calcolo correlazioni in corso..."):
-    node_states, link_states, core_state = get_computed_engine_data(
+    node_states, link_states, core_state, aligned_df = get_computed_engine_data(
         st.session_state["time_window"],
         st.session_state["use_spearman"],
         refresh_count
@@ -470,7 +470,7 @@ with tabs[2]:
     st.markdown("#### 🔄 Teoria Macro dei Cicli Economici di Martin Pring")
     st.caption("Modello di rotazione intermarket basato sulla sequenza cronologica di picchi e minimi delle 3 macro-classi di asset: **Obbligazioni (Bonds) → Azioni (Stocks) → Materie Prime (Commodities)**.")
 
-    pring_engine = PringCycleEngine(engine.aligned_df)
+    pring_engine = PringCycleEngine(aligned_df)
     pring_res = pring_engine.analyze()
 
     p_col1, p_col2 = st.columns([1.3, 1.7])
@@ -566,8 +566,8 @@ with tabs[2]:
     with c_tool1:
         st.markdown("##### 📐 Indicatore KST (Know Sure Thing)")
         st.caption("Oscillatore multi-temporale di momentum sviluppato da Martin Pring per individuare le svolte primarie su S&P 500.")
-        if "EQ_SPX" in engine.aligned_df:
-            fig_kst = build_kst_momentum_figure(engine.aligned_df["EQ_SPX"], title="S&P 500: Pring KST Multi-Timeframe")
+        if aligned_df is not None and "EQ_SPX" in aligned_df:
+            fig_kst = build_kst_momentum_figure(aligned_df["EQ_SPX"], title="S&P 500: Pring KST Multi-Timeframe")
             st.plotly_chart(fig_kst, use_container_width=True)
 
     with c_tool2:
@@ -667,8 +667,8 @@ with tabs[4]:
         st.markdown(f"**Descrizione:** {n_def.description}")
         st.markdown(f"**Ruolo nella Tela:** *{n_def.role}*")
 
-        if engine.aligned_df is not None and inspect_node_id in engine.aligned_df:
-            s_hist = engine.aligned_df[inspect_node_id]
+        if aligned_df is not None and inspect_node_id in aligned_df:
+            s_hist = aligned_df[inspect_node_id]
             fig_hist = px.line(
                 s_hist,
                 x=s_hist.index,

@@ -199,25 +199,39 @@ class PringCycleResult:
 class PringCycleEngine:
     """Quantitative engine determining the current Martin Pring Economic Cycle Stage."""
 
-    def __init__(self, aligned_df: pd.DataFrame):
-        self.df = aligned_df
+    def __init__(self, aligned_df: Optional[pd.DataFrame] = None):
+        if aligned_df is None or aligned_df.empty:
+            from quant_engine import engine
+            if engine.aligned_df is None or engine.aligned_df.empty:
+                engine.load_and_align_data()
+            self.df = engine.aligned_df
+        else:
+            self.df = aligned_df
 
     def analyze(self) -> PringCycleResult:
+        if self.df is None or self.df.empty:
+            from quant_engine import engine
+            if engine.aligned_df is None or engine.aligned_df.empty:
+                engine.load_and_align_data()
+            self.df = engine.aligned_df
+
         asset_statuses: Dict[str, PringAssetStatus] = {}
 
         # 1. Evaluate Bonds
         bonds_series = None
-        if "YIELD_US10" in self.df:
-            # Synthetic 10Y Bond Price proxy: Price ~ 100 / (1 + yield/100)^7
+        if "YIELD_US10" in self.df and len(self.df["YIELD_US10"]) > 5:
+            # Synthetic 10Y Bond Price proxy: Price ~ 1000 / (1 + yield/100)^7
             y10 = self.df["YIELD_US10"]
             bonds_series = 1000.0 / ((1.0 + (y10 / 100.0)) ** 7.0)
         else:
-            bonds_series = pd.Series(100.0, index=self.df.index)
+            dates = pd.date_range(end=pd.Timestamp.now(), periods=252, freq="B")
+            bonds_series = pd.Series(700.0, index=dates)
 
         b_kst, b_kst_sig = compute_kst(bonds_series)
         b_sma200 = bonds_series.rolling(min(200, len(bonds_series))).mean()
-        b_curr = float(bonds_series.iloc[-1])
-        b_mom = float((b_curr / bonds_series.iloc[-min(60, len(bonds_series))] - 1.0) * 100.0)
+        b_curr = float(bonds_series.iloc[-1]) if len(bonds_series) > 0 else 700.0
+        lookback_b = min(60, len(bonds_series))
+        b_mom = float((b_curr / bonds_series.iloc[-lookback_b] - 1.0) * 100.0) if lookback_b > 0 else 0.0
         b_bull = bool((b_curr >= b_sma200.iloc[-1]) and (b_kst.iloc[-1] > b_kst_sig.iloc[-1] or b_mom > 0))
 
         asset_statuses["BONDS"] = PringAssetStatus(
@@ -233,11 +247,17 @@ class PringCycleEngine:
         )
 
         # 2. Evaluate Stocks
-        stocks_series = self.df["EQ_SPX"] if "EQ_SPX" in self.df else pd.Series(5000.0, index=self.df.index)
+        if "EQ_SPX" in self.df and len(self.df["EQ_SPX"]) > 5:
+            stocks_series = self.df["EQ_SPX"]
+        else:
+            dates = pd.date_range(end=pd.Timestamp.now(), periods=252, freq="B")
+            stocks_series = pd.Series(6000.0, index=dates)
+
         s_kst, s_kst_sig = compute_kst(stocks_series)
         s_sma200 = stocks_series.rolling(min(200, len(stocks_series))).mean()
-        s_curr = float(stocks_series.iloc[-1])
-        s_mom = float((s_curr / stocks_series.iloc[-min(60, len(stocks_series))] - 1.0) * 100.0)
+        s_curr = float(stocks_series.iloc[-1]) if len(stocks_series) > 0 else 6000.0
+        lookback_s = min(60, len(stocks_series))
+        s_mom = float((s_curr / stocks_series.iloc[-lookback_s] - 1.0) * 100.0) if lookback_s > 0 else 0.0
         s_bull = bool((s_curr >= s_sma200.iloc[-1]) and (s_kst.iloc[-1] > s_kst_sig.iloc[-1] or s_mom > 0))
 
         asset_statuses["STOCKS"] = PringAssetStatus(
@@ -253,18 +273,20 @@ class PringCycleEngine:
         )
 
         # 3. Evaluate Commodities
-        if "COM_OIL" in self.df and "COM_COPPER" in self.df:
+        if "COM_OIL" in self.df and "COM_COPPER" in self.df and len(self.df["COM_OIL"]) > 5:
             comm_series = (self.df["COM_OIL"] / self.df["COM_OIL"].iloc[0] * 50.0 +
                            self.df["COM_COPPER"] / self.df["COM_COPPER"].iloc[0] * 50.0)
-        elif "COM_OIL" in self.df:
+        elif "COM_OIL" in self.df and len(self.df["COM_OIL"]) > 5:
             comm_series = self.df["COM_OIL"]
         else:
-            comm_series = pd.Series(100.0, index=self.df.index)
+            dates = pd.date_range(end=pd.Timestamp.now(), periods=252, freq="B")
+            comm_series = pd.Series(100.0, index=dates)
 
         c_kst, c_kst_sig = compute_kst(comm_series)
         c_sma200 = comm_series.rolling(min(200, len(comm_series))).mean()
-        c_curr = float(comm_series.iloc[-1])
-        c_mom = float((c_curr / comm_series.iloc[-min(60, len(comm_series))] - 1.0) * 100.0)
+        c_curr = float(comm_series.iloc[-1]) if len(comm_series) > 0 else 100.0
+        lookback_c = min(60, len(comm_series))
+        c_mom = float((c_curr / comm_series.iloc[-lookback_c] - 1.0) * 100.0) if lookback_c > 0 else 0.0
         c_bull = bool((c_curr >= c_sma200.iloc[-1]) and (c_kst.iloc[-1] > c_kst_sig.iloc[-1] or c_mom > 0))
 
         asset_statuses["COMMODITIES"] = PringAssetStatus(

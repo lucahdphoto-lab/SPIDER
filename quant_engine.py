@@ -120,6 +120,8 @@ class SpiderQuantEngine:
                 continue
 
             s = s[~s.index.duplicated(keep="last")].sort_index()
+            if hasattr(s.index, "tz") and s.index.tz is not None:
+                s.index = s.index.tz_localize(None)
 
             # Align on master calendar using forward-fill
             s_reindexed = s.reindex(master_calendar.union(s.index)).sort_index()
