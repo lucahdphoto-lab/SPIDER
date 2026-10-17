@@ -27,6 +27,13 @@ from config import (
     Z_SCORE_NORMAL,
 )
 from quant_engine import engine
+from pring_engine import (
+    PringCycleEngine,
+    build_kst_momentum_figure,
+    build_pring_cycle_dial_figure,
+    build_rrg_sector_matrix_figure,
+    PRING_STAGES,
+)
 from spider_ui import (
     build_macro_regime_matrix_figure,
     build_spider_web_figure,
@@ -374,6 +381,7 @@ with k5:
 tabs = st.tabs([
     "🕸️ Tela di Ragno (Spider Web Graph)",
     "🎯 Centro di Controllo (Macro Matrix)",
+    "🔄 Teoria dei Cicli di Martin Pring",
     "📋 Supervisione Tabellare & Export",
     "🔬 Focus Nodo & Relazioni",
     "⚡ Simulatore Stress What-If"
@@ -457,8 +465,131 @@ with tabs[1]:
         else:
             st.info("I tassi attuali sono in sostanziale equilibrio con i fondamentali macroeconomici.")
 
-# TAB 3
+# TAB 3: MARTIN PRING BUSINESS CYCLE
 with tabs[2]:
+    st.markdown("#### 🔄 Teoria Macro dei Cicli Economici di Martin Pring")
+    st.caption("Modello di rotazione intermarket basato sulla sequenza cronologica di picchi e minimi delle 3 macro-classi di asset: **Obbligazioni (Bonds) → Azioni (Stocks) → Materie Prime (Commodities)**.")
+
+    pring_engine = PringCycleEngine(engine.aligned_df)
+    pring_res = pring_engine.analyze()
+
+    p_col1, p_col2 = st.columns([1.3, 1.7])
+    with p_col1:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 18px; margin-bottom: 14px;">
+            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase; font-weight: 700;">FASE CORRENTE RILEVATA DA SPIDER</div>
+            <div style="font-size: 22px; font-weight: 800; color: {PRING_STAGES[pring_res.current_stage]['color']}; margin: 6px 0;">{pring_res.stage_title}</div>
+            <div style="font-size: 13px; color: #E2E8F0; line-height: 1.5; margin-bottom: 12px;">{pring_res.stage_desc}</div>
+            <div style="font-size: 12px; color: #38BDF8;"><b>Confidenza del Modello:</b> {pring_res.confidence_pct:.1f}%</div>
+            <div style="font-size: 12px; color: #CBD5E1; margin-top: 4px;"><b>Regime Economico:</b> {pring_res.stage_regime}</div>
+            <div style="font-size: 12px; color: #F59E0B; margin-top: 4px;"><b>{pring_res.sequence_state}</b></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        fig_dial = build_pring_cycle_dial_figure(pring_res, dark_mode=True)
+        st.plotly_chart(fig_dial, use_container_width=True)
+
+    with p_col2:
+        st.markdown("##### 🧭 Sequenza dei Punti di Svolta & Stato delle Classi di Asset")
+        st.markdown("""
+        > **Regola Aurea di Martin Pring:** I mercati non invertono mai contemporaneamente. La sequenza fisiologica di svolta è:  
+        > **1. Massimi (Tops):** Obbligazioni ➔ Azioni ➔ Materie Prime  
+        > **2. Minimi (Bottoms):** Obbligazioni ➔ Azioni ➔ Materie Prime
+        """)
+
+        b_st = pring_res.asset_statuses["BONDS"]
+        s_st = pring_res.asset_statuses["STOCKS"]
+        c_st = pring_res.asset_statuses["COMMODITIES"]
+
+        c_a1, c_a2, c_a3 = st.columns(3)
+        with c_a1:
+            st.markdown(f"""
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid {'#10B981' if b_st.is_bullish else '#EF4444'}; border-radius: 10px; padding: 12px;">
+                <div style="font-size: 11px; color: #94A3B8; font-weight: 600;">1. OBBLIGAZIONI</div>
+                <div style="font-size: 16px; font-weight: 800; color: {'#10B981' if b_st.is_bullish else '#EF4444'}; margin: 4px 0;">{'BULL' if b_st.is_bullish else 'BEAR'}</div>
+                <div style="font-size: 11px; color: #CBD5E1;">Trend: <b>{b_st.trend_200d}</b></div>
+                <div style="font-size: 11px; color: #CBD5E1;">Mom 60G: <b>{b_st.momentum_60d_pct:+.2f}%</b></div>
+                <div style="font-size: 11px; color: #94A3B8;">KST: <b>{b_st.kst_val:+.2f}</b></div>
+            </div>
+            """, unsafe_allow_html=True)
+        with c_a2:
+            st.markdown(f"""
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid {'#10B981' if s_st.is_bullish else '#EF4444'}; border-radius: 10px; padding: 12px;">
+                <div style="font-size: 11px; color: #94A3B8; font-weight: 600;">2. AZIONI</div>
+                <div style="font-size: 16px; font-weight: 800; color: {'#10B981' if s_st.is_bullish else '#EF4444'}; margin: 4px 0;">{'BULL' if s_st.is_bullish else 'BEAR'}</div>
+                <div style="font-size: 11px; color: #CBD5E1;">Trend: <b>{s_st.trend_200d}</b></div>
+                <div style="font-size: 11px; color: #CBD5E1;">Mom 60G: <b>{s_st.momentum_60d_pct:+.2f}%</b></div>
+                <div style="font-size: 11px; color: #94A3B8;">KST: <b>{s_st.kst_val:+.2f}</b></div>
+            </div>
+            """, unsafe_allow_html=True)
+        with c_a3:
+            st.markdown(f"""
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid {'#10B981' if c_st.is_bullish else '#EF4444'}; border-radius: 10px; padding: 12px;">
+                <div style="font-size: 11px; color: #94A3B8; font-weight: 600;">3. MATERIE PRIME</div>
+                <div style="font-size: 16px; font-weight: 800; color: {'#10B981' if c_st.is_bullish else '#EF4444'}; margin: 4px 0;">{'BULL' if c_st.is_bullish else 'BEAR'}</div>
+                <div style="font-size: 11px; color: #CBD5E1;">Trend: <b>{c_st.trend_200d}</b></div>
+                <div style="font-size: 11px; color: #CBD5E1;">Mom 60G: <b>{c_st.momentum_60d_pct:+.2f}%</b></div>
+                <div style="font-size: 11px; color: #94A3B8;">KST: <b>{c_st.kst_val:+.2f}</b></div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("##### 💼 Asset Allocation Tattica Suggerita da Martin Pring")
+        alloc_col1, alloc_col2 = st.columns(2)
+        with alloc_col1:
+            st.markdown(f"""
+            <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 12px;">
+                <div style="font-size: 12px; font-weight: 700; color: #10B981;">✅ ASSET DA PRIVILEGIARE (OVERWEIGHT)</div>
+                <ul style="font-size: 12px; color: #E2E8F0; margin-top: 6px; padding-left: 18px;">
+                    {''.join(f'<li>{a}</li>' for a in pring_res.favored_assets)}
+                </ul>
+                <div style="font-size: 12px; font-weight: 700; color: #38BDF8; margin-top: 8px;">🏷️ SETTORI AZIONARI FAVORITI:</div>
+                <div style="font-size: 12px; color: #CBD5E1; margin-top: 4px;">{', '.join(pring_res.favored_sectors)}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with alloc_col2:
+            st.markdown(f"""
+            <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 12px;">
+                <div style="font-size: 12px; font-weight: 700; color: #EF4444;">⚠️ ASSET DA SOTTOPESARE (UNDERWEIGHT)</div>
+                <ul style="font-size: 12px; color: #E2E8F0; margin-top: 6px; padding-left: 18px;">
+                    {''.join(f'<li>{a}</li>' for a in pring_res.unfavored_assets)}
+                </ul>
+                <div style="font-size: 12px; font-weight: 700; color: #F59E0B; margin-top: 8px;">🛡️ ROTAZIONE SETTORIALE ATTIVA:</div>
+                <div style="font-size: 12px; color: #CBD5E1; margin-top: 4px;">Spostare capitale verso i settori leading del ciclo corrente prima del picco dei tassi.</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown("<hr style='margin: 20px 0; border-color: rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
+
+    st.markdown("#### 📈 Strumenti Quantitativi di Pring: Oscillatore KST & Rotazione Settoriale RRG")
+    c_tool1, c_tool2 = st.columns(2)
+    with c_tool1:
+        st.markdown("##### 📐 Indicatore KST (Know Sure Thing)")
+        st.caption("Oscillatore multi-temporale di momentum sviluppato da Martin Pring per individuare le svolte primarie su S&P 500.")
+        if "EQ_SPX" in engine.aligned_df:
+            fig_kst = build_kst_momentum_figure(engine.aligned_df["EQ_SPX"], title="S&P 500: Pring KST Multi-Timeframe")
+            st.plotly_chart(fig_kst, use_container_width=True)
+
+    with c_tool2:
+        st.markdown("##### 🎯 Relative Rotation Graph (RRG) Settori S&P 500")
+        st.caption("Forza Relativa (RS-Ratio) vs Momentum (RS-Momentum) rispetto all'indice benchmark SPY.")
+        fig_rrg = build_rrg_sector_matrix_figure(dark_mode=True)
+        st.plotly_chart(fig_rrg, use_container_width=True)
+
+    with st.expander("📖 Guida Enciclopedica alle 6 Fasi del Ciclo di Martin Pring"):
+        for stg_num, stg_data in PRING_STAGES.items():
+            st.markdown(f"""
+            **Fase {stg_num}: {stg_data['title']}**  
+            - **Regime:** {stg_data['regime']}  
+            - **Obbligazioni:** {stg_data['bonds']} | **Azioni:** {stg_data['stocks']} | **Materie Prime:** {stg_data['commodities']}  
+            - **Dinamica:** {stg_data['description']}  
+            - **Asset Favoriti:** {', '.join(stg_data['favored_assets'])}  
+            - **Settori:** {', '.join(stg_data['favored_sectors'])}  
+            ---
+            """)
+
+# TAB 4: SUPERVISIONE TABELLARE
+with tabs[3]:
     st.markdown("#### 📋 Output Tabellare Interattivo & Supervisione Dati")
     st.caption("Tutte le metriche, i valori correnti, le variazioni, gli Z-score e i metadati di certificazione istituzionale.")
 
@@ -510,8 +641,8 @@ with tabs[2]:
         csv_links = df_links.to_csv(index=False).encode("utf-8")
         st.download_button("📥 Scarica Fili e Connessioni in CSV", data=csv_links, file_name=f"SPIDER_Fili_Connessioni_{datetime.date.today()}.csv", mime="text/csv")
 
-# TAB 4
-with tabs[3]:
+# TAB 5
+with tabs[4]:
     st.markdown("#### 🔬 Focus Singolo Nodo & Correlazioni di Dettaglio")
     inspect_node_id = st.selectbox(
         "Seleziona Indicatore o Asset da Analizzare in Profondità:",
@@ -556,8 +687,8 @@ with tabs[3]:
         else:
             st.info("Nessuna connessione diretta attiva per questo nodo.")
 
-# TAB 5
-with tabs[4]:
+# TAB 6
+with tabs[5]:
     st.markdown("#### ⚡ Simulatore What-If: Test di Stress e Rottura Relazioni")
     st.caption("Applica shock esogeni alle variabili chiave per testare istantaneamente la reazione della tensione della tela e degli Z-score (senza alterare i dati ufficiali salvati nel database).")
 
