@@ -581,3 +581,76 @@ def build_rrg_sector_matrix_figure(dark_mode: bool = True) -> go.Figure:
         showlegend=False,
     )
     return fig
+
+
+def build_sector_horizontal_bars_figure(dark_mode: bool = True) -> go.Figure:
+    """
+    Builds an interactive horizontal bar chart ranking S&P 500 Sectors by RS-Ratio vs benchmark (100.0 baseline).
+    Displays the Relative Rotation Quadrant and momentum direction.
+    """
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    grid_color = "rgba(255, 255, 255, 0.12)" if dark_mode else "rgba(15, 23, 42, 0.12)"
+
+    sector_data = [
+        {"ticker": "XLE", "name": "Energy", "rs_ratio": 104.2, "rs_mom": 103.5, "quad": "Leading", "color": "#10B981"},
+        {"ticker": "XLB", "name": "Materials", "rs_ratio": 102.8, "rs_mom": 102.1, "quad": "Leading", "color": "#10B981"},
+        {"ticker": "XLI", "name": "Industrials", "rs_ratio": 101.5, "rs_mom": 100.8, "quad": "Leading", "color": "#10B981"},
+        {"ticker": "XLF", "name": "Financials", "rs_ratio": 101.2, "rs_mom": 98.4, "quad": "Weakening", "color": "#F59E0B"},
+        {"ticker": "XLV", "name": "Healthcare", "rs_ratio": 99.0, "rs_mom": 101.5, "quad": "Improving", "color": "#3B82F6"},
+        {"ticker": "XLP", "name": "Consumer Staples", "rs_ratio": 98.4, "rs_mom": 102.4, "quad": "Improving", "color": "#3B82F6"},
+        {"ticker": "XLU", "name": "Utilities", "rs_ratio": 97.5, "rs_mom": 101.8, "quad": "Improving", "color": "#3B82F6"},
+        {"ticker": "XLK", "name": "Technology", "rs_ratio": 99.2, "rs_mom": 97.6, "quad": "Lagging", "color": "#EF4444"},
+        {"ticker": "XLY", "name": "Discretionary", "rs_ratio": 98.1, "rs_mom": 96.5, "quad": "Lagging", "color": "#EF4444"},
+    ]
+
+    # Sort descending by RS-Ratio
+    sector_data.sort(key=lambda x: x["rs_ratio"], reverse=False)
+
+    y_labels = [f"<b>{d['ticker']}</b> ({d['name']})" for d in sector_data]
+    x_spreads = [round(d["rs_ratio"] - 100.0, 1) for d in sector_data]
+    bar_colors = [d["color"] for d in sector_data]
+    hover_texts = [
+        f"<b>Settore: {d['name']} [{d['ticker']}]</b><br>"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━<br>"
+        f"• Forza Relativa (RS-Ratio): <b>{d['rs_ratio']:.1f}</b> (Spread vs SPY: {d['rs_ratio'] - 100.0:+.1f}%)<br>"
+        f"• Momentum Relativo (RS-Mom): <b>{d['rs_mom']:.1f}</b><br>"
+        f"• Quadrante RRG: <b>{d['quad']}</b>"
+        for d in sector_data
+    ]
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        y=y_labels,
+        x=x_spreads,
+        orientation="h",
+        marker=dict(color=bar_colors, line=dict(color="rgba(255,255,255,0.4)", width=1)),
+        hovertext=hover_texts,
+        hoverinfo="text",
+        text=[f"  {val:+.1f}% ({d['quad']})" for val, d in zip(x_spreads, sector_data)],
+        textposition="outside",
+        textfont=dict(color="#F8FAFC", size=11, family="Inter, sans-serif"),
+    ))
+
+    # Baseline 0 (RS-Ratio = 100.0 benchmark)
+    fig.add_vline(x=0.0, line_dash="solid", line_color="rgba(255, 255, 255, 0.4)", line_width=1.8)
+
+    fig.update_layout(
+        title="<b>Classifica Forza Relativa dei Settori S&P 500 (Spread vs Benchmark SPY)</b>",
+        paper_bgcolor=bg_color,
+        plot_bgcolor=bg_color,
+        font=dict(color="#F8FAFC", size=11),
+        margin=dict(l=140, r=90, t=50, b=40),
+        xaxis=dict(
+            title="Differenziale di Forza Relativa % rispetto al Benchmark SPY (Zero = Parità)",
+            gridcolor=grid_color,
+            zeroline=False,
+            range=[-4.0, 5.5],
+        ),
+        yaxis=dict(
+            autorange=True,
+            showgrid=False,
+        ),
+        height=380,
+    )
+    return fig

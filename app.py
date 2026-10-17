@@ -32,6 +32,7 @@ from pring_engine import (
     build_kst_momentum_figure,
     build_pring_cycle_dial_figure,
     build_rrg_sector_matrix_figure,
+    build_sector_horizontal_bars_figure,
     PRING_STAGES,
 )
 from spider_ui import (
@@ -576,17 +577,60 @@ with tabs[2]:
         fig_rrg = build_rrg_sector_matrix_figure(dark_mode=True)
         st.plotly_chart(fig_rrg, use_container_width=True)
 
-    with st.expander("📖 Guida Enciclopedica alle 6 Fasi del Ciclo di Martin Pring"):
+    # Horizontal Bar Chart ranking sectors
+    st.markdown("##### 📊 Livelli di Forza Relativa dei Settori S&P 500 (Classifica Linee Orizzontali)")
+    st.caption("Visualizzazione orizzontale dei livelli di sovraperformance/sottoperformance rispetto alla parità (benchmark SPY = 0%). I colori indicano il quadrante di appartenenza nel ciclo di rotazione.")
+    fig_bars = build_sector_horizontal_bars_figure(dark_mode=True)
+    st.plotly_chart(fig_bars, use_container_width=True)
+
+    with st.expander("📖 Guida Enciclopedica: Le 6 Fasi del Ciclo, KST e Relative Rotation Graph (RRG)"):
+        st.markdown("### 🔄 Le 6 Fasi del Ciclo Economico di Martin Pring")
         for stg_num, stg_data in PRING_STAGES.items():
             st.markdown(f"""
             **Fase {stg_num}: {stg_data['title']}**  
             - **Regime:** {stg_data['regime']}  
-            - **Obbligazioni:** {stg_data['bonds']} | **Azioni:** {stg_data['stocks']} | **Materie Prime:** {stg_data['commodities']}  
+            - **Obbligazioni (Prezzo):** {stg_data['bonds']} | **Azioni:** {stg_data['stocks']} | **Materie Prime:** {stg_data['commodities']}  
             - **Dinamica:** {stg_data['description']}  
-            - **Asset Favoriti:** {', '.join(stg_data['favored_assets'])}  
+            - **Asset Favoriti (Overweight):** {', '.join(stg_data['favored_assets'])}  
             - **Settori:** {', '.join(stg_data['favored_sectors'])}  
             ---
             """)
+
+        st.markdown("### 📐 Indicatore KST (Know Sure Thing): Matematica e Interpretazione")
+        st.markdown("""
+        L'indicatore **KST (Know Sure Thing)** è un oscillatore di momentum formulato da Martin Pring per catturare la tendenza primaria del mercato eliminando i falsi segnali tipici degli oscillatori a singolo periodo (come l'RSI a 14 giorni).
+        
+        * **Formula e Costruzione Multi-Temporale:**
+          Il KST combina 4 diversi tassi di variazione (Rate of Change - ROC), ciascuno smussato con una media mobile semplice (SMA) e ponderato con pesi crescenti all'aumentare dell'orizzonte temporale:
+          $$\\text{RCMA}_1 = \\text{SMA}(\\text{ROC}(10), 10) \\times 1$$
+          $$\\text{RCMA}_2 = \\text{SMA}(\\text{ROC}(15), 10) \\times 2$$
+          $$\\text{RCMA}_3 = \\text{SMA}(\\text{ROC}(20), 10) \\times 3$$
+          $$\\text{RCMA}_4 = \\text{SMA}(\\text{ROC}(30), 15) \\times 4$$
+          $$\\mathbf{\\text{KST}} = \\text{RCMA}_1 + \\text{RCMA}_2 + \\text{RCMA}_3 + \\text{RCMA}_4$$
+          $$\\mathbf{\\text{Signal Line}} = \\text{SMA}(\\text{KST}, 9)$$
+        
+        * **Segnali Operativi:**
+          1. **Inversione Ciclica:** Quando la linea KST (blu) attraversa al rialzo la Signal Line (tratteggiata arancione), conferma l'inizio di una nuova fase espansiva dell'asset.
+          2. **Conferma dello Zero:** Il superamento della linea dello zero verso l'alto sancisce l'ingresso in un trend rialzista consolidato a medio-lungo termine.
+          3. **Divergenze:** Se il prezzo segna nuovi massimi ma il KST non li conferma, preannuncia l'esaurimento del ciclo e il passaggio alla fase successiva di Pring.
+        """)
+
+        st.markdown("---")
+        st.markdown("### 🎯 Relative Rotation Graph (RRG): Funzionamento e Rotazione Settoriale")
+        st.markdown("""
+        Il **Relative Rotation Graph (RRG)**, ideato da Julius de Kempenaer e ampiamente integrato nella scuola di Martin Pring, è uno strumento visuale che mappa la forza relativa di molteplici asset o settori contemporaneamente rispetto a un benchmark comune (l'S&P 500 / ETF `SPY`).
+        
+        * **I Due Assi Fondamentali (Normalizzati a 100):**
+          - **Asse X: RS-Ratio (Forza Relativa):** Misura se il settore sta sovraperformando ($>100$) o sottoperformando ($<100$) il benchmark di mercato.
+          - **Asse Y: RS-Momentum (Velocità della Forza Relativa):** Misura se il trend di sovraperformance sta accelerando ($>100$) o decelerando ($<100$).
+        
+        * **La Rotazione Oraria nei 4 Quadranti:**
+          Nel corso del ciclo economico, i settori tendono a ruotare in **senso orario** attraversando 4 stadi:
+          1. **🟢 LEADING (In Alto a Destra):** Forza Relativa $>100$ e Momentum $>100$. Il settore sta sovraperformando il mercato con velocità crescente (es. *Energia e Materiali in Fase 4*).
+          2. **🟡 WEAKENING (In Basso a Destra):** Forza Relativa $>100$ ma Momentum $<100$. Il settore è ancora più forte del mercato, ma sta perdendo slancio (inizio rallentamento).
+          3. **🔴 LAGGING (In Basso a Sinistra):** Forza Relativa $<100$ e Momentum $<100$. Il settore sottoperforma l'indice ed è in trend ribassista relativo (es. *Tecnologici compressi dai tassi alti in Fase 4/5*).
+          4. **🔵 IMPROVING (In Alto a Sinistra):** Forza Relativa $<100$ ma Momentum $>100$. Il settore è ancora debole rispetto al mercato, ma il momentum sta invertendo al rialzo (fase di accumulazione/ripresa anticipata, es. *Utilities difensive*).
+        """)
 
 # TAB 4: SUPERVISIONE TABELLARE
 with tabs[3]:
