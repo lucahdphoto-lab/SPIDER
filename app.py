@@ -444,37 +444,69 @@ with tabs[0]:
                 st.rerun()
 
     # External dedicated analytical card (displayed cleanly outside the graph canvas so it never blocks nodes)
-    if active_isolated_id and active_isolated_id in node_states:
-        ns = node_states[active_isolated_id]
-        nd = NODES[active_isolated_id]
-        connected_links = [l for l in link_states if l.node_a_id == active_isolated_id or l.node_b_id == active_isolated_id]
+    displayed_node_id = active_isolated_id if (active_isolated_id and active_isolated_id in node_states) else None
+    
+    if displayed_node_id:
+        ns = node_states[displayed_node_id]
+        nd = NODES[displayed_node_id]
+        connected_links = [l for l in link_states if l.node_a_id == displayed_node_id or l.node_b_id == displayed_node_id]
+        
+        status_color = "#D946EF" if abs(ns.z_score) >= 2.0 else ("#F59E0B" if abs(ns.z_score) >= 1.25 else "#10B981")
+        quad_info = QUADRANTS.get(nd.quadrant, {"name": nd.quadrant, "color": "#38BDF8"})
+
+        links_badges = "".join([
+            f'<span style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 3px 8px; margin-right: 6px; margin-bottom: 6px; display: inline-block; font-size: 11px; font-family: monospace; color: #E2E8F0;">'
+            f'<b>{l.node_b_id if l.node_a_id == displayed_node_id else l.node_a_id}</b> ({l.active_corr:+.2f} | |Z|={l.z_score_tension:.1f})'
+            f'</span>'
+            for l in connected_links
+        ])
 
         st.markdown(f"""
-        <div style="background: rgba(15, 23, 42, 0.95); border: 1.5px solid #38BDF8; border-radius: 12px; padding: 18px 22px; margin-top: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+        <div style="background: rgba(15, 23, 42, 0.95); border: 1.5px solid #38BDF8; border-radius: 12px; padding: 20px 24px; margin-top: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
                 <div>
-                    <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #38BDF8; font-weight: 700;">🔍 SCHEDA NODO SELEZIONATO (ESTERNA AL GRAFICO)</span>
-                    <div style="font-size: 22px; font-weight: 800; color: #F8FAFC; margin-top: 2px;">{nd.name} <span style="font-size: 16px; color: #94A3B8;">[{active_isolated_id}]</span></div>
-                    <div style="font-size: 13px; color: #94A3B8; margin-top: 4px;">{nd.description}</div>
-                </div>
-                <div style="display: flex; gap: 16px; align-items: center;">
-                    <div style="text-align: right;">
-                        <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Valore Attuale</div>
-                        <div style="font-size: 20px; font-weight: 800; color: #F8FAFC; font-family: monospace;">{ns.current_value:,.2f} {ns.unit}</div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #38BDF8; font-weight: 700;">🔍 SCHEDA NODO ISTITUZIONALE (ESTERNA AL GRAFICO)</span>
+                        <span style="background: {status_color}22; border: 1px solid {status_color}; color: {status_color}; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 700;">{ns.status.upper()}</span>
+                        <span style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #94A3B8; border-radius: 4px; padding: 2px 8px; font-size: 11px;">Anello {nd.ring} • {nd.category}</span>
                     </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Z-Score Dinamico</div>
-                        <div style="font-size: 20px; font-weight: 800; color: {'#EF4444' if abs(ns.z_score) >= 2.0 else ('#F59E0B' if abs(ns.z_score) >= 1.25 else '#10B981')}; font-family: monospace;">{ns.z_score:+.2f}</div>
+                    <div style="font-size: 24px; font-weight: 800; color: #F8FAFC;">{nd.name} <span style="font-size: 16px; color: #94A3B8; font-family: monospace;">[{displayed_node_id}]</span></div>
+                    <div style="font-size: 13px; color: #CBD5E1; margin-top: 6px; max-width: 850px;">{nd.description}</div>
+                    <div style="font-size: 12.5px; color: #94A3B8; margin-top: 4px;"><b>Ruolo Intermarket & Dinamica:</b> {nd.role}</div>
+                </div>
+                <div style="display: flex; gap: 20px; align-items: center;">
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 14px; text-align: right;">
+                        <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">Valore Attuale</div>
+                        <div style="font-size: 22px; font-weight: 800; color: #F8FAFC; font-family: 'JetBrains Mono', monospace;">{ns.current_value:,.2f} <span style="font-size: 13px; color: #94A3B8;">{ns.unit}</span></div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 14px; text-align: right;">
+                        <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">Z-Score Dinamico</div>
+                        <div style="font-size: 22px; font-weight: 800; color: {status_color}; font-family: 'JetBrains Mono', monospace;">{ns.z_score:+.2f}</div>
                     </div>
                 </div>
             </div>
-            <div style="display: flex; gap: 24px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 12.5px; color: #CBD5E1; flex-wrap: wrap;">
-                <div><b>Variazione Periodo:</b> <span style="color: {'#10B981' if ns.delta_period >= 0 else '#EF4444'};">{ns.delta_period:+,.2f} ({ns.delta_period_pct:+.2f}%)</span></div>
-                <div><b>Variazione 1 Anno (YoY):</b> <span style="color: {'#10B981' if ns.delta_yoy >= 0 else '#EF4444'};">{ns.delta_yoy:+,.2f}</span></div>
-                <div><b>Fonte Ufficiale:</b> <span style="color: #F8FAFC;">{nd.source} ({nd.official_ticker})</span></div>
-                <div><b>Ultimo Rilascio:</b> <span style="color: #F8FAFC;">{ns.last_timestamp}</span></div>
-                <div><b>Connessioni Dirette nella Tela:</b> <span style="color: #38BDF8; font-weight: bold;">{len(connected_links)} collegamenti attivi</span></div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 12.5px; color: #CBD5E1;">
+                <div><b>Variazione Periodo:</b> <span style="color: {'#10B981' if ns.delta_period >= 0 else '#EF4444'}; font-weight: 600;">{ns.delta_period:+,.2f} ({ns.delta_period_pct:+.2f}%)</span></div>
+                <div><b>Variazione YoY (1 Anno):</b> <span style="color: {'#10B981' if ns.delta_yoy >= 0 else '#EF4444'}; font-weight: 600;">{ns.delta_yoy:+,.2f}</span></div>
+                <div><b>Fonte Ufficiale Certificata:</b> <span style="color: #F8FAFC; font-weight: 600;">{nd.source}</span> (<span style="color: #38BDF8; font-family: monospace;">{nd.official_ticker}</span>)</div>
+                <div><b>Data Ultimo Rilascio:</b> <span style="color: #F8FAFC; font-weight: 600;">{ns.last_timestamp}</span></div>
+                <div><b>Quadrante Macro:</b> <span style="color: {quad_info['color']}; font-weight: 600;">{quad_info['name']}</span></div>
             </div>
+            <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08);">
+                <div style="font-size: 11.5px; color: #94A3B8; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    🔗 <b>Collegamenti Diretti nella Tela ({len(connected_links)} Connessioni Attive):</b>
+                </div>
+                <div>{links_badges if links_badges else '<span style=\"color:#64748B;\">Nessun collegamento diretto filtrato</span>'}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 14px 20px; margin-top: 14px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 13px; color: #94A3B8;">
+                💡 <i>Suggerimento Istituzionale: Clicca su qualsiasi nodo della tela di ragno o selezionalo dal menu laterale per bloccare l'evidenziazione ed esaminare la scheda analitica dettagliata con tutti i parametri di trasmissione macro.</i>
+            </div>
+            <span style="font-size: 11.5px; color: #38BDF8; font-family: monospace; white-space: nowrap;">30 Nodi Disponibili</span>
         </div>
         """, unsafe_allow_html=True)
 

@@ -244,11 +244,23 @@ def build_spider_web_figure(
         delta_str = f"{n_state.delta_period:+,.2f} ({n_state.delta_period_pct:+.2f}%)" if n_state else "N/D"
         z_str = f"{n_state.z_score:+.2f}" if n_state else "0.00"
 
-        # Sleek, non-obtrusive tooltip on the graph
+        yoy_str = f"{n_state.delta_yoy:+,.2f}" if n_state else "N/D"
+        status_str = n_state.status if n_state else "Normale"
+        ts_str = n_state.last_timestamp if n_state else ""
+
         hover_card = (
-            f"<b>{n_def.name} ({n_id})</b><br>"
-            f"Valore: <b>{val_str}</b> | Δ: <b>{delta_str}</b> | Z: <b>{z_str}</b><br>"
-            f"<i>👉 Clicca per bloccare il focus sui collegamenti</i>"
+            f"<b>🏛️ NODO: {n_def.name} [{n_id}]</b><br>"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━<br>"
+            f"• Categoria: <b>{n_def.category}</b> (Anello {n_def.ring})<br>"
+            f"• Valore Attuale: <b>{val_str}</b><br>"
+            f"• Variazione Periodo: <b>{delta_str}</b><br>"
+            f"• Variazione YoY (1 Anno): <b>{yoy_str}</b><br>"
+            f"• Z-Score Dinamico: <b>{z_str}</b> ({status_str})<br>"
+            f"• Ruolo Intermarket: {n_def.role}<br>"
+            f"• Fonte Certificata: <b>{n_def.source}</b> ({n_def.official_ticker})<br>"
+            f"• Ultimo Rilascio: {ts_str}<br>"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━<br>"
+            f"<i>👉 Clicca sul nodo per bloccare il focus sui collegamenti</i>"
         )
         node_hovertexts.append(hover_card)
 
