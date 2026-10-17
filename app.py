@@ -35,6 +35,11 @@ from pring_engine import (
     build_sector_horizontal_bars_figure,
     PRING_STAGES,
 )
+from curve_regimes_engine import (
+    yield_curve_engine,
+    build_yield_curve_comparison_figure,
+    build_regimes_matrix_preview_figure,
+)
 from spider_ui import (
     build_macro_regime_matrix_figure,
     build_spider_web_figure,
@@ -383,6 +388,7 @@ tabs = st.tabs([
     "🕸️ Tela di Ragno (Spider Web Graph)",
     "🎯 Centro di Controllo (Macro Matrix)",
     "🔄 Teoria dei Cicli di Martin Pring",
+    "📈 Curva dei Rendimenti & Regimi (Steno Framework)",
     "📋 Supervisione Tabellare & Export",
     "🔬 Focus Nodo & Relazioni",
     "⚡ Simulatore Stress What-If"
@@ -632,8 +638,161 @@ with tabs[2]:
           4. **🔵 IMPROVING (In Alto a Sinistra):** Forza Relativa $<100$ ma Momentum $>100$. Il settore è ancora debole rispetto al mercato, ma il momentum sta invertendo al rialzo (fase di accumulazione/ripresa anticipata, es. *Utilities difensive*).
         """)
 
-# TAB 4: SUPERVISIONE TABELLARE
+# TAB 4: CURVA DEI RENDIMENTI & REGIMI (STENO FRAMEWORK)
 with tabs[3]:
+    st.markdown("#### 📈 Dinamica della Curva dei Rendimenti & Regimi Macro (Steno Research Framework)")
+    st.markdown("##### *«Steepeners feed the credit engine.. flatteners starve it»*")
+    st.caption("Analisi dei 4 regimi della curva dei tassi (Bull/Bear Steepener & Bull/Bear Flattener) classificati in ordine di impatto sul ciclo economico e sulla creazione del credito bancario.")
+
+    yc_state = yield_curve_engine.get_curve_regime_state()
+
+    # Top KPI summary cards
+    yc_c1, yc_c2, yc_c3, yc_c4 = st.columns(4)
+    with yc_c1:
+        st.markdown(f"""
+        <div class="kpi-card" style="border-left: 4px solid {yc_state.color_hex};">
+            <div class="kpi-title">Regime Rilevato</div>
+            <div class="kpi-main-val" style="color: {yc_state.color_hex}; font-size: 18px;">{yc_state.regime_name}</div>
+            <div class="kpi-sub-val">Rango Ciclo: {yc_state.rank} di 4</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with yc_c2:
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-title">Variazione Tasso Breve (2Y)</div>
+            <div class="kpi-main-val" style="color: {'#EF4444' if yc_state.short_rate_delta_bps > 0 else '#10B981'}; font-size: 20px;">
+                {yc_state.short_rate_delta_bps:+.1f} bps
+            </div>
+            <div class="kpi-sub-val">Rispetto a 30gg fa</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with yc_c3:
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-title">Variazione Tasso Lungo (10Y)</div>
+            <div class="kpi-main-val" style="color: {'#EF4444' if yc_state.long_rate_delta_bps > 0 else '#10B981'}; font-size: 20px;">
+                {yc_state.long_rate_delta_bps:+.1f} bps
+            </div>
+            <div class="kpi-sub-val">Rispetto a 30gg fa</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with yc_c4:
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-title">Inclinazione Pendenza (Slope Δ)</div>
+            <div class="kpi-main-val" style="color: {'#10B981' if yc_state.slope_delta_bps > 0 else '#F59E0B'}; font-size: 20px;">
+                {yc_state.slope_delta_bps:+.1f} bps
+            </div>
+            <div class="kpi-sub-val">Spread 2Y-10Y: {yc_state.current_slope_2s10s_bps:+.1f} bps</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Main comparison chart and 2x2 regime matrix
+    yc_col_left, yc_col_right = st.columns([3, 2])
+    with yc_col_left:
+        fig_yc = build_yield_curve_comparison_figure(yc_state, dark_mode=True)
+        st.plotly_chart(fig_yc, use_container_width=True)
+
+    with yc_col_right:
+        fig_matrix = build_regimes_matrix_preview_figure(yc_state.regime_id, dark_mode=True)
+        st.plotly_chart(fig_matrix, use_container_width=True)
+
+        st.markdown(f"""
+        <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 14px; margin-top: 10px;">
+            <div style="font-size: 13px; font-weight: 700; color: {yc_state.color_hex}; margin-bottom: 6px;">
+                Diagnosi del Credito:
+            </div>
+            <div style="font-size: 13px; color: #F8FAFC; margin-bottom: 8px;">
+                {yc_state.impact_credit_engine}
+            </div>
+            <div style="font-size: 12px; color: #94A3B8; line-height: 1.5;">
+                {yc_state.macro_description}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Points table and asset allocation guidance
+    col_pts, col_alloc = st.columns([1, 1])
+    with col_pts:
+        st.markdown("##### 📊 Tabella Punti di Scadenza Curva USA (3M → 30Y)")
+        df_yc_points = pd.DataFrame([
+            {
+                "Scadenza": p.tenor,
+                "Anni": p.maturity_years,
+                "Rendimento Attuale": f"{p.current_yield:.2f}%",
+                "Rendimento Precedente": f"{p.prev_yield:.2f}%",
+                "Variazione (bps)": f"{p.delta_bps:+.1f} bps",
+                "Fonte Dati": p.source,
+            }
+            for p in yc_state.curve_points
+        ])
+        st.dataframe(df_yc_points, use_container_width=True, hide_index=True)
+
+    with col_alloc:
+        st.markdown("##### 💼 Posizionamento Portafoglio nel Regime Corrente")
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px;">
+            <div style="margin-bottom: 12px;">
+                <span style="color: #10B981; font-weight: 700;">🟢 ASSET FAVORITI:</span><br>
+                <span style="font-size: 13px; color: #F8FAFC;">{" • ".join(yc_state.favored_assets)}</span>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <span style="color: #EF4444; font-weight: 700;">🔴 ASSET SFAVORITI / DA SOTTOPESARE:</span><br>
+                <span style="font-size: 13px; color: #F8FAFC;">{" • ".join(yc_state.unfavored_assets)}</span>
+            </div>
+            <div style="font-size: 12px; color: #94A3B8;">
+                <b>Spiegazione TLT / Reddito Fisso:</b> In un regime di <i>{yc_state.regime_name}</i>, {
+                    'il TLT è vulnerabile alle perdite in conto capitale dovute al rialzo dei tassi e alla compressione dei premi al termine.'
+                    if 'BEAR' in yc_state.regime_id else
+                    'il TLT beneficia del calo dei tassi a lungo termine e del declino dell\'inflazione attesa.'
+                }
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Detailed pedagogical expander with Steno Research framework
+    with st.expander("📖 Guida Enciclopedica: I 4 Regimi della Curva dei Rendimenti (Steno Research)", expanded=False):
+        st.markdown("""
+        ### I 4 Regimi della Curva dei Rendimenti (Ranked for the Business Cycle)
+        La forma e il movimento della curva dei rendimenti sono il motore più potente del credito macroeconomico:
+        > **«Steepeners feed the credit engine.. flatteners starve it»**  
+        *(Le curve che si irripidiscono alimentano il motore del credito bancario.. le curve che si appiattiscono lo affamano)*
+
+        ---
+
+        #### 1. #1 BULL STEEPENER (Espansione / "Trump/Bessent Dream")
+        * **Dinamica dei Tassi:** La parte a breve scende sensibilmente mentre la parte a lunga scende meno o tiene.
+        * **Causa:** La Federal Reserve taglia aggressivamente i tassi per sostenere la crescita o per normalizzazione monetaria.
+        * **Impatto sul Credito:** **Massimo stimolo.** Le banche si rifinanziano a tassi bassi e prestano a tassi a lungo più alti, massimizzando il margine di interesse (NIM) e facendo correre il credito.
+        * **Asset Chiave:** Azioni Cicliche, Small Cap (Russell 2000), Titoli Bancari, Immobiliari/REITs, Oro.
+
+        #### 2. #2 BEAR STEEPENER (Surriscaldamento / "The Bank Engine Still Runs")
+        * **Dinamica dei Tassi:** La parte a lungo sale più velocemente della parte a breve.
+        * **Causa:** Aspettative di inflazione in aumento, forte crescita economica nominale o abbondante emissione di debito pubblico da parte del Tesoro (aumento del *term premium*).
+        * **Impatto sul Credito:** **Positivo per le banche.** La curva ripida preserva la redditività bancaria, ma i tassi più alti a lungo aumentano il costo dei mutui e dei prestiti societari.
+        * **Asset Chiave:** Titoli Value, Materie Prime, Petrolio, Titoli Energetici; **forte sottopeso su TLT / Long Treasuries**.
+
+        #### 3. #3 BULL FLATTENER (Disinflazione / "Scarce-Asset Heaven")
+        * **Dinamica dei Tassi:** I premi al termine si comprimono, la parte a lungo scende molto più di quella a breve.
+        * **Causa:** Rallentamento della crescita o crollo delle aspettative di inflazione; gli investitori comprano bond a lungo termine per bloccare i rendimenti.
+        * **Impatto sul Credito:** Il margine di interesse si assottiglia. Il credito rallenta progressivamente.
+        * **Asset Chiave:** **TLT e Treasury a lungo termine (rally dei prezzi)**, Big Tech / Growth a lungo orizzonte, Asset scarsi (Oro, Bitcoin), Difensivi.
+
+        #### 4. #4 BEAR FLATTENER (Stretta Monetaria / "The Cycle KILLER")
+        * **Dinamica dei Tassi:** La parte a breve sale molto più della parte a lunga.
+        * **Causa:** Le banche centrali alzano aggressivamente i tassi per domare l'inflazione persistente, invertendo o appiattendo la curva.
+        * **Impatto sul Credito:** **Strozza il credito bancario.** Prestare a lungo termine costa più che finanziarsi a breve: le banche restringono drasticamente gli standard di erogazione, portando verso la recessione.
+        * **Asset Chiave:** Cash / Liquidità monetaria a 1-3 mesi (BIL/SGOV), Dollaro USA (DXY); **sottopesare azioni cicliche e debito speculativo High Yield**.
+        """)
+
+
+# TAB 5: SUPERVISIONE TABELLARE
+with tabs[4]:
     st.markdown("#### 📋 Output Tabellare Interattivo & Supervisione Dati")
     st.caption("Tutte le metriche, i valori correnti, le variazioni, gli Z-score e i metadati di certificazione istituzionale.")
 
@@ -685,8 +844,8 @@ with tabs[3]:
         csv_links = df_links.to_csv(index=False).encode("utf-8")
         st.download_button("📥 Scarica Fili e Connessioni in CSV", data=csv_links, file_name=f"SPIDER_Fili_Connessioni_{datetime.date.today()}.csv", mime="text/csv")
 
-# TAB 5
-with tabs[4]:
+# TAB 6: FOCUS NODO & RELAZIONI
+with tabs[5]:
     st.markdown("#### 🔬 Focus Singolo Nodo & Correlazioni di Dettaglio")
     inspect_node_id = st.selectbox(
         "Seleziona Indicatore o Asset da Analizzare in Profondità:",
@@ -731,8 +890,8 @@ with tabs[4]:
         else:
             st.info("Nessuna connessione diretta attiva per questo nodo.")
 
-# TAB 6
-with tabs[5]:
+# TAB 7: SIMULATORE WHAT-IF
+with tabs[6]:
     st.markdown("#### ⚡ Simulatore What-If: Test di Stress e Rottura Relazioni")
     st.caption("Applica shock esogeni alle variabili chiave per testare istantaneamente la reazione della tensione della tela e degli Z-score (senza alterare i dati ufficiali salvati nel database).")
 
