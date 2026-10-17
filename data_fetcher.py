@@ -289,9 +289,13 @@ class InstitutionalDataFetcher:
                 s = self.fetch_fred_series("ECBDFR")
 
         elif node_id == "INF_EZHICP":
-            s = self.fetch_ecb_series("ICP/M.U2.N.000000.4.ANR")
-            if s is None:
-                s = self.fetch_fred_series("CP0000EZ19M086NEST")
+            # Fetch Eurozone HICP index and compute actual YoY rate
+            s_idx = self.fetch_fred_series("CP0000EZ19M086NEST")
+            if s_idx is not None and len(s_idx) > 13:
+                s = s_idx.pct_change(periods=12) * 100.0
+                s = s.dropna()
+            else:
+                s = self.fetch_ecb_series("ICP/M.U2.N.000000.4.ANR")
 
         elif node_id == "YIELD_DE10":
             s = self.fetch_ecb_series("YC/B.U2.EUR.4F.G_N_A.SV_C_YM.SR_10Y")
@@ -303,7 +307,32 @@ class InstitutionalDataFetcher:
                 if s is not None and not s.empty:
                     s.loc[today] = tv_quotes["TVC:DE10Y"]
 
-        # 4. Standard FRED Tickers
+        # 4. US Inflation & Macro Index Series: compute authentic YoY directly from raw index
+        elif node_id == "INF_USCPI":
+            s_idx = self.fetch_fred_series("CPIAUCSL")
+            if s_idx is not None and len(s_idx) > 13:
+                s = s_idx.pct_change(periods=12) * 100.0
+                s = s.dropna()
+
+        elif node_id == "INF_USPCE":
+            s_idx = self.fetch_fred_series("PCEPILFE")
+            if s_idx is not None and len(s_idx) > 13:
+                s = s_idx.pct_change(periods=12) * 100.0
+                s = s.dropna()
+
+        elif node_id == "GRO_INDPRO":
+            s_idx = self.fetch_fred_series("INDPRO")
+            if s_idx is not None and len(s_idx) > 13:
+                s = s_idx.pct_change(periods=12) * 100.0
+                s = s.dropna()
+
+        elif node_id == "GRO_RETAIL":
+            s_idx = self.fetch_fred_series("RSXFS")
+            if s_idx is not None and len(s_idx) > 13:
+                s = s_idx.pct_change(periods=12) * 100.0
+                s = s.dropna()
+
+        # 5. Standard FRED Tickers
         else:
             s = self.fetch_fred_series(node.official_ticker)
 
@@ -370,19 +399,19 @@ class InstitutionalDataFetcher:
             "YIELD_US02": (4.75, 0.06),
             "YIELD_US10": (5.10, 0.05),
             "YIELD_REAL10": (2.78, 0.04),
-            "CURVE_10_2": (35.0, 1.2),
+            "CURVE_10_2": (0.35, 0.05),
             "YIELD_DE10": (3.42, 0.04),
             "SPREAD_BTP": (109.0, 1.5),
-            "INF_USCPI": (336.5, 0.15),
-            "INF_USPCE": (130.5, 0.10),
+            "INF_USCPI": (3.72, 0.08),
+            "INF_USPCE": (3.01, 0.06),
             "INF_EXP5Y": (2.33, 0.02),
-            "INF_EZHICP": (104.3, 0.10),
+            "INF_EZHICP": (3.75, 0.08),
             "LAB_UNRATE": (4.20, 0.03),
             "LAB_NFP": (159044.0, 50.0),
             "LAB_CLAIMS": (199000.0, 1200.0),
-            "GRO_USGDP": (2.20, 0.05),
-            "GRO_INDPRO": (103.95, 0.08),
-            "GRO_RETAIL": (652115.0, 300.0),
+            "GRO_USGDP": (2.19, 0.05),
+            "GRO_INDPRO": (2.25, 0.08),
+            "GRO_RETAIL": (6.19, 0.15),
             "EQ_SPX": (7659.0, 25.0),
             "EQ_NDX": (29187.0, 120.0),
             "EQ_RUT": (2721.0, 15.0),

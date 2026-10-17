@@ -174,9 +174,19 @@ class SpiderQuantEngine:
             val_1y_ago = float(s_full.iloc[-yoy_pts]) if yoy_pts > 0 else curr_val
             delta_yoy = curr_val - val_1y_ago
 
-            mean_val = float(s_recent.mean())
-            std_val = float(s_recent.std())
-            if std_val > 1e-6:
+            # For high-frequency market asset nodes, compute Z-score relative to selected rolling window
+            # For macro/rate series with low frequency (Ring 1 & 2), standardize relative to 3Y history (756 business days)
+            # to avoid artificially inflating Z-scores when 30D variance is close to zero.
+            if n_def.ring in [1, 2]:
+                hist_lookback = min(len(s_full), 756)
+                s_baseline = s_full.iloc[-hist_lookback:]
+                mean_val = float(s_baseline.mean())
+                std_val = float(s_baseline.std())
+            else:
+                mean_val = float(s_recent.mean())
+                std_val = float(s_recent.std())
+
+            if std_val > 1e-4:
                 z_score = (curr_val - mean_val) / std_val
             else:
                 z_score = 0.0
@@ -378,35 +388,56 @@ class SpiderQuantEngine:
     ) -> SpiderCoreState:
         """Synthesize the state of the central control hub."""
         # 1. Macro Regime Composites
+        # Growth indicator components:
+        # - Real GDP growth vs historical trend (target 2.0%)
+        # - Industrial Production growth
+        # - Retail Sales growth
+        # - Copper (Doctor Copper economic barometer)
+        # - Yield curve slope (10Y-2Y positive spread indicates economic expansion)
+        # - Labor resilience (Unemployment rate and Initial Jobless claims inverted)
         growth_components = []
         if "GRO_USGDP" in node_states:
-            growth_components.append(node_states["GRO_USGDP"].z_score * 1.5)
+            # Baseline benchmark around 2.0% real growth
+            gdp_state = node_states["GRO_USGDP"]
+            g_dev = (gdp_state.current_value - 2.0) / 0.8
+            growth_components.append(g_dev * 1.5)
         if "GRO_INDPRO" in node_states:
             growth_components.append(node_states["GRO_INDPRO"].z_score * 1.2)
         if "GRO_RETAIL" in node_states:
             growth_components.append(node_states["GRO_RETAIL"].z_score * 1.0)
         if "COM_COPPER" in node_states:
-            growth_components.append(node_states["COM_COPPER"].z_score * 1.0)
+            growth_components.append(node_states["COM_COPPER"].z_score * 0.8)
         if "CURVE_10_2" in node_states:
             growth_components.append(node_states["CURVE_10_2"].z_score * 0.8)
         if "LAB_UNRATE" in node_states:
-            growth_components.append(-node_states["LAB_UNRATE"].z_score * 1.4)
+            # Low unemployment (< 4.5%) supports resilient growth
+            unrate = node_states["LAB_UNRATE"].current_value
+            growth_components.append((4.5 - unrate) * 1.2)
         if "LAB_CLAIMS" in node_states:
-            growth_components.append(-node_states["LAB_CLAIMS"].z_score * 1.0)
+            growth_components.append(-node_states["LAB_CLAIMS"].z_score * 0.8)
 
         growth_score = float(np.mean(growth_components)) if growth_components else 0.2
 
+        # Inflation indicator components:
+        # - Core PCE vs Fed 2.0% target
+        # - Headline CPI vs target
+        # - 5Y5Y Forward Inflation Expectations
+        # - Eurozone HICP
+        # - Oil price pressure (energy shock)
         inflation_components = []
-        if "INF_USCPI" in node_states:
-            inflation_components.append(node_states["INF_USCPI"].z_score * 1.5)
         if "INF_USPCE" in node_states:
-            inflation_components.append(node_states["INF_USPCE"].z_score * 1.5)
+            pce_val = node_states["INF_USPCE"].current_value
+            inflation_components.append((pce_val - 2.0) * 1.5)
+        if "INF_USCPI" in node_states:
+            cpi_val = node_states["INF_USCPI"].current_value
+            inflation_components.append((cpi_val - 2.5) * 1.2)
         if "INF_EXP5Y" in node_states:
-            inflation_components.append(node_states["INF_EXP5Y"].z_score * 1.0)
+            inflation_components.append(node_states["INF_EXP5Y"].z_score * 0.8)
         if "INF_EZHICP" in node_states:
-            inflation_components.append(node_states["INF_EZHICP"].z_score * 1.0)
+            hicp_val = node_states["INF_EZHICP"].current_value
+            inflation_components.append((hicp_val - 2.0) * 1.0)
         if "COM_OIL" in node_states:
-            inflation_components.append(node_states["COM_OIL"].z_score * 1.2)
+            inflation_components.append(node_states["COM_OIL"].z_score * 1.0)
 
         inflation_score = float(np.mean(inflation_components)) if inflation_components else 0.1
 
@@ -414,14 +445,14 @@ class SpiderQuantEngine:
             regime = "Goldilocks / Espansione Disinflazionistica"
             desc = "Crescita solida e inflazione in calo: contesto ideale per multipli azionari (Risk-On)."
         elif growth_score >= 0 and inflation_score >= 0:
-            regime = "Reflazione / Surriscaldamento"
-            desc = "Crescita trainante ma inflazione in risalita: ciclici e commodities favoriti, tassi sotto pressione."
+            regime = "Reflazione / Surriscaldamento Controllato"
+            desc = "Crescita resiliente con inflazione sostenuta da shock energetici: banche centrali vigili sui tassi, ciclici e materie prime favoriti."
         elif growth_score < 0 and inflation_score >= 0:
             regime = "Stagflazione"
-            desc = "Rallentamento economico accompagnato da inflazione elevata: regime più avverso ai mercati, difendere con Oro e Liquidità."
+            desc = "Rallentamento economico accompagnato da inflazione elevata: regime avverso ai mercati, difendere con Oro e Liquidità."
         else:
             regime = "Deflazione / Recessione"
-            desc = "Crescita e inflazione entrambe in contrazione: flight-to-quality verso Treasury e Bund, tagli aggressivi banche centrali (Risk-Off)."
+            desc = "Crescita e inflazione entrambe in contrazione: flight-to-quality verso governativi difensivi (Risk-Off)."
 
         trajectory: List[Tuple[str, float, float]] = []
         if not self.transformed_df.empty:
@@ -429,7 +460,7 @@ class SpiderQuantEngine:
                 pts = min(len(self.transformed_df) - 1, int(months_back * 21))
                 row = self.transformed_df.iloc[-pts - 1]
                 t_date = row.name.strftime("%b %Y")
-                g_val = float((row.get("GRO_USGDP", 2.0) - 2.0) / 1.5)
+                g_val = float((row.get("GRO_USGDP", 2.0) - 2.0) / 1.0)
                 i_val = float((row.get("INF_USCPI", 2.5) - 2.5) / 1.0)
                 trajectory.append((t_date, g_val, i_val))
 
@@ -449,24 +480,31 @@ class SpiderQuantEngine:
         else:
             web_status = "Bassa Tensione (Equilibrio Fisiologico)"
 
-        # 3. Central Bank Policy Bias
+        # 3. Central Bank Policy Bias & Real Rates
         fed_rate = node_states["RATE_FED"].current_value if "RATE_FED" in node_states else 3.88
         ecb_rate = node_states["RATE_ECB"].current_value if "RATE_ECB" in node_states else 2.50
-        us_pce = node_states["INF_USPCE"].current_value if "INF_USPCE" in node_states else 2.6
-        ez_hicp = node_states["INF_EZHICP"].current_value if "INF_EZHICP" in node_states else 2.2
+        us_pce = node_states["INF_USPCE"].current_value if "INF_USPCE" in node_states else 3.01
+        ez_hicp = node_states["INF_EZHICP"].current_value if "INF_EZHICP" in node_states else 3.75
         us_02y = node_states["YIELD_US02"].current_value if "YIELD_US02" in node_states else 4.75
 
+        # Real policy rates: Nominal Policy Rate - Core Inflation
         fed_real_rate = fed_rate - us_pce
         ecb_real_rate = ecb_rate - ez_hicp
 
-        gdp_val = node_states["GRO_USGDP"].current_value if "GRO_USGDP" in node_states else 2.2
-        taylor_target = 0.5 + us_pce + 0.5 * (us_pce - 2.0) + 0.5 * (gdp_val - 2.0)
+        # Standard Institutional Taylor Rule:
+        # Target = r* + pi + 0.5*(pi - pi*) + 0.5*(y - y*)
+        # with r* = 1.0%, pi* = 2.0%, y* = 2.0%
+        gdp_val = node_states["GRO_USGDP"].current_value if "GRO_USGDP" in node_states else 2.19
+        taylor_target = 1.0 + us_pce + 0.5 * (us_pce - 2.0) + 0.5 * (gdp_val - 2.0)
         taylor_gap_bps = (fed_rate - taylor_target) * 100.0
 
-        if fed_real_rate > 1.5 and us_02y > fed_rate:
-            cb_bias = "Hawkish (Pressione Restrittiva Persistente)"
-        elif fed_real_rate < 0.5 or us_02y < (fed_rate - 0.5):
-            cb_bias = "Dovish (Aspettative di Allentamento & Tagli)"
+        # Institutional Policy Bias Classification
+        if fed_real_rate >= 1.5 or (us_02y > fed_rate + 0.5):
+            cb_bias = "Hawkish (Stretta Monetaria Rigida)"
+        elif fed_real_rate >= 0.5 or (fed_rate >= 3.5 and us_pce > 2.5):
+            cb_bias = "Restrittivo / Vigile (Ancoraggio Aspettative)"
+        elif fed_real_rate < 0.0 or us_02y < (fed_rate - 0.75):
+            cb_bias = "Dovish (Orientamento Accomodante)"
         else:
             cb_bias = "Neutral / Data-Dependent (In Pausa Strategica)"
 
