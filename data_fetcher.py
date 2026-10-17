@@ -20,8 +20,12 @@ import requests
 
 # Fix macOS IPv6 hanging issue on certain CDNs (Akamai/FRED)
 try:
+    import socket
     import urllib3.util.connection as urllib3_cn
     urllib3_cn.HAS_IPV6 = False
+    def _force_ipv4():
+        return socket.AF_INET
+    urllib3_cn.allowed_gai_family = _force_ipv4
 except Exception:
     pass
 
