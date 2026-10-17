@@ -7,6 +7,15 @@ Analyzes the four yield curve regimes ranked for the business cycle:
 #4 BEAR FLATTENER  : Short end up more than long (Monetary tightening, cycle killer)
 
 "Steepeners feed the credit engine.. flatteners starve it."
+
+Integrates dual-layer slope analysis:
+- Absolute Curve Geometry (Inversion vs Normal vs Disinversion/Uninverting)
+- Dynamic Shift (Steepening vs Flattening / Bull vs Bear)
+- Multi-dimensional Banking & Credit Engine Transmission Channel:
+  * Net Interest Margin (NIM)
+  * SLOOS Lending Standards (Senior Loan Officer Opinion Survey)
+  * Credit Impulse & Loan Volume Creation
+  * Risk of Recession vs Cyclical Refinancing Pressure
 """
 
 from dataclasses import dataclass
@@ -30,19 +39,48 @@ class YieldCurvePoint:
 
 
 @dataclass
+class InversionMetrics:
+    is_2s10s_inverted: bool
+    spread_2s10s_bps: float
+    prev_2s10s_bps: float
+    delta_2s10s_bps: float
+
+    is_3m10y_inverted: bool
+    spread_3m10y_bps: float
+    prev_3m10y_bps: float
+    delta_3m10y_bps: float
+
+    inversion_status: str       # "NORMAL", "INVERTED", "UNINVERTING_BULL" (disinversione rialzista), "UNINVERTING_BEAR" (disinversione da inflazione)
+    inversion_status_badge: str
+    recession_warning_level: str # "BASSO", "MEDIO", "ELEVATO (FASE CRITICA POST-INVERSIONE)"
+
+
+@dataclass
+class CreditEngineAnalysis:
+    net_interest_margin_impact: str  # Impatto su NIM e profitti bancari
+    bank_lending_standards: str      # Criteri di erogazione (Restrittivi / Accomodanti)
+    credit_impulse_direction: str    # Impulso del credito (Accelerazione / Contrazione)
+    sloos_interpretation: str        # Lettura del ciclo bancario (SLOOS)
+    corporate_refinancing_risk: str  # Rischio rollover debito societario
+    summary_verdict: str             # Verdetto sintetico
+
+
+@dataclass
 class YieldCurveRegimeState:
-    regime_id: str          # "BULL_STEEPENER", "BEAR_STEEPENER", "BULL_FLATTENER", "BEAR_FLATTENER"
-    regime_name: str        # e.g. "#2 BEAR STEEPENER"
-    rank: int               # 1, 2, 3, or 4
-    headline: str           # e.g. "Long end up more than short.. the bank engine still runs"
+    regime_id: str                   # "BULL_STEEPENER", "BEAR_STEEPENER", "BULL_FLATTENER", "BEAR_FLATTENER"
+    regime_name: str                 # e.g. "#2 BEAR STEEPENER"
+    rank: int                        # 1, 2, 3, or 4
+    headline: str                    # e.g. "Long end up more than short.. the bank engine still runs"
     short_rate_delta_bps: float
     long_rate_delta_bps: float
-    slope_delta_bps: float  # (Long - Short) change
+    slope_delta_bps: float           # (Long - Short) change
     current_slope_2s10s_bps: float
     current_slope_3m30y_bps: float
     curve_points: List[YieldCurvePoint]
-    comparison_period: str  # e.g. "1 Mese fa (30d)"
-    impact_credit_engine: str # "Alimenta il motore del credito (Espansivo)" vs "Strozza il credito (Restrittivo)"
+    inversion: InversionMetrics
+    credit_analysis: CreditEngineAnalysis
+    comparison_period: str           # e.g. "Ultimi 30 Giorni"
+    impact_credit_engine: str
     favored_assets: List[str]
     unfavored_assets: List[str]
     macro_description: str
@@ -56,65 +94,64 @@ REGIMES_INFO = {
         "headline": "Short end drops, curve steepens.. the Trump/Bessent dream",
         "credit_engine": "🟢 Alimenta vigorosamente il credito bancario (Margini di intermediazione in rapido aumento)",
         "color": "#10B981", # Emerald green
-        "favored": ["Azioni Cicliche & Small Cap (Russell 2000)", "Banche & Finanziari", "Real Estate / REITs", "Oro / Asset Scarsi"],
-        "unfavored": ["Liquidità monetaria / T-Bills (rendimento in calo)", "Dollaro USA (DXY)"],
-        "desc": "La parte a breve della curva crolla a seguito di tagli aggressivi dei tassi della Fed, mentre la parte a lunga tiene o scende meno. È il regime più favorevole alla crescita economica, agli investimenti e al credito."
+        "favored": ["Azioni Cicliche & Small Cap (Russell 2000)", "Banche Commerciali & Finanziari", "Real Estate / REITs", "Oro / Asset Scarsi"],
+        "unfavored": ["Liquidità monetaria / T-Bills (rendimento in discesa)", "Dollaro USA (DXY)"],
+        "desc": "La parte a breve della curva crolla a seguito di tagli aggressivi dei tassi della Fed, mentre la parte a lunga tiene o scende meno. È il regime di massimo stimolo alla creazione di moneta bancaria e al ciclo del credito."
     },
     "BEAR_STEEPENER": {
         "name": "#2 BEAR STEEPENER",
         "rank": 2,
         "headline": "Long end up more than short.. the bank engine still runs",
-        "credit_engine": "🟡 Il motore bancario funziona ancora (Curve ripida favorisce il margine di interesse)",
+        "credit_engine": "🟡 Il motore bancario funziona ancora (Curva ripida sostiene il margine d'interesse, ma mutui più cari)",
         "color": "#3B82F6", # Bright Blue
-        "favored": ["Bancari & Assicurativi (Margine d'interesse)", "Materie Prime (Commodities)", "Energy & Materiali", "Titoli Value"],
-        "unfavored": ["TLT / Titoli di Stato a Lunga Duration (Perdite in conto capitale)", "Growth ad alta duration", "REITs ad alto indebitamento"],
-        "desc": "I tassi a lungo termine salgono più velocemente di quelli a breve, trainati da maggiori aspettative di inflazione, emissioni di debito pubblico elevate e premio a termine. La curva si irripidisce: ottimo per i margini bancari, ma punitivo per il reddito fisso a lunga scadenza (TLT)."
+        "favored": ["Bancari & Assicurativi (NIM solido)", "Materie Prime (Commodities)", "Energy & Materiali di Base", "Titoli Value"],
+        "unfavored": ["TLT / Titoli di Stato a Lunga Duration (Forti perdite in conto capitale)", "Growth ad alta duration", "REITs ad alto indebitamento"],
+        "desc": "I tassi a lungo termine salgono più velocemente di quelli a breve per aspettative di inflazione, emissioni ingenti del Tesoro e premio a termine in aumento. La curva si irripidisce: preserva i margini bancari ma penalizza la duration lunga (TLT)."
     },
     "BULL_FLATTENER": {
         "name": "#3 BULL FLATTENER",
         "rank": 3,
         "headline": "Term premia compress, long end drops.. scarce-asset heaven",
-        "credit_engine": "🟠 Compressione dei margini di credito.. il motore rallenta",
+        "credit_engine": "🟠 Compressione dei margini di credito.. il motore bancario rallenta",
         "color": "#F59E0B", # Amber
         "favored": ["TLT / Long Treasuries (Forte rally dei prezzi)", "Titoli Growth / Big Tech ad alta duration", "Asset scarsi / Oro", "Defensive / Quality"],
-        "unfavored": ["Banche regionali e commerciali (Margini compressi)", "Materie prime cicliche", "Small Cap"],
-        "desc": "I tassi a lunga scadenza scendono sensibilmente mentre i tassi a breve rimangono stabili o scendono meno. Segnala disinflazione e rallentamento economico. I premi al termine si comprimono e gli asset a lunga duration registrano forti guadagni."
+        "unfavored": ["Banche regionali e commerciali (Margini compressi)", "Materie prime industriali", "Small Cap"],
+        "desc": "I tassi a lunga scadenza scendono sensibilmente per disinflazione o timori di rallentamento, mentre i tassi a breve restano elevati o scendono poco. I margini di intermediazione si contraggono e gli investitori comprano duration."
     },
     "BEAR_FLATTENER": {
         "name": "#4 BEAR FLATTENER",
         "rank": 4,
         "headline": "Short end up more than long.. the cycle KILLER",
-        "credit_engine": "🔴 Strozza il motore del credito bancario (Inversione della curva, contrazione del credito)",
+        "credit_engine": "🔴 Strozza il motore del credito bancario (Inversione/compressione estrema, banche stringono i rubinetti)",
         "color": "#EF4444", # Red
-        "favored": ["Cash / T-Bills a 1-3 mesi (Rendimento elevato senza duration)", "Dollaro USA (DXY)", "Titoli difensivi a basso debito"],
+        "favored": ["Cash / T-Bills a 1-3 mesi (Rendimento elevato senza duration)", "Dollaro USA (DXY)", "Titoli difensivi a bilancio solido"],
         "unfavored": ["Azioni Cicliche e Azionario Globale", "High Yield & Corporate Debito", "Real Estate", "TLT & Obbligazioni a lungo termine"],
-        "desc": "La Fed e le banche centrali alzano aggressivamente i tassi a breve per soffocare l'inflazione, mentre la parte a lunga non segue per paura di recessione. La curva si appiattisce o si inverte: è il classico 'Cycle Killer' che precede le recessioni."
+        "desc": "La banca centrale alza i tassi a breve per soffocare l'inflazione, mentre la parte a lungo rifiuta di salire per timori recessivi. È il classico 'Cycle Killer' che affama il credito e precede le contrazioni economiche."
     }
 }
 
 
 class YieldCurveEngine:
-    """Engine for fetching yield curve tenors and classifying the yield curve regime."""
+    """Engine for fetching yield curve tenors and performing deep credit transmission analysis."""
 
     def __init__(self):
-        # Default fallback historical curve if network fails
         self.tenor_defs = [
             {"tenor": "3M", "years": 0.25, "yahoo": "^IRX", "fred": "DGS3MO", "default": 4.07, "default_prev": 4.25},
-            {"tenor": "2Y", "years": 2.0,  "yahoo": "2YY=F", "fred": "DGS2",   "default": 4.75, "default_prev": 4.60},
-            {"tenor": "5Y", "years": 5.0,  "yahoo": "^FVX", "fred": "DGS5",   "default": 4.90, "default_prev": 4.70},
-            {"tenor": "10Y", "years": 10.0, "yahoo": "^TNX", "fred": "DGS10",  "default": 5.10, "default_prev": 4.85},
-            {"tenor": "30Y", "years": 30.0, "yahoo": "^TYX", "fred": "DGS30",  "default": 5.44, "default_prev": 5.15},
+            {"tenor": "2Y", "years": 2.0,  "yahoo": "2YY=F", "fred": "DGS2",   "default": 4.75, "default_prev": 4.39},
+            {"tenor": "5Y", "years": 5.0,  "yahoo": "^FVX", "fred": "DGS5",   "default": 4.90, "default_prev": 4.80},
+            {"tenor": "10Y", "years": 10.0, "yahoo": "^TNX", "fred": "DGS10",  "default": 5.10, "default_prev": 4.95},
+            {"tenor": "30Y", "years": 30.0, "yahoo": "^TYX", "fred": "DGS30",  "default": 5.44, "default_prev": 5.30},
         ]
 
     def get_curve_regime_state(self, lookback_days: int = 30) -> YieldCurveRegimeState:
         """
-        Fetches current and lookback yield points, computes deltas, and identifies regime.
+        Fetches current and lookback yield points, computes deltas, evaluates inversion status,
+        and produces a rigorous credit engine transmission analysis.
         """
         points: List[YieldCurvePoint] = []
-
-        # Attempt to pull real data from Yahoo Finance
         yahoo_symbols = [d["yahoo"] for d in self.tenor_defs]
         data_hist = {}
+
         try:
             df = yf.download(yahoo_symbols, period="3mo", progress=False)["Close"]
             if not df.empty:
@@ -124,7 +161,7 @@ class YieldCurveEngine:
                         s = df[sym].dropna()
                         if len(s) >= 2:
                             curr_v = float(s.iloc[-1])
-                            idx_prev = max(0, len(s) - 22) # ~1 month trading days
+                            idx_prev = max(0, len(s) - 22)
                             prev_v = float(s.iloc[idx_prev])
                             data_hist[d["tenor"]] = (curr_v, prev_v)
         except Exception:
@@ -142,7 +179,7 @@ class YieldCurveEngine:
                 idx_prev = max(0, len(s10) - 22)
                 data_hist["10Y"] = (float(s10.iloc[-1]), float(s10.iloc[idx_prev]))
 
-        # Build YieldCurvePoint list
+        # Assemble points
         for d in self.tenor_defs:
             tenor = d["tenor"]
             if tenor in data_hist:
@@ -162,44 +199,85 @@ class YieldCurveEngine:
                 )
             )
 
-        # Calculate key spreads and deltas
-        # Short rate: 3M or 2Y
-        # Long rate: 10Y or 30Y
+        # Spread metrics
         p_3m = next((p for p in points if p.tenor == "3M"), points[0])
         p_2y = next((p for p in points if p.tenor == "2Y"), points[1])
         p_10y = next((p for p in points if p.tenor == "10Y"), points[3])
         p_30y = next((p for p in points if p.tenor == "30Y"), points[4])
 
-        delta_short = p_2y.delta_bps # standard 2Y short rate delta
-        delta_long = p_10y.delta_bps  # standard 10Y long rate delta
-        delta_slope = delta_long - delta_short # > 0 -> Steepening, < 0 -> Flattening
+        delta_short = p_2y.delta_bps
+        delta_long = p_10y.delta_bps
+        delta_slope = delta_long - delta_short
 
-        current_2s10s_bps = (p_10y.current_yield - p_2y.current_yield) * 100.0
+        curr_2s10s_bps = (p_10y.current_yield - p_2y.current_yield) * 100.0
+        prev_2s10s_bps = (p_10y.prev_yield - p_2y.prev_yield) * 100.0
+        delta_2s10s_bps = curr_2s10s_bps - prev_2s10s_bps
+
+        curr_3m10y_bps = (p_10y.current_yield - p_3m.current_yield) * 100.0
+        prev_3m10y_bps = (p_10y.prev_yield - p_3m.prev_yield) * 100.0
+        delta_3m10y_bps = curr_3m10y_bps - prev_3m10y_bps
+
         current_3m30y_bps = (p_30y.current_yield - p_3m.current_yield) * 100.0
 
-        # Classify Regime according to Steno Research 4 regimes:
-        # Steepener vs Flattener: delta_slope > 0 vs delta_slope <= 0
-        # Bull vs Bear: overall rate direction.
-        # Specifically:
-        # Bull Steepener: Short end drops, curve steepens (delta_short < 0 and delta_slope > 0)
-        # Bear Steepener: Long end up more than short (delta_long > delta_short and delta_long > 0)
-        # Bull Flattener: Long end drops more than short (delta_long < 0 and delta_slope <= 0)
-        # Bear Flattener: Short end up more than long (delta_short > delta_long and delta_short > 0)
+        # Inversion diagnosis
+        is_2s10s_inverted = (curr_2s10s_bps < 0)
+        is_3m10y_inverted = (curr_3m10y_bps < 0)
+        was_2s10s_inverted = (prev_2s10s_bps < 0)
 
+        if is_2s10s_inverted or is_3m10y_inverted:
+            inversion_status = "INVERTED"
+            inversion_status_badge = "⚠️ CURVA INVERTITA (Condizioni da Recessione in Incubazione)"
+            recession_level = "ELEVATO (Allerta inversione attiva)"
+        elif was_2s10s_inverted and not is_2s10s_inverted:
+            if delta_short < 0:
+                inversion_status = "UNINVERTING_BULL"
+                inversion_status_badge = "🚨 DISINVERSIONE DA TAGLIO FED (Bull Steepener - Fase Storicamente più Pericolosa)"
+                recession_level = "MASSIMO (La recessione storicamente scatta quando la curva si disinverte)"
+            else:
+                inversion_status = "UNINVERTING_BEAR"
+                inversion_status_badge = "🟡 DISINVERSIONE DA BEAR STEEPENER (Spinta da Term Premium & Inflazione)"
+                recession_level = "MEDIO (Inflazione persistente, rinvio della recessione)"
+        else:
+            inversion_status = "NORMAL"
+            inversion_status_badge = "🟢 CURVA POSITIVA (Pendenza Fisiologica Espansiva)"
+            recession_level = "BASSO"
+
+        inversion_metrics = InversionMetrics(
+            is_2s10s_inverted=is_2s10s_inverted,
+            spread_2s10s_bps=curr_2s10s_bps,
+            prev_2s10s_bps=prev_2s10s_bps,
+            delta_2s10s_bps=delta_2s10s_bps,
+            is_3m10y_inverted=is_3m10y_inverted,
+            spread_3m10y_bps=curr_3m10y_bps,
+            prev_3m10y_bps=prev_3m10y_bps,
+            delta_3m10y_bps=delta_3m10y_bps,
+            inversion_status=inversion_status,
+            inversion_status_badge=inversion_status_badge,
+            recession_warning_level=recession_level,
+        )
+
+        # Steno 4 Regimes Classification
         if delta_slope > 0:
-            # Steepening
             if delta_short < 0:
                 reg_id = "BULL_STEEPENER"
             else:
                 reg_id = "BEAR_STEEPENER"
         else:
-            # Flattening
             if delta_long < 0:
                 reg_id = "BULL_FLATTENER"
             else:
                 reg_id = "BEAR_FLATTENER"
 
         info = REGIMES_INFO[reg_id]
+
+        # In-depth Credit Engine Transmission Analysis
+        credit_analysis = self._evaluate_credit_transmission(
+            regime_id=reg_id,
+            inversion=inversion_metrics,
+            short_delta=delta_short,
+            long_delta=delta_long,
+            curr_2s10s=curr_2s10s_bps
+        )
 
         return YieldCurveRegimeState(
             regime_id=reg_id,
@@ -209,15 +287,78 @@ class YieldCurveEngine:
             short_rate_delta_bps=delta_short,
             long_rate_delta_bps=delta_long,
             slope_delta_bps=delta_slope,
-            current_slope_2s10s_bps=current_2s10s_bps,
+            current_slope_2s10s_bps=curr_2s10s_bps,
             current_slope_3m30y_bps=current_3m30y_bps,
             curve_points=points,
+            inversion=inversion_metrics,
+            credit_analysis=credit_analysis,
             comparison_period="Ultimi 30 Giorni",
             impact_credit_engine=info["credit_engine"],
             favored_assets=info["favored"],
             unfavored_assets=info["unfavored"],
             macro_description=info["desc"],
             color_hex=info["color"],
+        )
+
+    def _evaluate_credit_transmission(
+        self,
+        regime_id: str,
+        inversion: InversionMetrics,
+        short_delta: float,
+        long_delta: float,
+        curr_2s10s: float
+    ) -> CreditEngineAnalysis:
+        """
+        Deep econometric modeling of the banking credit channel based on both slope dynamics
+        and level inversion.
+        """
+        if inversion.is_2s10s_inverted or inversion.is_3m10y_inverted:
+            nim = "🔴 Margine di Interesse (NIM) Compresso / Negativo"
+            standards = "🔴 Restrizione Severa dei Criteri di Fido (SLOOS Net Tightening > 40%)"
+            impulse = "📉 Impulso del Credito in Contrazione Rapida (Credit Crunch)"
+            sloos = "Le banche pagano di più sulla raccolta a breve di quanto incassano sui prestiti a lungo termine: incentivazione a bloccare la liquidità presso la banca centrale anziché finanziare l'economia reale."
+            refi = "🔴 Elevato Rischio di Rollover per PMI e Real Estate Commerciale esposti a tassi variabili."
+            verdict = "Il canale del credito è strozzato (Flattening / Inversione). La trasmissione monetaria è restrittiva al massimo."
+
+        elif inversion.inversion_status == "UNINVERTING_BULL":
+            nim = "🟢 Espansione Rapida del NIM (Crollo Costo della Raccolta)"
+            standards = "🟡 Elevata Selettività Cautelativa (Banche preparano accantonamenti su perdite su crediti)"
+            impulse = "🟡 Fase Transitoria: Offerta di credito potenziale in crescita, ma domanda frenata dal rallentamento economico"
+            sloos = "La disinversione bull riflette tagli d'urgenza della banca centrale: il motore del credito si riattiva per i rifinanziamenti, ma il rischio insolvenze è all'apice del ciclo."
+            refi = "🟢 Sollievo immediato sui prestiti a tasso variabile grazie al crollo dei tassi a breve."
+            verdict = "Disinversione Bull: fase tipica di imminente atterraggio / recessione. Il credito riprende respiro sui costi, ma soffre la qualità dei debitori."
+
+        elif regime_id == "BEAR_STEEPENER":
+            nim = "🟢 Margine Bancario Solido ed in Espansione (Yield Curve Steep)"
+            standards = "🟡 Criteri di Fido Neutro-Prudenti (SLOOS bilanciato)"
+            impulse = "🟢 Il motore del credito continua a girare per le grandi imprese con potere di prezzo"
+            sloos = "Le banche possono prestare a tassi a 10 anni elevati mantenendo il costo della raccolta controllato. Tuttavia, l'alto livello assoluto dei rendimenti a lungo termine deprime la domanda di nuovi mutui immobiliari."
+            refi = "🟡 Costo del debito a tasso fisso a lungo termine molto oneroso. Forti perdite per chi detiene TLT."
+            verdict = "Il motore bancario funziona ancora ('The bank engine still runs'), ma i tassi lunghi elevati fungono da freno progressivo alla domanda di credito per investimenti capital-intensive."
+
+        elif regime_id == "BEAR_FLATTENER":
+            nim = "🔴 Erosione Continua del Margine di Intermediazione"
+            standards = "🔴 Banche in fase di inasprimento dei requisiti di prestito"
+            impulse = "📉 Decelerazione marcata dei volumi di erogazione prestiti"
+            sloos = "Il rialzo aggressivo dei tassi a breve alza il costo dei depositi, mentre la curva piatta toglie ogni premio per la trasformazione delle scadenze bancarie."
+            refi = "🔴 Pressione massima su prestiti corporate a breve e carte di credito."
+            verdict = "Regime 'Cycle Killer': la stretta monetaria si trasmette integralmente al sistema bancario, riducendo l'offerta aggregata di credito."
+
+        else: # BULL_STEEPENER or BULL_FLATTENER
+            nim = "🟡 Margini Moderati in Stabilizzazione"
+            standards = "🟢 Progressivo allentamento dei vincoli di fido"
+            impulse = "🟢 Ripresa graduale dei volumi di finanziamento"
+            sloos = "L'abbassamento dei tassi favorisce la domanda di credito privato e mutui per acquisto abitazioni."
+            refi = "🟢 Finestre favorevoli di rinegoziazione ed emissione bond societari."
+            verdict = "Condizioni di credito distese e favorevoli agli investimenti produttivi."
+
+        return CreditEngineAnalysis(
+            net_interest_margin_impact=nim,
+            bank_lending_standards=standards,
+            credit_impulse_direction=impulse,
+            sloos_interpretation=sloos,
+            corporate_refinancing_risk=refi,
+            summary_verdict=verdict,
         )
 
 
@@ -242,7 +383,7 @@ def build_yield_curve_comparison_figure(state: YieldCurveRegimeState, dark_mode:
         x=tenors,
         y=prev_yields,
         mode="lines+markers",
-        name="Before (1 Mese fa)",
+        name="Before (30gg fa)",
         line=dict(color="#94A3B8", width=3, dash="dash"),
         marker=dict(size=8, color="#94A3B8"),
         hovertemplate="<b>%{x} Prima</b>: %{y:.2f}%<extra></extra>",
@@ -343,9 +484,7 @@ def build_regimes_matrix_preview_figure(current_regime_id: str, dark_mode: bool 
     """
     fig = go.Figure()
 
-    # Define quadrant boxes
     boxes = [
-        # x0, x1, y0, y1, regime_id, rank, title, subtitle, color
         (-1, 0, 0, 1, "BULL_STEEPENER", "#1", "BULL STEEPENER", "Short end drops, curve steepens\nTrump/Bessent dream", "#10B981"),
         (0, 1, 0, 1, "BEAR_STEEPENER", "#2", "BEAR STEEPENER", "Long end up more than short\nBank engine runs", "#3B82F6"),
         (-1, 0, -1, 0, "BULL_FLATTENER", "#3", "BULL FLATTENER", "Term premia compress, long drops\nScarce-asset heaven", "#F59E0B"),

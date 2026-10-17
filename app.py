@@ -692,6 +692,67 @@ with tabs[3]:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
+    # Inversion Status Banner & Dual-Spread Inversion Cards
+    inv = yc_state.inversion
+    inv_bg = "rgba(239, 68, 68, 0.15)" if inv.inversion_status == "INVERTED" else (
+        "rgba(245, 158, 11, 0.15)" if "UNINVERTING" in inv.inversion_status else "rgba(16, 185, 129, 0.12)"
+    )
+    inv_border = "#EF4444" if inv.inversion_status == "INVERTED" else (
+        "#F59E0B" if "UNINVERTING" in inv.inversion_status else "#10B981"
+    )
+
+    st.markdown(f"""
+    <div style="background: {inv_bg}; border: 1.5px solid {inv_border}; border-radius: 10px; padding: 14px 18px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <span style="font-size: 14px; font-weight: 800; color: #FFFFFF;">STATO GEOMETRICO CURVA:</span> 
+                <span style="font-size: 14px; font-weight: 700; color: {inv_border}; margin-left: 8px;">{inv.inversion_status_badge}</span>
+            </div>
+            <div>
+                <span style="font-size: 12px; color: #94A3B8;">Rischio Recessione da Curva:</span> 
+                <b style="font-size: 13px; color: #FFFFFF; background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 4px;">{inv.recession_warning_level}</b>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Inversion Spreads Row (2s10s and 3m10s)
+    col_inv1, col_inv2, col_inv3 = st.columns(3)
+    with col_inv1:
+        st.markdown(f"""
+        <div class="kpi-card" style="border-left: 4px solid {'#EF4444' if inv.is_2s10s_inverted else '#10B981'};">
+            <div class="kpi-title">Spread Benchmark 2Y-10Y</div>
+            <div class="kpi-main-val" style="color: {'#EF4444' if inv.is_2s10s_inverted else '#10B981'}; font-size: 20px;">
+                {inv.spread_2s10s_bps:+.1f} bps
+            </div>
+            <div class="kpi-sub-val">{"⚠️ INVERTITO" if inv.is_2s10s_inverted else "🟢 POSITIVO (Normale)"} (Var 30gg: {inv.delta_2s10s_bps:+.1f} bps)</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_inv2:
+        st.markdown(f"""
+        <div class="kpi-card" style="border-left: 4px solid {'#EF4444' if inv.is_3m10y_inverted else '#10B981'};">
+            <div class="kpi-title">Spread Fed Monitor 3M-10Y</div>
+            <div class="kpi-main-val" style="color: {'#EF4444' if inv.is_3m10y_inverted else '#10B981'}; font-size: 20px;">
+                {inv.spread_3m10y_bps:+.1f} bps
+            </div>
+            <div class="kpi-sub-val">{"⚠️ INVERTITO" if inv.is_3m10y_inverted else "🟢 POSITIVO"} (Var 30gg: {inv.delta_3m10y_bps:+.1f} bps)</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_inv3:
+        st.markdown(f"""
+        <div class="kpi-card">
+            <div class="kpi-title">Spread Estremo 3M-30Y</div>
+            <div class="kpi-main-val" style="color: #38BDF8; font-size: 20px;">
+                {yc_state.current_slope_3m30y_bps:+.1f} bps
+            </div>
+            <div class="kpi-sub-val">Inclinazione complessiva del ciclo</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
     # Main comparison chart and 2x2 regime matrix
     yc_col_left, yc_col_right = st.columns([3, 2])
     with yc_col_left:
@@ -715,6 +776,41 @@ with tabs[3]:
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # DEEP CREDIT TRANSMISSION PANEL
+    st.markdown("##### 🏦 Matrice di Trasmissione del Credito Bancario & Standard di Fido")
+    cred = yc_state.credit_analysis
+    c_card1, c_card2, c_card3 = st.columns(3)
+    with c_card1:
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; height: 100%;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700; margin-bottom: 6px;">Margine di Interesse (NIM)</div>
+            <div style="font-size: 13px; font-weight: 700; color: #F8FAFC; margin-bottom: 6px;">{cred.net_interest_margin_impact}</div>
+            <div style="font-size: 11px; color: #94A3B8; line-height: 1.4;">{cred.sloos_interpretation}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with c_card2:
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; height: 100%;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700; margin-bottom: 6px;">Standard di Prestito (SLOOS)</div>
+            <div style="font-size: 13px; font-weight: 700; color: #F8FAFC; margin-bottom: 6px;">{cred.bank_lending_standards}</div>
+            <div style="font-size: 11px; color: #94A3B8; line-height: 1.4;">Direzione Impulso Credito: <b style="color: #FFFFFF;">{cred.credit_impulse_direction}</b></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with c_card3:
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; height: 100%;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700; margin-bottom: 6px;">Rischio Rollover & Rifinanziamento</div>
+            <div style="font-size: 13px; font-weight: 700; color: #F8FAFC; margin-bottom: 6px;">{cred.corporate_refinancing_risk}</div>
+            <div style="font-size: 11px; color: #94A3B8; line-height: 1.4;"><b>Verdetto SPIDER:</b> {cred.summary_verdict}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
 
     # Points table and asset allocation guidance
     col_pts, col_alloc = st.columns([1, 1])
