@@ -1,0 +1,19 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# SQLite Database Cache
+data/*.db
+data/*.sqlite
+
+# Environment and local settings
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# OS metadata
+.DS_Store
+Thumbs.db
