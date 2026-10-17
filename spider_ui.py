@@ -152,16 +152,18 @@ def build_spider_web_figure(
             y_mid = (yA + yB) / 2.0
             badge_text = f"{link.active_corr:+.2f}" if link.is_master else f"|Z|={link.z_score_tension:.1f}"
 
+            corr_dir_label = "🟢 Positiva (Coerente)" if link.active_corr > 0 else "🔴 Negativa / Inversa"
             hover_html = (
                 f"<b>🕸️ FILO SPIDER: {link.id}</b><br>"
                 f"<b>{link.node_a_name} ↔ {link.node_b_name}</b><br>"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━<br>"
                 f"• Stato Tensione: <b>{link.status}</b> (|Z| = {link.z_score_tension:.2f})<br>"
-                f"• Correlazione Rolling: <b>{link.active_corr:+.2f}</b> (Teorica: {link.theoretical_corr:+d})<br>"
+                f"• Relazione Teorica: <b>{'+1 (Diretta / Positiva)' if link.theoretical_corr > 0 else '-1 (Inversa)'}</b><br>"
+                f"• Correlazione Rolling: <b>{link.active_corr:+.2f}</b> ({corr_dir_label})<br>"
                 f"• Valore A: {link.node_a_val:,.2f} (Δ: {link.node_a_delta:+,.2f})<br>"
                 f"• Valore B: {link.node_b_val:,.2f} (Δ: {link.node_b_delta:+,.2f})<br>"
-                f"• Meccanismo: {link.mechanism}<br>"
-                f"• Allarme Macro: <i>{link.alert_description}</i>"
+                f"• Meccanismo Macro: {link.mechanism}<br>"
+                f"• Diagnosi SPIDER: <i>{link.alert_description}</i>"
             )
 
             fig.add_trace(go.Scatter(
