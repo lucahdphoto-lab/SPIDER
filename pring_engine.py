@@ -217,33 +217,54 @@ class PringCycleEngine:
 
         asset_statuses: Dict[str, PringAssetStatus] = {}
 
-        # 1. Evaluate Bonds
+        # 1. Evaluate Bonds (Market Prices & Yields)
+        # Martin Pring Principle: Bonds Bull = Bond PRICES rising (Yields falling).
+        # We fetch the primary US Treasury ETF price proxy (TLT 20Y / IEF 7-10Y).
         bonds_series = None
-        if "YIELD_US10" in self.df and len(self.df["YIELD_US10"]) > 5:
-            # Synthetic 10Y Bond Price proxy: Price ~ 1000 / (1 + yield/100)^7
-            y10 = self.df["YIELD_US10"]
-            bonds_series = 1000.0 / ((1.0 + (y10 / 100.0)) ** 7.0)
-        else:
-            dates = pd.date_range(end=pd.Timestamp.now(), periods=252, freq="B")
-            bonds_series = pd.Series(700.0, index=dates)
+        b_symbol = "iShares 20+ Year Treasury Bond ETF (TLT)"
+        try:
+            import yfinance as yf
+            tlt = yf.Ticker("TLT").history(period="2y")
+            if tlt is not None and not tlt.empty and "Close" in tlt and len(tlt) > 30:
+                c = tlt["Close"].dropna()
+                idx = pd.to_datetime(c.index).tz_localize(None).normalize()
+                bonds_series = pd.Series(c.values, index=idx, name="TLT")
+        except Exception:
+            bonds_series = None
+
+        if bonds_series is None or bonds_series.empty:
+            if "YIELD_US10" in self.df and len(self.df["YIELD_US10"]) > 5:
+                # Synthetic Bond Price: inverse to 10Y yields
+                y10 = self.df["YIELD_US10"]
+                bonds_series = 1000.0 / ((1.0 + (y10 / 100.0)) ** 7.0)
+                b_symbol = "US 10Y Treasury (Prezzo Sintetico)"
+            else:
+                dates = pd.date_range(end=pd.Timestamp.now(), periods=252, freq="B")
+                bonds_series = pd.Series(80.0, index=dates)
 
         b_kst, b_kst_sig = compute_kst(bonds_series)
         b_sma200 = bonds_series.rolling(min(200, len(bonds_series))).mean()
-        b_curr = float(bonds_series.iloc[-1]) if len(bonds_series) > 0 else 700.0
+        b_curr = float(bonds_series.iloc[-1]) if len(bonds_series) > 0 else 80.0
         lookback_b = min(60, len(bonds_series))
         b_mom = float((b_curr / bonds_series.iloc[-lookback_b] - 1.0) * 100.0) if lookback_b > 0 else 0.0
-        b_bull = bool((b_curr >= b_sma200.iloc[-1]) and (b_kst.iloc[-1] > b_kst_sig.iloc[-1] or b_mom > 0))
+
+        # Rigorous Pring Intermarket Rule for Bonds:
+        # A true Bull market in bonds requires prices ABOVE 200d SMA AND positive momentum (or KST > signal).
+        # When bond prices are below 200d SMA or yields are pushing higher (TLT negative YTD), bonds are BEAR.
+        b_above_sma = bool(b_curr >= b_sma200.iloc[-1])
+        b_kst_bull = bool(b_kst.iloc[-1] > b_kst_sig.iloc[-1])
+        b_bull = bool(b_above_sma and (b_mom > 0 or b_kst_bull))
 
         asset_statuses["BONDS"] = PringAssetStatus(
-            name="Obbligazioni (Bonds 10Y)",
-            symbol="US 10Y Treasury (Prezzo)",
+            name="Obbligazioni (Bonds - Prezzo)",
+            symbol=b_symbol,
             current_price=b_curr,
-            trend_200d="BULL" if b_curr >= b_sma200.iloc[-1] else "BEAR",
+            trend_200d="BULL" if b_above_sma else "BEAR",
             momentum_60d_pct=b_mom,
             kst_val=float(b_kst.iloc[-1]),
             kst_signal=float(b_kst_sig.iloc[-1]),
             is_bullish=b_bull,
-            summary="Rialzista (Rendimenti in calo)" if b_bull else "Ribassista (Pressione Tassi)",
+            summary="Rialzista (Prezzi in salita / Rendimenti in calo)" if b_bull else "Ribassista (Prezzi compressi / Tassi elevati)",
         )
 
         # 2. Evaluate Stocks
