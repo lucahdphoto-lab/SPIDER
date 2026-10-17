@@ -39,6 +39,7 @@ from curve_regimes_engine import (
     yield_curve_engine,
     build_yield_curve_comparison_figure,
     build_regimes_matrix_preview_figure,
+    build_quadrants_comparison_grid_figure,
 )
 from spider_ui import (
     build_macro_regime_matrix_figure,
@@ -762,6 +763,67 @@ with tabs[3]:
     with yc_col_right:
         fig_matrix = build_regimes_matrix_preview_figure(yc_state.regime_id, dark_mode=True)
         st.plotly_chart(fig_matrix, use_container_width=True)
+
+        # Popup Modal Trigger & Definition
+        @st.dialog("🔍 Dettaglio Grafico & Caratteristiche dei 4 Regimi della Curva", width="large")
+        def show_quadrants_modal():
+            st.markdown("### 📊 I 4 Scenari della Curva dei Rendimenti (Framework Steno Research)")
+            st.caption("Visualizzazione grafica comparativa ('Before' tratteggiato vs 'After' continuo) delle quattro dinamiche di traslazione della curva, con frecce direzionali sulle scadenze guida 3M e 30Y.")
+
+            # 2x2 Subplots Figure
+            fig_grid = build_quadrants_comparison_grid_figure(dark_mode=True)
+            st.plotly_chart(fig_grid, use_container_width=True)
+
+            st.markdown("#### 📋 Tabella Sinottica delle Caratteristiche dei Tassi & del Credito")
+            df_regimes_table = pd.DataFrame([
+                {
+                    "Regime": "#1 BULL STEEPENER",
+                    "Dinamica Tasso Breve (3M / 2Y)": "⬇️ Crollo marcato (Tagli Fed)",
+                    "Dinamica Tasso Lungo (10Y / 30Y)": "➡️ Stabile o discesa lieve",
+                    "Pendenza Curva (Slope)": "↗️ Forte irripidimento (Steeper)",
+                    "Motore del Credito": "🟢 Massimo stimolo (NIM banche alle stelle)",
+                    "Driver Macro": "Allentamento monetario per rilanciare la crescita (Trump/Bessent dream)",
+                    "Asset Favoriti": "Small Cap (RUT), Banche, Real Estate",
+                },
+                {
+                    "Regime": "#2 BEAR STEEPENER",
+                    "Dinamica Tasso Breve (3M / 2Y)": "➡️ Stabile o lieve rialzo",
+                    "Dinamica Tasso Lungo (10Y / 30Y)": "⬆️ Forte rialzo (Premio a termine)",
+                    "Pendenza Curva (Slope)": "↗️ Irripidimento guidato dai lunghi",
+                    "Motore del Credito": "🟡 Il motore bancario gira ancora (Yield curve steep)",
+                    "Driver Macro": "Aspettative inflattive e massicce emissioni di debito pubblico",
+                    "Asset Favoriti": "Materie Prime, Energia, Titoli Value (Short TLT)",
+                },
+                {
+                    "Regime": "#3 BULL FLATTENER",
+                    "Dinamica Tasso Breve (3M / 2Y)": "➡️ Stabile o lieve discesa",
+                    "Dinamica Tasso Lungo (10Y / 30Y)": "⬇️ Forte calo (Compressione term premia)",
+                    "Pendenza Curva (Slope)": "↘️ Appiattimento guidato dai lunghi",
+                    "Motore del Credito": "🟠 Margini di intermediazione compressi",
+                    "Driver Macro": "Forte disinflazione o timori di rallentamento economico",
+                    "Asset Favoriti": "TLT / Long Treasuries, Big Tech ad alta duration, Oro",
+                },
+                {
+                    "Regime": "#4 BEAR FLATTENER",
+                    "Dinamica Tasso Breve (3M / 2Y)": "⬆️ Forte rialzo (Fed restrittiva)",
+                    "Dinamica Tasso Lungo (10Y / 30Y)": "➡️ Rialzo contenuto o freno",
+                    "Pendenza Curva (Slope)": "↘️ Appiattimento / Rischio inversione",
+                    "Motore del Credito": "🔴 Pressione sui margini bancari (Inasprimento selettivo)",
+                    "Driver Macro": "Politica monetaria restrittiva ('higher for longer') per frenare l'inflazione",
+                    "Asset Favoriti": "Cash monetario 1-3M (BIL/SGOV), USD (DXY), Quality",
+                },
+            ])
+            st.dataframe(df_regimes_table, use_container_width=True, hide_index=True)
+
+            st.markdown("""
+            > **Regola aurea di Sintesi:**  
+            > * I regimi **STEEPENER** (#1 e #2) aumentano la pendenza della curva favorendo la redditività del credito e il moltiplicatore monetario.  
+            > * I regimi **FLATTENER** (#3 e #4) comprimono il differenziale temporale, riducendo l'incentivo bancario alla trasformazione delle scadenze.
+            """)
+
+        # Button placed directly beneath the matrix
+        if st.button("🔎 Esplora Grafici Specifici & Tabella dei 4 Quadranti (Pop-up)", use_container_width=True, type="secondary"):
+            show_quadrants_modal()
 
         st.markdown(f"""
         <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 14px; margin-top: 10px;">

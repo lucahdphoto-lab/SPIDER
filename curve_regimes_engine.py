@@ -555,4 +555,107 @@ def build_regimes_matrix_preview_figure(current_regime_id: str, dark_mode: bool 
     return fig
 
 
+def build_quadrants_comparison_grid_figure(dark_mode: bool = True) -> go.Figure:
+    """
+    Renders an exact replication of the Steno Research 4 Yield-Curve Regimes graphic:
+    A 2x2 grid of small subplot curves comparing 'Before' (dashed gray) vs 'After' (solid colored)
+    for #1 Bull Steepener, #2 Bear Steepener, #3 Bull Flattener, and #4 Bear Flattener,
+    with directional arrows on 3M and 30Y tenors.
+    """
+    from plotly.subplots import make_subplots
+
+    bg_color = "#0B0F19" if dark_mode else "#FFFFFF"
+    paper_color = "#0F172A" if dark_mode else "#F8FAFC"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+    grid_color = "rgba(255, 255, 255, 0.08)" if dark_mode else "rgba(0, 0, 0, 0.08)"
+
+    tenors = ["3m", "2y", "5y", "10y", "30y"]
+
+    fig = make_subplots(
+        rows=2, cols=2,
+        subplot_titles=(
+            "<span style='color:#38BDF8; font-weight:bold;'>#1 BULL STEEPENER</span><br><span style='font-size:11px; color:#94A3B8;'>Short end drops, curve steepens.. Trump/Bessent dream</span>",
+            "<span style='color:#60A5FA; font-weight:bold;'>#2 BEAR STEEPENER</span><br><span style='font-size:11px; color:#94A3B8;'>Long end up more than short.. the bank engine still runs</span>",
+            "<span style='color:#F59E0B; font-weight:bold;'>#3 BULL FLATTENER</span><br><span style='font-size:11px; color:#94A3B8;'>Term premia compress, long end drops.. scarce-asset heaven</span>",
+            "<span style='color:#EF4444; font-weight:bold;'>#4 BEAR FLATTENER</span><br><span style='font-size:11px; color:#94A3B8;'>Short end up more than long.. restrictive / late-cycle</span>",
+        ),
+        vertical_spacing=0.18,
+        horizontal_spacing=0.10,
+    )
+
+    # 1. Bull Steepener: Baseline rises gently, After drops sharply at 3M
+    bs_before = [4.4, 4.6, 4.8, 5.0, 5.2]
+    bs_after  = [3.2, 3.5, 4.2, 4.9, 5.2]
+
+    # 2. Bear Steepener: Baseline normal, After rises sharply at 30Y
+    brs_before = [4.0, 4.2, 4.5, 4.8, 5.0]
+    brs_after  = [4.1, 4.3, 4.8, 5.4, 6.0]
+
+    # 3. Bull Flattener: Baseline normal, After drops sharply at 30Y
+    bf_before = [3.8, 4.1, 4.4, 4.7, 5.0]
+    bf_after  = [3.8, 3.9, 4.0, 4.1, 4.2]
+
+    # 4. Bear Flattener: Baseline normal, After rises sharply at 3M
+    brf_before = [3.4, 3.8, 4.2, 4.6, 5.0]
+    brf_after  = [4.8, 4.7, 4.7, 4.8, 5.1]
+
+    quadrants_data = [
+        (1, 1, bs_before, bs_after, "#38BDF8", "down", "3m", 4.4, 3.2),
+        (1, 2, brs_before, brs_after, "#1E40AF", "up", "30y", 5.0, 6.0),
+        (2, 1, bf_before, bf_after, "#334155", "down", "30y", 5.0, 4.2),
+        (2, 2, brf_before, brf_after, "#DC2626", "up", "3m", 3.4, 4.8),
+    ]
+
+    for row, col, y_bef, y_aft, line_col, arr_dir, arr_tenor, y_start, y_end in quadrants_data:
+        show_leg = (row == 1 and col == 1)
+
+        # Before (dashed)
+        fig.add_trace(go.Scatter(
+            x=tenors, y=y_bef, mode="lines",
+            line=dict(color="#94A3B8", width=2, dash="dash"),
+            name="Before", showlegend=show_leg,
+        ), row=row, col=col)
+
+        # After (solid)
+        fig.add_trace(go.Scatter(
+            x=tenors, y=y_aft, mode="lines",
+            line=dict(color=line_col, width=3.5),
+            name="After", showlegend=show_leg,
+        ), row=row, col=col)
+
+        # Directional arrow
+        arr_color = line_col
+        fig.add_annotation(
+            x=arr_tenor, y=y_end,
+            ax=arr_tenor, ay=y_start,
+            xref=f"x{'' if (row==1 and col==1) else (col if row==1 else (col+2))}",
+            yref=f"y{'' if (row==1 and col==1) else (col if row==1 else (col+2))}",
+            showarrow=True, arrowhead=2, arrowsize=1.2, arrowwidth=2.5,
+            arrowcolor=arr_color,
+        )
+
+    fig.update_layout(
+        plot_bgcolor=paper_color,
+        paper_bgcolor=bg_color,
+        font=dict(color=text_color),
+        height=540,
+        margin=dict(l=30, r=30, t=60, b=30),
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.04, xanchor="right", x=1,
+            font=dict(size=12, color=text_color)
+        ),
+    )
+
+    for i in range(1, 5):
+        axis_name_x = "xaxis" if i == 1 else f"xaxis{i}"
+        axis_name_y = "yaxis" if i == 1 else f"yaxis{i}"
+        fig.update_layout({
+            axis_name_x: dict(gridcolor=grid_color, zeroline=False, tickfont=dict(size=11, color=text_color)),
+            axis_name_y: dict(gridcolor=grid_color, zeroline=False, tickfont=dict(size=10, color=text_color), showticklabels=False),
+        })
+
+    return fig
+
+
 yield_curve_engine = YieldCurveEngine()
+
