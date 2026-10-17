@@ -134,9 +134,14 @@ def build_spider_web_figure(
             if quadA != filter_quadrant and quadB != filter_quadrant:
                 is_focused = False
 
-        line_color = link.color_hex if is_focused else ("rgba(255,255,255,0.06)" if dark_mode else "rgba(0,0,0,0.06)")
-        line_width = link.line_width * (1.3 if is_focused and selected_node_id else 1.0) if is_focused else 0.8
-        dash_style = link.line_dash if is_focused else "dot"
+        if selected_node_id and selected_node_id != "SPIDER_CORE":
+            line_color = link.color_hex if is_focused else ("rgba(255,255,255,0.03)" if dark_mode else "rgba(0,0,0,0.03)")
+            line_width = (link.line_width * 1.5) if is_focused else 0.5
+            dash_style = link.line_dash if is_focused else "dot"
+        else:
+            line_color = link.color_hex if is_focused else ("rgba(255,255,255,0.06)" if dark_mode else "rgba(0,0,0,0.06)")
+            line_width = link.line_width if is_focused else 0.8
+            dash_style = link.line_dash if is_focused else "dot"
 
         fig.add_trace(go.Scatter(
             x=[xA, xB],
@@ -204,21 +209,26 @@ def build_spider_web_figure(
         quad_info = QUADRANTS.get(n_def.quadrant, {"color": "#38BDF8"})
         base_color = quad_info["color"]
 
-        if n_state and abs(n_state.z_score) >= Z_SCORE_CRITICAL:
-            node_fill = "#D946EF" if not is_dimmed else "rgba(217, 70, 239, 0.2)"
+        if is_dimmed:
+            # High-contrast dimming: very low opacity, no border, smaller size
+            node_fill = "rgba(71, 85, 105, 0.15)"
+            node_border = "rgba(255, 255, 255, 0.05)"
+            size = 10
+        elif n_state and abs(n_state.z_score) >= Z_SCORE_CRITICAL:
+            node_fill = "#D946EF"
             node_border = "#FFFFFF"
             size = 22
         elif n_state and abs(n_state.z_score) >= Z_SCORE_NORMAL:
-            node_fill = "#F59E0B" if not is_dimmed else "rgba(245, 158, 11, 0.2)"
+            node_fill = "#F59E0B"
             node_border = "#FCD34D"
             size = 18
         else:
-            node_fill = base_color if not is_dimmed else "rgba(100, 116, 139, 0.2)"
+            node_fill = base_color
             node_border = "#FFFFFF" if (selected_node_id == n_id) else "rgba(255,255,255,0.4)"
             size = 16
 
         if selected_node_id == n_id:
-            size = 26
+            size = 28
             node_border = "#38BDF8"
 
         node_x.append(x)
@@ -226,7 +236,7 @@ def build_spider_web_figure(
         node_colors.append(node_fill)
         node_border_colors.append(node_border)
         node_sizes.append(size)
-        node_labels.append(n_id if show_labels else "")
+        node_labels.append(n_id if (show_labels and (not is_dimmed or selected_node_id == n_id)) else "")
 
         val_str = f"{n_state.current_value:,.2f} {n_state.unit}" if n_state else "N/D"
         delta_str = f"{n_state.delta_period:+,.2f} ({n_state.delta_period_pct:+.2f}%)" if n_state else "N/D"
@@ -262,6 +272,7 @@ def build_spider_web_figure(
         textposition="top center",
         textfont=dict(size=9.5, color=text_color, family="Inter, sans-serif"),
         hovertext=node_hovertexts,
+        customdata=list(NODES.keys())[:len(node_x)],
         hoverinfo="text",
         name="Peripheral_Nodes",
         showlegend=False,

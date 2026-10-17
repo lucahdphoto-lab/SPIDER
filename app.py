@@ -423,7 +423,25 @@ with tabs[0]:
         show_labels=toggle_labels,
         dark_mode=True,
     )
-    st.plotly_chart(fig_web, use_container_width=True)
+    
+    chart_event = st.plotly_chart(
+        fig_web,
+        use_container_width=True,
+        on_select="rerun",
+        selection_mode=["points"],
+        key="spider_web_chart_selection"
+    )
+
+    # If the user clicks on any node directly on the web, isolate it instantly!
+    if chart_event and "selection" in chart_event and chart_event["selection"].get("points"):
+        pts = chart_event["selection"]["points"]
+        if pts and "customdata" in pts[0] and pts[0]["customdata"]:
+            clicked_node = pts[0]["customdata"]
+            if isinstance(clicked_node, list):
+                clicked_node = clicked_node[0]
+            if clicked_node in NODES and st.session_state.get("selected_node") != clicked_node:
+                st.session_state["selected_node"] = clicked_node
+                st.rerun()
 
     st.markdown("""
     <div style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 16px; font-size: 12px; color: #94A3B8; display: flex; flex-wrap: wrap; gap: 20px;">
