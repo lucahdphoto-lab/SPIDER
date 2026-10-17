@@ -879,11 +879,13 @@ with tabs[3]:
         * **Impatto sul Credito:** Il margine di interesse si assottiglia. Il credito rallenta progressivamente.
         * **Asset Chiave:** **TLT e Treasury a lungo termine (rally dei prezzi)**, Big Tech / Growth a lungo orizzonte, Asset scarsi (Oro, Bitcoin), Difensivi.
 
-        #### 4. #4 BEAR FLATTENER (Stretta Monetaria / "The Cycle KILLER")
-        * **Dinamica dei Tassi:** La parte a breve sale molto più della parte a lunga.
-        * **Causa:** Le banche centrali alzano aggressivamente i tassi per domare l'inflazione persistente, invertendo o appiattendo la curva.
-        * **Impatto sul Credito:** **Strozza il credito bancario.** Prestare a lungo termine costa più che finanziarsi a breve: le banche restringono drasticamente gli standard di erogazione, portando verso la recessione.
-        * **Asset Chiave:** Cash / Liquidità monetaria a 1-3 mesi (BIL/SGOV), Dollaro USA (DXY); **sottopesare azioni cicliche e debito speculativo High Yield**.
+        #### 4. #4 BEAR FLATTENER (Stretta Monetaria / Late-Cycle Test)
+        * **Dinamica dei Tassi:** La parte a breve sale più velocemente della parte a lunga.
+        * **Causa:** Le banche centrali mantengono o rialzano i tassi guida a fronte di un'inflazione ancora resiliente (*higher for longer*).
+        * **Impatto sul Credito:** 
+          - *Se la curva è invertita (< 0 bps):* Diventa il classico **'Cycle Killer'** che affama il credito e costringe le banche a chiudere i rubinetti del prestito.
+          - *Se la curva è ancora positiva (> +15/30 bps, contesto attuale):* Il credito non subisce un credit crunch (i dati ufficiali **Fed SLOOS** mostrano standard fermi e l'indice **Chicago Fed NFCI a -0.50** segnala condizioni distese); si assiste invece a un test selettivo sui margini di interesse e a un rallentamento controllato.
+        * **Asset Chiave:** Cash / Liquidità monetaria a 1-3 mesi (BIL/SGOV), Dollaro USA (DXY), Titoli difensivi Quality; **sottopesare TLT / Long Treasuries per via dei tassi terminali alti**.
         """)
 
 

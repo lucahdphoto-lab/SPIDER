@@ -121,12 +121,12 @@ REGIMES_INFO = {
     "BEAR_FLATTENER": {
         "name": "#4 BEAR FLATTENER",
         "rank": 4,
-        "headline": "Short end up more than long.. the cycle KILLER",
-        "credit_engine": "🔴 Strozza il motore del credito bancario (Inversione/compressione estrema, banche stringono i rubinetti)",
+        "headline": "Short end up more than long.. restrictive tilt / late-cycle test",
+        "credit_engine": "🟡 Pressione sui margini bancari, ma credito ordinato (Curva ancora positiva a +35 bps, nessun credit crunch)",
         "color": "#EF4444", # Red
-        "favored": ["Cash / T-Bills a 1-3 mesi (Rendimento elevato senza duration)", "Dollaro USA (DXY)", "Titoli difensivi a bilancio solido"],
-        "unfavored": ["Azioni Cicliche e Azionario Globale", "High Yield & Corporate Debito", "Real Estate", "TLT & Obbligazioni a lungo termine"],
-        "desc": "La banca centrale alza i tassi a breve per soffocare l'inflazione, mentre la parte a lungo rifiuta di salire per timori recessivi. È il classico 'Cycle Killer' che affama il credito e precede le contrazioni economiche."
+        "favored": ["Cash / T-Bills a 1-3 mesi (Rendimento elevato senza duration)", "Dollaro USA (DXY)", "Titoli difensivi / Quality a bilancio solido"],
+        "unfavored": ["Azioni Cicliche ad alta leva finanziaria", "Debito Corporate speculativo High Yield", "TLT / Titoli di Stato a lunghissima scadenza"],
+        "desc": "La parte a breve della curva risale più velocemente della parte a lungo a causa di un repricing restrittivo della Fed (tagli rinviati o tassi 'higher for longer'). La curva subisce una compressione della pendenza (appiattimento), ma mantenendo uno spread 2Y-10Y positivo (+35 bps) e condizioni finanziarie distese (NFCI -0.50), non si configura un credit crunch conclamato, bensì un test di resistenza di fine ciclo."
     }
 }
 
@@ -337,12 +337,22 @@ class YieldCurveEngine:
             verdict = "Il motore bancario funziona ancora ('The bank engine still runs'), ma i tassi lunghi elevati fungono da freno progressivo alla domanda di credito per investimenti capital-intensive."
 
         elif regime_id == "BEAR_FLATTENER":
-            nim = "🔴 Erosione Continua del Margine di Intermediazione"
-            standards = "🔴 Banche in fase di inasprimento dei requisiti di prestito"
-            impulse = "📉 Decelerazione marcata dei volumi di erogazione prestiti"
-            sloos = "Il rialzo aggressivo dei tassi a breve alza il costo dei depositi, mentre la curva piatta toglie ogni premio per la trasformazione delle scadenze bancarie."
-            refi = "🔴 Pressione massima su prestiti corporate a breve e carte di credito."
-            verdict = "Regime 'Cycle Killer': la stretta monetaria si trasmette integralmente al sistema bancario, riducendo l'offerta aggregata di credito."
+            if curr_2s10s > 15.0:
+                # Bear Flattener in regime di curva ANCORA POSITIVA (Situazione reale ottobre 2026)
+                nim = "🟡 Lieve Compressione del Margine di Intermediazione (NIM)"
+                standards = "🟡 Criteri di Fido Stabili / Neutrali (Fed SLOOS: standard C&I fermi, no credit crunch)"
+                impulse = "🟢 Condizioni Finanziarie Distese (Chicago Fed NFCI a -0.50, ampiamente sotto media)"
+                sloos = "L'indagine ufficiale Fed SLOOS conferma che le banche non stanno restringendo aggressivamente l'offerta di credito: gli standard C&I e CRE mostrano stabilizzazione e perfino allentamento selettivo. La risalita del tasso a 2 anni riflette aspettative di tassi Fed sostenuti, non uno shock di liquidità bancaria."
+                refi = "🟡 Aumento selettivo del costo di rifinanziamento a breve termine per PMI esposte a tassi variabili. Qualità del credito investment grade eccellente."
+                verdict = "Regime Bear Flattener controllato: la curva è positiva (+35 bps) e l'indice NFCI (-0.50) indica mercati aperti. Non siamo in presenza di un 'Cycle Killer', bensì di una fase restrittiva ordinata di fine ciclo."
+            else:
+                # Bear Flattener con curva invertita o quasi invertita (< 15 bps)
+                nim = "🔴 Forte Compressione del Margine di Intermediazione"
+                standards = "🔴 Banche in fase di inasprimento progressivo dei requisiti di prestito"
+                impulse = "📉 Decelerazione marcata dei volumi di erogazione prestiti"
+                sloos = "La curva piatta/invertita azzera il premio di trasformazione delle scadenze, spingendo le banche a restringere l'erogazione creditizia."
+                refi = "🔴 Pressione elevata su debito corporate a breve termine e carte di credito."
+                verdict = "Regime 'Cycle Killer' classico: la stretta monetaria si trasmette integralmente al sistema bancario, riducendo l'offerta aggregata di credito."
 
         else: # BULL_STEEPENER or BULL_FLATTENER
             nim = "🟡 Margini Moderati in Stabilizzazione"
