@@ -443,8 +443,43 @@ with tabs[0]:
                 st.session_state["selected_node"] = clicked_node
                 st.rerun()
 
+    # External dedicated analytical card (displayed cleanly outside the graph canvas so it never blocks nodes)
+    if active_isolated_id and active_isolated_id in node_states:
+        ns = node_states[active_isolated_id]
+        nd = NODES[active_isolated_id]
+        connected_links = [l for l in link_states if l.node_a_id == active_isolated_id or l.node_b_id == active_isolated_id]
+
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.95); border: 1.5px solid #38BDF8; border-radius: 12px; padding: 18px 22px; margin-top: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #38BDF8; font-weight: 700;">🔍 SCHEDA NODO SELEZIONATO (ESTERNA AL GRAFICO)</span>
+                    <div style="font-size: 22px; font-weight: 800; color: #F8FAFC; margin-top: 2px;">{nd.name} <span style="font-size: 16px; color: #94A3B8;">[{active_isolated_id}]</span></div>
+                    <div style="font-size: 13px; color: #94A3B8; margin-top: 4px;">{nd.description}</div>
+                </div>
+                <div style="display: flex; gap: 16px; align-items: center;">
+                    <div style="text-align: right;">
+                        <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Valore Attuale</div>
+                        <div style="font-size: 20px; font-weight: 800; color: #F8FAFC; font-family: monospace;">{ns.current_value:,.2f} {ns.unit}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Z-Score Dinamico</div>
+                        <div style="font-size: 20px; font-weight: 800; color: {'#EF4444' if abs(ns.z_score) >= 2.0 else ('#F59E0B' if abs(ns.z_score) >= 1.25 else '#10B981')}; font-family: monospace;">{ns.z_score:+.2f}</div>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 24px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 12.5px; color: #CBD5E1; flex-wrap: wrap;">
+                <div><b>Variazione Periodo:</b> <span style="color: {'#10B981' if ns.delta_period >= 0 else '#EF4444'};">{ns.delta_period:+,.2f} ({ns.delta_period_pct:+.2f}%)</span></div>
+                <div><b>Variazione 1 Anno (YoY):</b> <span style="color: {'#10B981' if ns.delta_yoy >= 0 else '#EF4444'};">{ns.delta_yoy:+,.2f}</span></div>
+                <div><b>Fonte Ufficiale:</b> <span style="color: #F8FAFC;">{nd.source} ({nd.official_ticker})</span></div>
+                <div><b>Ultimo Rilascio:</b> <span style="color: #F8FAFC;">{ns.last_timestamp}</span></div>
+                <div><b>Connessioni Dirette nella Tela:</b> <span style="color: #38BDF8; font-weight: bold;">{len(connected_links)} collegamenti attivi</span></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.markdown("""
-    <div style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 16px; font-size: 12px; color: #94A3B8; display: flex; flex-wrap: wrap; gap: 20px;">
+    <div style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 16px; margin-top: 12px; font-size: 12px; color: #94A3B8; display: flex; flex-wrap: wrap; gap: 20px;">
         <div>🟢 <b>Verde Smeraldo:</b> Correlazione Positiva Diretta Normale</div>
         <div>🔴 <b>Rosso Corallo:</b> Correlazione Inversa Normale</div>
         <div>🟡 <b>Giallo Ambra:</b> Tensione Moderata (|Z| ≥ 1.25)</div>

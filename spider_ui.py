@@ -190,6 +190,7 @@ def build_spider_web_figure(
     node_hovertexts = []
     node_border_colors = []
 
+    node_customdata = []
     for n_id, n_def in NODES.items():
         if n_id not in coords:
             continue
@@ -210,10 +211,10 @@ def build_spider_web_figure(
         base_color = quad_info["color"]
 
         if is_dimmed:
-            # High-contrast dimming: very low opacity, no border, smaller size
-            node_fill = "rgba(71, 85, 105, 0.15)"
-            node_border = "rgba(255, 255, 255, 0.05)"
-            size = 10
+            # Ultra-low opacity so focus nodes and lines pop out with maximum contrast
+            node_fill = "rgba(51, 65, 85, 0.12)"
+            node_border = "rgba(255, 255, 255, 0.03)"
+            size = 9
         elif n_state and abs(n_state.z_score) >= Z_SCORE_CRITICAL:
             node_fill = "#D946EF"
             node_border = "#FFFFFF"
@@ -237,25 +238,17 @@ def build_spider_web_figure(
         node_border_colors.append(node_border)
         node_sizes.append(size)
         node_labels.append(n_id if (show_labels and (not is_dimmed or selected_node_id == n_id)) else "")
+        node_customdata.append(n_id)
 
         val_str = f"{n_state.current_value:,.2f} {n_state.unit}" if n_state else "N/D"
         delta_str = f"{n_state.delta_period:+,.2f} ({n_state.delta_period_pct:+.2f}%)" if n_state else "N/D"
-        yoy_str = f"{n_state.delta_yoy:+,.2f}" if n_state else "N/D"
         z_str = f"{n_state.z_score:+.2f}" if n_state else "0.00"
-        status_str = n_state.status if n_state else "Normale"
-        ts_str = n_state.last_timestamp if n_state else ""
 
+        # Sleek, non-obtrusive tooltip on the graph
         hover_card = (
-            f"<b>🏛️ NODO: {n_def.name} [{n_id}]</b><br>"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━━━<br>"
-            f"• Categoria: <b>{n_def.category}</b> (Anello {n_def.ring})<br>"
-            f"• Valore Attuale: <b>{val_str}</b><br>"
-            f"• Variazione Periodo: <b>{delta_str}</b><br>"
-            f"• Variazione YoY (1 Anno): <b>{yoy_str}</b><br>"
-            f"• Z-Score Dinamico: <b>{z_str}</b> ({status_str})<br>"
-            f"• Ruolo Intermarket: {n_def.role}<br>"
-            f"• Fonte Certificata: <b>{n_def.source}</b> ({n_def.official_ticker})<br>"
-            f"• Ultimo Rilascio: {ts_str}"
+            f"<b>{n_def.name} ({n_id})</b><br>"
+            f"Valore: <b>{val_str}</b> | Δ: <b>{delta_str}</b> | Z: <b>{z_str}</b><br>"
+            f"<i>👉 Clicca per bloccare il focus sui collegamenti</i>"
         )
         node_hovertexts.append(hover_card)
 
@@ -272,7 +265,7 @@ def build_spider_web_figure(
         textposition="top center",
         textfont=dict(size=9.5, color=text_color, family="Inter, sans-serif"),
         hovertext=node_hovertexts,
-        customdata=list(NODES.keys())[:len(node_x)],
+        customdata=node_customdata,
         hoverinfo="text",
         name="Peripheral_Nodes",
         showlegend=False,
