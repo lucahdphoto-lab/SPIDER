@@ -176,17 +176,20 @@ class SpiderQuantEngine:
             val_1y_ago = float(s_full.iloc[-yoy_pts]) if yoy_pts > 0 else curr_val
             delta_yoy = curr_val - val_1y_ago
 
-            # For high-frequency market asset nodes, compute Z-score relative to selected rolling window
-            # For macro/rate series with low frequency (Ring 1 & 2), standardize relative to 3Y history (756 business days)
-            # to avoid artificially inflating Z-scores when 30D variance is close to zero.
+            # Econometrically calibrated lookback for Z-scores:
+            # - Ring 1 & 2 (Monetary policy & Macro): 3Y structural lookback (756 business days)
+            # - Ring 3 (Equities, FX, Commodities, Spreads): 1Y intermediate lookback (252 business days)
+            # This avoids short-term window compression where high-flying assets get negative Z-scores.
             if n_def.ring in [1, 2]:
                 hist_lookback = min(len(s_full), 756)
                 s_baseline = s_full.iloc[-hist_lookback:]
                 mean_val = float(s_baseline.mean())
                 std_val = float(s_baseline.std())
             else:
-                mean_val = float(s_recent.mean())
-                std_val = float(s_recent.std())
+                lookback_len = min(len(s_full), 252)
+                s_baseline = s_full.iloc[-lookback_len:]
+                mean_val = float(s_baseline.mean())
+                std_val = float(s_baseline.std())
 
             if std_val > 1e-4:
                 z_score = (curr_val - mean_val) / std_val
@@ -288,6 +291,77 @@ class SpiderQuantEngine:
                 line_width = max(1.2, float(abs(active_r) * 3.5))
                 line_dash = "solid" if abs(active_r) > 0.25 else "dot"
 
+            # Contextual Macro Diagnostic Generator:
+            # Replaces generic hypothetical text with exact empirical status of the link
+            dynamic_alert = m_def.alert_description
+            if link_id == "LINK_01":
+                if zA > 0.5 and zB < -0.5:
+                    dynamic_alert = f"Divergenza Recessiva: Inflazione elevata ({node_states[nA_id].current_value:.2f}%) con crollo rendimenti 2Y ({node_states[nB_id].current_value:.2f}%) segnala aspettative di pivot forzato."
+                elif zA > 0.0 and zB > 0.0:
+                    dynamic_alert = f"Coerenza Restrittiva: Inflazione sopra target ({node_states[nA_id].current_value:.2f}%) mantiene elevati i rendimenti a 2Y ({node_states[nB_id].current_value:.2f}%)."
+                else:
+                    dynamic_alert = f"Divergenza empirica su Inflazione Core ({node_states[nA_id].current_value:.2f}%) vs Treasury 2Y ({node_states[nB_id].current_value:.2f}%)."
+            elif link_id == "LINK_02":
+                if zA > 0.5 and zB > 0.5:
+                    dynamic_alert = f"Divergenza Euforica: Rendimenti reali alti ({node_states[nA_id].current_value:.2f}%) e Nasdaq ai massimi, multipli a rischio di violento repricing."
+                elif zA > 0.5 and zB <= 0.5:
+                    dynamic_alert = f"Pressione Valutazioni: Rendimenti reali restrittivi ({node_states[nA_id].current_value:.2f}%) frenano l'espansione dei multipli Big Tech."
+                else:
+                    dynamic_alert = f"Dinamica Tassi Reali ({node_states[nA_id].current_value:.2f}%) vs Nasdaq ({node_states[nB_id].current_value:,.0f})."
+            elif link_id == "LINK_03":
+                if zA > 0.5 and zB > 0.5:
+                    dynamic_alert = f"Accumulazione Istituzionale: Oro in rally (${node_states[nB_id].current_value:,.0f}/oz) nonostante tassi reali positivi ({node_states[nA_id].current_value:.2f}%), domanda di protezione sovrana/de-dollarizzazione."
+                elif zA > 0.5 and zB <= 0.5:
+                    dynamic_alert = f"Concorrenza Cedolare: Tassi reali positivi ({node_states[nA_id].current_value:.2f}%) aumentano il costo opportunità di detenere oro."
+                else:
+                    dynamic_alert = f"Dinamica TIPS Reali ({node_states[nA_id].current_value:.2f}%) vs Oro (${node_states[nB_id].current_value:,.0f}/oz)."
+            elif link_id == "LINK_04":
+                if zA < -0.5 and zB > 0.5:
+                    dynamic_alert = f"Inflazione Strutturale: Petrolio debole (${node_states[nA_id].current_value:.2f}) ma aspettative d'inflazione elevate ({node_states[nB_id].current_value:.2f}%), pressioni salariali radicate."
+                elif zA > 0.5 and zB > 0.5:
+                    dynamic_alert = f"Spinta Energetica: Petrolio elevato (${node_states[nA_id].current_value:.2f}/bbl) sostiene le aspettative d'inflazione forward ({node_states[nB_id].current_value:.2f}%)."
+                else:
+                    dynamic_alert = f"Trasmissione Petrolio (${node_states[nA_id].current_value:.2f}) su Aspettative 5Y5Y ({node_states[nB_id].current_value:.2f}%)."
+            elif link_id == "LINK_05":
+                if zA > 0.5 and zB < 0.0:
+                    dynamic_alert = f"Curva Dietro la Curva: Sussidi disoccupazione in rialzo ({node_states[nA_id].current_value:,.0f}) con curva ancora compressa/invertita."
+                elif zB > 0.0:
+                    dynamic_alert = f"Normalizzazione Pendenza: Curva positiva (+{node_states[nB_id].current_value:.0f} bps) coerente con sussidi disoccupazione stabili ({node_states[nA_id].current_value:,.0f})."
+                else:
+                    dynamic_alert = f"Dinamica Sussidi ({node_states[nA_id].current_value:,.0f}) vs Spread 10Y-2Y ({node_states[nB_id].current_value:+.0f} bps)."
+            elif link_id == "LINK_06":
+                if zA > 0.5 and zB > 0.5:
+                    dynamic_alert = f"Fragilità Creditizia: Small Cap in rally mentre gli spread High Yield si allargano a {node_states[nA_id].current_value:.2f}%."
+                elif zA <= 0.0:
+                    dynamic_alert = f"Condizioni Credito Distese: Spread High Yield compressi ({node_states[nA_id].current_value:.2f}%), assenza di stress creditizio sistemico per le small cap."
+                else:
+                    dynamic_alert = f"Divergenza Spread HY ({node_states[nA_id].current_value:.2f}%) vs Russell 2000 ({node_states[nB_id].current_value:,.0f})."
+            elif link_id == "LINK_07":
+                dynamic_alert = f"Differenziale Tassi: US 2Y al {node_states[nA_id].current_value:.2f}% guida i flussi sul dollaro con EUR/USD a {node_states[nB_id].current_value:.4f}."
+            elif link_id == "LINK_08":
+                if zA > 0.5 and zB > 0.5:
+                    dynamic_alert = f"Divergenza Dollaro/Azionario: Dollar Index DXY tonico ({node_states[nA_id].current_value:.2f}) e S&P 500 ai massimi ({node_states[nB_id].current_value:,.0f}), gli asset USA agiscono da polo di attrazione globale della liquidità."
+                elif zA > 0.5 and zB < -0.5:
+                    dynamic_alert = f"Restrizione Finanziaria: Dollaro forte ({node_states[nA_id].current_value:.2f}) deprime i multipli e gli utili esteri dell'azionario."
+                else:
+                    dynamic_alert = f"Condizioni Finanziarie: Dollar Index DXY a {node_states[nA_id].current_value:.2f} vs S&P 500 a {node_states[nB_id].current_value:,.0f}."
+            elif link_id == "LINK_09":
+                if zA < -0.8 and zB > 0.5:
+                    dynamic_alert = f"Allarme Rallentamento: Rame in forte ribasso (${node_states[nA_id].current_value:.2f}) anticipa un ciclo manifatturiero in frenata."
+                elif zA > 0.5 and zB <= 0.0:
+                    dynamic_alert = f"Divergenza Anticipatoria: Rame tonico (${node_states[nA_id].current_value:.2f}/lb, Z={zA:+.2f}) anticipa una riaccelerazione manifatturiera non ancora visibile nei dati industriali storici (+{node_states[nB_id].current_value:.2f}% YoY)."
+                elif zA >= 0.0 and zB >= 0.0:
+                    dynamic_alert = f"Ciclo Manifatturiero Espansivo: Rame tonico (${node_states[nA_id].current_value:.2f}/lb) coerente con produzione industriale in espansione (+{node_states[nB_id].current_value:.2f}% YoY)."
+                else:
+                    dynamic_alert = f"Dinamica Rame (${node_states[nA_id].current_value:.2f}/lb) vs Produzione Industriale (+{node_states[nB_id].current_value:.2f}% YoY)."
+            elif link_id == "LINK_10":
+                if zA > 0.5 and zB > 0.5:
+                    dynamic_alert = f"Rischio Asimmetrico: FTSE MIB sale nonostante allargamento anomalo dello spread BTP/Bund ({node_states[nA_id].current_value:.0f} bps)."
+                elif zA <= 0.0:
+                    dynamic_alert = f"Stabilità Sovrana: Spread BTP/Bund contenuto a {node_states[nA_id].current_value:.0f} bps mantiene solido il settore bancario e il FTSE MIB."
+                else:
+                    dynamic_alert = f"Dinamica Spread BTP/Bund ({node_states[nA_id].current_value:.0f} bps) vs FTSE MIB ({node_states[nB_id].current_value:,.0f})."
+
             link_states.append(LinkState(
                 id=link_id,
                 node_a_id=nA_id,
@@ -308,7 +382,7 @@ class SpiderQuantEngine:
                 line_width=line_width,
                 line_dash=line_dash,
                 mechanism=m_def.mechanism,
-                alert_description=m_def.alert_description,
+                alert_description=dynamic_alert,
                 is_master=True,
                 weight=m_def.weight,
             ))
@@ -389,66 +463,71 @@ class SpiderQuantEngine:
         link_states: List[LinkState]
     ) -> SpiderCoreState:
         """Synthesize the state of the central control hub."""
-        # 1. Macro Regime Composites
+        # 1. Macro Regime Composites (Standard Institutional Benchmarking)
         # Growth indicator components:
         # - Real GDP growth vs historical trend (target 2.0%)
-        # - Industrial Production growth
-        # - Retail Sales growth
-        # - Copper (Doctor Copper economic barometer)
-        # - Yield curve slope (10Y-2Y positive spread indicates economic expansion)
-        # - Labor resilience (Unemployment rate and Initial Jobless claims inverted)
+        # - Industrial Production growth vs historical trend (target 1.5%)
+        # - Retail Sales growth vs trend (target 4.0%)
+        # - Doctor Copper (vs historical median ~$4.50/lb)
+        # - Yield curve slope (10Y-2Y positive spread indicates expansion, non-inversion)
+        # - Labor resilience: Unemployment rate (below 4.5% = expansion) and Claims (below 230k = expansion)
         growth_components = []
         if "GRO_USGDP" in node_states:
-            # Baseline benchmark around 2.0% real growth
-            gdp_state = node_states["GRO_USGDP"]
-            g_dev = (gdp_state.current_value - 2.0) / 0.8
-            growth_components.append(g_dev * 1.5)
+            gdp_val = node_states["GRO_USGDP"].current_value
+            growth_components.append((gdp_val - 2.0) / 0.8)
         if "GRO_INDPRO" in node_states:
-            growth_components.append(node_states["GRO_INDPRO"].z_score * 1.2)
+            ind_val = node_states["GRO_INDPRO"].current_value
+            growth_components.append((ind_val - 1.5) / 1.5)
         if "GRO_RETAIL" in node_states:
-            growth_components.append(node_states["GRO_RETAIL"].z_score * 1.0)
+            ret_val = node_states["GRO_RETAIL"].current_value
+            growth_components.append((ret_val - 4.0) / 2.5)
         if "COM_COPPER" in node_states:
-            growth_components.append(node_states["COM_COPPER"].z_score * 0.8)
+            cop_val = node_states["COM_COPPER"].current_value
+            growth_components.append((cop_val - 4.5) / 1.5)
         if "CURVE_10_2" in node_states:
-            growth_components.append(node_states["CURVE_10_2"].z_score * 0.8)
+            curv_val = node_states["CURVE_10_2"].current_value
+            # +35 bps is a normal positive slope (expansionary), whereas < 0 is inverted
+            growth_components.append(curv_val / 50.0)
         if "LAB_UNRATE" in node_states:
-            # Low unemployment (< 4.5%) supports resilient growth
             unrate = node_states["LAB_UNRATE"].current_value
-            growth_components.append((4.5 - unrate) * 1.2)
+            growth_components.append((4.5 - unrate) / 0.5)
         if "LAB_CLAIMS" in node_states:
-            growth_components.append(-node_states["LAB_CLAIMS"].z_score * 0.8)
+            claims_val = node_states["LAB_CLAIMS"].current_value
+            growth_components.append((230000.0 - claims_val) / 30000.0)
 
-        growth_score = float(np.mean(growth_components)) if growth_components else 0.2
+        growth_score = float(np.mean(growth_components)) if growth_components else 0.5
 
         # Inflation indicator components:
         # - Core PCE vs Fed 2.0% target
         # - Headline CPI vs target
-        # - 5Y5Y Forward Inflation Expectations
-        # - Eurozone HICP
-        # - Oil price pressure (energy shock)
+        # - 5Y5Y Forward Inflation Expectations vs 2.2% target
+        # - Eurozone HICP vs 2.0% target
+        # - Oil price pressure (WTI benchmark ~$75/bbl)
         inflation_components = []
         if "INF_USPCE" in node_states:
             pce_val = node_states["INF_USPCE"].current_value
-            inflation_components.append((pce_val - 2.0) * 1.5)
+            inflation_components.append((pce_val - 2.0) / 0.8)
         if "INF_USCPI" in node_states:
             cpi_val = node_states["INF_USCPI"].current_value
-            inflation_components.append((cpi_val - 2.5) * 1.2)
+            inflation_components.append((cpi_val - 2.0) / 1.0)
         if "INF_EXP5Y" in node_states:
-            inflation_components.append(node_states["INF_EXP5Y"].z_score * 0.8)
+            exp_val = node_states["INF_EXP5Y"].current_value
+            inflation_components.append((exp_val - 2.2) / 0.3)
         if "INF_EZHICP" in node_states:
             hicp_val = node_states["INF_EZHICP"].current_value
-            inflation_components.append((hicp_val - 2.0) * 1.0)
+            inflation_components.append((hicp_val - 2.0) / 1.0)
         if "COM_OIL" in node_states:
-            inflation_components.append(node_states["COM_OIL"].z_score * 1.0)
+            oil_val = node_states["COM_OIL"].current_value
+            inflation_components.append((oil_val - 75.0) / 15.0)
 
-        inflation_score = float(np.mean(inflation_components)) if inflation_components else 0.1
+        inflation_score = float(np.mean(inflation_components)) if inflation_components else 0.5
 
         if growth_score >= 0 and inflation_score < 0:
             regime = "Goldilocks / Espansione Disinflazionistica"
             desc = "Crescita solida e inflazione in calo: contesto ideale per multipli azionari (Risk-On)."
         elif growth_score >= 0 and inflation_score >= 0:
             regime = "Reflazione / Surriscaldamento Controllato"
-            desc = "Crescita resiliente con inflazione sostenuta da shock energetici: banche centrali vigili sui tassi, ciclici e materie prime favoriti."
+            desc = "Crescita resiliente con inflazione sostenuta da domanda e materie prime: banche centrali vigili sui tassi, ciclici e commodities favoriti."
         elif growth_score < 0 and inflation_score >= 0:
             regime = "Stagflazione"
             desc = "Rallentamento economico accompagnato da inflazione elevata: regime avverso ai mercati, difendere con Oro e Liquidità."
