@@ -526,8 +526,8 @@ class SpiderQuantEngine:
             regime = "Goldilocks / Espansione Disinflazionistica"
             desc = "Crescita solida e inflazione in calo: contesto ideale per multipli azionari (Risk-On)."
         elif growth_score >= 0 and inflation_score >= 0:
-            regime = "Reflazione / Surriscaldamento Controllato"
-            desc = "Crescita resiliente con inflazione sostenuta da domanda e materie prime: banche centrali vigili sui tassi, ciclici e commodities favoriti."
+            regime = "Surriscaldamento Ciclico (Late-Cycle Inflationary Boom)"
+            desc = "Crescita resiliente in piena occupazione con inflazione e materie prime sopra target: banche centrali su tassi restrittivi (Hawkish), commodities favorite e bond penalizzati."
         elif growth_score < 0 and inflation_score >= 0:
             regime = "Stagflazione"
             desc = "Rallentamento economico accompagnato da inflazione elevata: regime avverso ai mercati, difendere con Oro e Liquidità."

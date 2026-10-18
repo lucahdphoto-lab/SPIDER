@@ -57,8 +57,8 @@ PRING_STAGES = {
     },
     4: {
         "title": "Fase 4: Boom Economico & Shock Inflazione",
-        "regime": "Surriscaldamento / Reflazione",
-        "description": "L'economia è in piena espansione ('boom') con domanda superiore all'offerta. L'inflazione sale visibilmente; le banche centrali alzano i tassi. I bond crollano, mentre materie prime ed energia dominano.",
+        "regime": "Surriscaldamento Ciclico (Late-Cycle Inflationary Boom)",
+        "description": "L'economia è in piena espansione ('boom') con domanda superiore all'offerta e piena occupazione. L'inflazione sale al di sopra del target; le banche centrali mantengono o inaspriscono tassi restrittivi. I bond crollano (yield in salita), mentre materie prime ed energia dominano.",
         "bonds": "DOWN (Ribassista Forte / Tassi in salita)",
         "stocks": "UP / TOPPING (Fine ciclo bull azionario)",
         "commodities": "UP (Rialzista Esplosivo / Protagoniste)",

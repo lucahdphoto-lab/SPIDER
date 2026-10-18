@@ -351,7 +351,7 @@ def build_macro_regime_matrix_figure(core_state: SpiderCoreState, dark_mode: boo
     fig.add_shape(type="rect", x0=-4, y0=-4, x1=0, y1=0, fillcolor="rgba(59, 130, 246, 0.12)", line=dict(width=0))
 
     fig.add_annotation(x=2.0, y=-2.0, text="<b>GOLDILOCKS</b><br>Disinflazione & Crescita<br>(Multipli Equity Risk-On)", showarrow=False, font=dict(color="#10B981", size=11))
-    fig.add_annotation(x=2.0, y=2.0, text="<b>REFLAZIONE</b><br>Surriscaldamento Ciclico<br>(Commodities & Value)", showarrow=False, font=dict(color="#F59E0B", size=11))
+    fig.add_annotation(x=2.0, y=2.0, text="<b>SURRISCALDAMENTO CICLICO</b><br>Late-Cycle Inflationary Boom<br>(Commodities & Value)", showarrow=False, font=dict(color="#F59E0B", size=11))
     fig.add_annotation(x=-2.0, y=2.0, text="<b>STAGFLAZIONE</b><br>Rallentamento & Inflazione<br>(Oro, Cash, Difensivi)", showarrow=False, font=dict(color="#EF4444", size=11))
     fig.add_annotation(x=-2.0, y=-2.0, text="<b>DEFLAZIONE / RECESSIONE</b><br>Contrazione Generale<br>(Treasury Bonds & Bunds)", showarrow=False, font=dict(color="#3B82F6", size=11))
 

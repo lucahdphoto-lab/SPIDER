@@ -558,6 +558,22 @@ with tabs[1]:
         else:
             st.info("I tassi attuali sono in sostanziale equilibrio con i fondamentali macroeconomici.")
 
+    with st.expander("📚 Distinzione Teorica Fondamentale: Reflazione vs Surriscaldamento Ciclico (Overheating)"):
+        st.markdown("""
+        ### 🔍 Teoria Macroeconomica: Perché la Reflazione non è un Surriscaldamento
+
+        * **1. Che cos'è la vera Reflazione (Irving Fisher / Keynes / Cole):**
+          - La **Reflazione** è un programma deliberato di **politica monetaria e fiscale ultra-espansiva** (taglio aggressivo dei tassi, espansione della base monetaria/QE, deficit spending) finalizzato a contrastare una **spirale deflazionistica** o una **depressione economica**.
+          - Interviene quando l'economia opera **al di sotto della piena capacità produttiva** (output gap negativo, disoccupazione ciclica elevata) e l'inflazione è caduta **sotto** il trend di lungo periodo (es. post-crisi 2008 o post-lockdown 2020).
+          - **Obiettivo:** Riportare la domanda aggregata e i prezzi *dal basso* verso il target neutrale ($2\%$).
+
+        * **2. Il Contesto Attuale: Surriscaldamento da Tardo Ciclo (Late-Cycle Overheating):**
+          - L'economia attuale opera in regime di **piena occupazione** (tasso di disoccupazione al $4,2\%$, richieste di sussidi a $199.000$).
+          - L'inflazione è **già al di sopra del target** (Core PCE al $3,01\%$, CPI Headline al $3,72\%$, Petrolio WTI a $\$101/\text{bbl}$).
+          - La politica monetaria è **restrittiva** (Fed Funds al $3,88\%$, tasso reale positivo a $+0,87\%$, bias **Hawkish / Vigile**).
+          - **Conclusione Istituzionale:** Questo scenario NON è una manovra di reflazione anti-deflazione, bensì un **Surriscaldamento Ciclico da domanda/costi delle materie prime** (perfettamente descritto dalla *Fase 4 del ciclo di Martin Pring*), in cui le banche centrali contrastano l'eccesso di domanda anziché stimolarla.
+        """)
+
 # TAB 3: MARTIN PRING BUSINESS CYCLE
 with tabs[2]:
     st.markdown("#### 🔄 Teoria Macro dei Cicli Economici di Martin Pring")
