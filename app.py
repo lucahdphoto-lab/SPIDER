@@ -400,7 +400,7 @@ with tabs[0]:
     st.markdown("#### 🕸️ Visualizzazione Radiale Concentrica a Tela di Ragno")
     st.caption("I cerchi concentrici separano Politica Monetaria (Anello 1), Fondamentali Macro (Anello 2) e Asset Intermarket (Anello 3). Lo spessore e il colore dei fili indicano la forza e la tensione della relazione.")
 
-    col_ctl1, col_ctl2, col_ctl3 = st.columns([2, 1, 1])
+    col_ctl1, col_ctl2, col_ctl3, col_ctl4 = st.columns([2, 1, 1, 1])
     with col_ctl1:
         if active_isolated_id:
             st.info(f"🔍 **Modalità Focus Attiva:** Isolamento del nodo `{active_isolated_id}` ({node_states[active_isolated_id].name if active_isolated_id in node_states else ''}) e di tutte le sue connessioni dirette.")
@@ -409,9 +409,75 @@ with tabs[0]:
     with col_ctl2:
         toggle_labels = st.checkbox("Mostra Etichette Ticker", value=True)
     with col_ctl3:
-        if active_isolated_id and st.button("Mostra Tutta la Tela"):
+        if active_isolated_id and st.button("Mostra Tutta la Tela", use_container_width=True):
             st.session_state["selected_node"] = "TUTTI (Visualizzazione Globale)"
             st.rerun()
+
+    # Modal Dialog definition for Spider Web User Manual & Guide
+    @st.dialog("📖 Manuale Istituzionale: Guida alla Struttura & Lettura della Tela SPIDER", width="large")
+    def show_spider_info_modal():
+        st.markdown("### 🕸️ Architettura & Manuale di Utilizzo della Tela di Ragno")
+        st.caption("Guida operativa istituzionale alla comprensione dei 3 Anelli Concentrici, dei 4 Quadranti Macro, della Tensione dei Fili e della Sintesi Sistemica.")
+
+        st.markdown("""
+        ---
+        #### 1. 🎯 I Tre Cerchi Concentrici (Topologia Causa $\\rightarrow$ Effetto)
+        La rete radiale organizza le 30 variabili monitorate lungo una catena di trasmissione logica:
+        * **Centro (`SPIDER_CORE` - Raggio 0):** Il nucleo di controllo. Misura la tensione aggregata dell'intera rete ($|Z|$ sistemico), il regime macroeconomico e l'orientamento delle banche centrali (*Hawkish / Dovish / Neutral*).
+        * **Anello 1 (Interno - Raggio 1.0): Politica Monetaria, Tassi & Rendimenti**  
+          *Nodi:* `RATE_FED`, `RATE_ECB`, `YIELD_US02`, `YIELD_US10`, `YIELD_REAL10`, `CURVE_10_2`, `YIELD_DE10`, `SPREAD_BTP`.  
+          *Ruolo:* Punto di origine del costo del capitale privo di rischio e delle aspettative sui tassi di interesse guida a 1-2 anni.
+        * **Anello 2 (Intermedio - Raggio 2.0): Macroeconomia Reale (Fondamentali)**  
+          *Nodi:* `INF_USPCE`, `INF_USCPI`, `INF_EXP5Y`, `INF_EZHICP`, `GRO_USGDP`, `GRO_INDPRO`, `GRO_RETAIL`, `LAB_UNRATE`, `LAB_NFP`, `LAB_CLAIMS`.  
+          *Ruolo:* Misura la risposta dell'economia reale (inflazione, consumi, PIL e dinamiche occupazionali) agli impulsi monetari, con il fisiologico ritardo temporale (*transmission lag* di 6-18 mesi).
+        * **Anello 3 (Esterno - Raggio 3.0): Indici Azionari, Credito & Asset Intermarket**  
+          *Nodi:* Borse USA ed Europee (`EQ_SPX`, `EQ_NDX`, `EQ_RUT`, `EQ_DAX`, `EQ_MIB`), Commodities (`COM_OIL`, `COM_GOLD`, `COM_COPPER`), Valute (`FX_DXY`, `FX_EURUSD`), Credito (`CRED_HY`) e Volatilità (`RISK_VIX`).  
+          *Ruolo:* Mercati di contrattazione liquida: dove si formano i prezzi finali, si riflettono le aspettative degli investitori e si prezzano i premi per il rischio.
+
+        ---
+        #### 2. 🧭 I 4 Quadranti Macroeconomici Angolari
+        La mappa è orientata a 360° per isolare i settori macro-finanziari:
+        * **🟡 INFLAZIONE & COMMODITIES (Angolo 30° - 90°):** Prezzi al consumo (`CPI`, `PCE`, `HICP`), aspettative break-even a 5 anni e materie prime energetiche/preziose (`Petrolio WTI`, `Oro`).
+        * **🟢 CRESCITA & PRODUZIONE (Angolo 90° - 160°):** PIL reale, produzione industriale, vendite al dettaglio, rame (*Dr. Copper*) e curva di espansione 10Y-2Y.
+        * **🔵 LAVORO & OCCUPAZIONE (Angolo 190° - 260°):** Tasso di disoccupazione U3, buste paga Non-Farm Payrolls e richieste settimanali di sussidi di disoccupazione.
+        * **🟣 LIQUIDITÀ & RISCHIO (Angolo 280° - 350°):** Tassi ufficiali, curva dei titoli di stato USA e UE, differenziale BTP/Bund, Dollaro USA (`DXY`) e spread High Yield.
+
+        ---
+        #### 3. 🎨 Codifica Cromatica dei Fili (Links) & Segnali di Tensione
+        Ogni filo tra due nodi esprime il grado di coerenza empirica rispetto alla teoria macroeconomica classica:
+        """)
+
+        st.markdown("""
+        | Colore del Filo | Relazione Empirica | Significato & Diagnosi Quantitativa |
+        | :--- | :--- | :--- |
+        | **🟢 Verde Smeraldo** | **Positiva Diretta Normale** | I due nodi si muovono concordi come previsto dalla teoria (es. `COM_OIL` $\\leftrightarrow$ `INF_EXP5Y`: il rialzo del greggio trasmette fisiologicamente inflazione forward). |
+        | **🔴 Rosso Corallo** | **Inversa Normale** | I due nodi divergono fisiologicamente (es. `YIELD_US02` $\\leftrightarrow$ `FX_EURUSD`: tassi USA a breve più alti attraggono capitali e deprimono EUR/USD). |
+        | **🟡 Giallo Ambra (Tratteggio)** | **Tensione Moderata ($1,25 \\le \|Z\| < 2,0$)** | La correlazione storica si sta indebolendo o c'è attrito ciclico tra i fondamentali e i prezzi di mercato. |
+        | **🟣 Viola Neon Pulsante** | **Rottura / Divergenza Critica ($\|Z\| \\ge 2,0$)** | **Segnale di Allarme:** Rottura anomala della correlazione storica (es. `DXY` forte e `S&P 500` ai massimi simultanei, o azionario euforico con tassi reali restrittivi). |
+        """)
+
+        st.markdown("""
+        * **Spessore della Linea:** Proporzionale all'intensità del legame rolling ($|r|$). Un filo spesso indica una catena di trasmissione dominante e sincronizzata.
+        * **Badge Numerico sul Filo:** Riporta il coefficiente di correlazione rolling attivo calcolato sulla finestra temporale impostata (30D, 90D, 1Y, 5Y).
+
+        ---
+        #### 4. 🔘 Dimensione & Colore dei Nodi (Deviazione Z-Score)
+        * **Dimensione del cerchio:** Più il pallino è grande, maggiore è la deviazione della serie storica dalla sua media ($|Z\text{-score}|$).
+        * **Bordo Bianco Acceso / Viola Neon:** Nodo in territorio statistico estremo ($|Z| \ge 2,0$).
+        * **Colore Centrale `SPIDER_CORE`:**
+          * 🟢 **Verde:** Tensione Sistemica Bassa ($< 1,25$) $\rightarrow$ Mercato in perfetto equilibrio armonico.
+          * 🟡 **Arancione:** Tensione Sistemica Moderata ($1,25 - 2,0$) $\rightarrow$ Frizioni tra tassi e valutazioni.
+          * 🔴 **Rosso:** Tensione Sistemica Critica ($> 2,0$) $\rightarrow$ Rischio elevato di violento repricing o anomalia macroeconomica.
+
+        ---
+        #### 5. 🕹️ Modalità di Interazione Focus & Scheda Esterna
+        * **Click su qualsiasi Nodo:** Isola istantaneamente il nodo selezionato, **abbassando l'intensità di tutti gli altri nodi** e mettendo in piena luce solo i suoi fili attivi.
+        * **Scheda Esterna al Grafico:** Sotto la tela compare la scheda istituzionale completa con Valore Attuale, $\Delta$ Periodo, YoY, Z-Score dinamico, Fonte ufficiale, Ruolo macroeconomico e l'elenco delle connessioni dirette, **senza mai coprire il grafico o i nodi**.
+        """)
+
+    with col_ctl4:
+        if st.button("ℹ️ Information (Manuale)", use_container_width=True, type="secondary"):
+            show_spider_info_modal()
 
     fig_web = build_spider_web_figure(
         node_states=node_states,
@@ -519,6 +585,36 @@ with tabs[0]:
         <div><b>Spessore Filo:</b> Proporzionale all'intensità del legame rolling (|r|)</div>
     </div>
     """, unsafe_allow_html=True)
+
+    with st.expander("📖 Manuale Operativo Rapido: Come Leggere & Interpretare la Tela di Ragno (Clicca qui)"):
+        st.markdown("""
+        ### 🕸️ Manuale d'Uso della Tela di Ragno SPIDER
+
+        #### 1. I Tre Livelli Concentrici (Dalla Causa all'Effetto)
+        - **Anello 1 (Interno): Politica Monetaria & Tassi Sovrani**  
+          Contiene i tassi guida della FED e della BCE (`RATE_FED`, `RATE_ECB`), i rendimenti a 2 e 10 anni (`YIELD_US02`, `YIELD_US10`), i tassi reali TIPS (`YIELD_REAL10`) e la pendenza della curva (`CURVE_10_2`). Qui si originano gli impulsi del costo del denaro.
+        - **Anello 2 (Intermedio): Macroeconomia Reale & Fondamentali**  
+          Contiene i dati macro con ritardo di trasmissione: Inflazione (`INF_USPCE`, `INF_USCPI`), Occupazione e Lavoro (`LAB_UNRATE`, `LAB_CLAIMS`) e Produzione/Consumi (`GRO_USGDP`, `GRO_INDPRO`, `GRO_RETAIL`).
+        - **Anello 3 (Esterno): Asset Finanziari, Borse & Materie Prime**  
+          Contiene le quotazioni dei mercati a pronti: Indici Azionari (`S&P 500`, `Nasdaq 100`, `Russell 2000`, `DAX`, `FTSE MIB`), Petrolio (`COM_OIL`), Oro (`COM_GOLD`), Rame (`COM_COPPER`), Dollaro (`FX_DXY`) e Credito High Yield (`CRED_HY`).
+
+        #### 2. Significato dei Colori dei Fili di Connessione
+        - **🟢 Verde Smeraldo:** Relazione teorica positiva rispettata (due variabili che devono salire/scendere insieme lo stanno facendo).
+        - **🔴 Rosso Corallo:** Relazione teorica inversa rispettata (due variabili che divergono lo stanno facendo normalmente).
+        - **🟡 Giallo Ambra (Tratteggiato):** Tensione moderata ($1,25 \le |Z| < 2,0$). Il filo sta accumulando attrito statistico rispetto alla media storica.
+        - **🟣 Viola Neon Pulsante:** Anomalia o divergenza critica ($|Z| \ge 2,0$). La relazione storica è temporaneamente rotta (es. Dollaro e Borsa che salgono insieme come polo di attrazione globale della liquidità).
+        - **Spessore del Filo:** Indica la forza assoluta del coefficiente di correlazione rolling ($|r|$).
+
+        #### 3. Centro di Controllo `SPIDER_CORE`
+        Il nucleo al centro calcola la **Tensione Sistemica della Tela**:
+        - 🟢 **Verde ($< 1,25$):** Tela in equilibrio armonico.
+        - 🟡 **Giallo/Arancio ($1,25 - 2,0$):** Attrito macroeconomico (fase di tassi restrittivi o shock energetici).
+        - 🔴 **Rosso ($> 2,0$):** Rottura sistemica con elevato rischio di violento repricing intermarket.
+
+        #### 4. Come Usare l'Interazione sulla Rete
+        - **Hover:** Passando con il mouse su un nodo o su un badge numerico del filo compaiono i valori istantanei.
+        - **Click sul Nodo:** Cliccando su un nodo nella tela, tutti i nodi non collegati vengono attenuati (sfocati) e appare la **Scheda Esterna Dettagliata** sotto al grafico con tutte le informazioni quantitative e la fonte certificata.
+        """)
 
 # TAB 2
 with tabs[1]:
