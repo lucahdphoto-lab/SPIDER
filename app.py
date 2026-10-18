@@ -342,16 +342,106 @@ if core_state.active_critical_alerts:
         for alt in core_state.active_critical_alerts:
             st.error(alt)
 
-k1, k2, k3, k4, k5 = st.columns(5)
+# Modal Dialog definition for Landing Scenario Analysis (Soft vs Hard vs No Landing)
+@st.dialog("🛬 Analisi del Ciclo di Atterraggio: Soft vs Hard vs No Landing", width="large")
+def show_landing_scenario_modal():
+    ls = core_state.landing_scenario
+    st.markdown(f"### 🧭 Scenario Predittivo Ciclico: <span style='color: {ls.color_hex};'>{ls.scenario_title}</span>", unsafe_allow_html=True)
+    st.caption("Modello di probabilità multi-variata basato sull'interazione tra Crescita del PIL, Rigidità dell'Inflazione, Dinamica Occupazionale e Spread Creditizi.")
+
+    # Probability Bars
+    p_c1, p_c2, p_c3 = st.columns(3)
+    with p_c1:
+        st.markdown(f"""
+        <div style="background: rgba(245, 158, 11, 0.1); border: 1.5px solid #F59E0B; border-radius: 10px; padding: 14px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #F59E0B; font-weight: 700;">🔥 NO LANDING</div>
+            <div style="font-size: 26px; font-weight: 800; color: #F59E0B; font-family: monospace;">{ls.prob_no_landing:.1f}%</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 4px;">Crescita forte + Inflazione alta</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with p_c2:
+        st.markdown(f"""
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1.5px solid #10B981; border-radius: 10px; padding: 14px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #10B981; font-weight: 700;">🛬 SOFT LANDING</div>
+            <div style="font-size: 26px; font-weight: 800; color: #10B981; font-family: monospace;">{ls.prob_soft_landing:.1f}%</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 4px;">Disinflazione ordinata + Crescita moderata</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with p_c3:
+        st.markdown(f"""
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1.5px solid #EF4444; border-radius: 10px; padding: 14px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #EF4444; font-weight: 700;">⚠️ HARD LANDING</div>
+            <div style="font-size: 26px; font-weight: 800; color: #EF4444; font-family: monospace;">{ls.prob_hard_landing:.1f}%</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 4px;">Forte contrazione / Recessione</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("#### 🔬 Driver Empirici Attuali Rilevati dai Nodi SPIDER:")
+    for drv in ls.key_drivers:
+        st.markdown(f"• **{drv}**")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("#### 📋 Quadro Comparativo Teorico dei Tre Scenari di Atterraggio:")
+    df_landing_guide = pd.DataFrame([
+        {
+            "Scenario": "🔥 NO LANDING (Attuale)",
+            "Crescita Economica (PIL)": "Resiliente / Superiore al potenziale (> 2.0%)",
+            "Dinamica Inflazione": "Sostenuta e sopra target (PCE > 2.8%, petrolio alto)",
+            "Mercato del Lavoro": "Piena occupazione solida (Disoccupazione < 4.3%, bassi licenziamenti)",
+            "Politica Monetaria Fed": "Tassi elevati a lungo ('Higher for longer'), stop ai tagli",
+            "Impatto Asset Allocation": "Favoriti: Materie Prime, Energia, Titoli Value. Sottopesare bond a lunga duration.",
+        },
+        {
+            "Scenario": "🛬 SOFT LANDING (Goldilocks)",
+            "Crescita Economica (PIL)": "Decelerazione ordinata verso il trend potenziale (~1.5% - 2.0%)",
+            "Dinamica Inflazione": "Progressivo e costante rientro verso il target 2.0%",
+            "Mercato del Lavoro": "Ribilanciamento graduale senza impennata di licenziamenti (disoccupazione 4.3% - 4.8%)",
+            "Politica Monetaria Fed": "Tagli preventivi graduali verso tassi neutrali (~3.0%)",
+            "Impatto Asset Allocation": "Scenario ideale per azionario diversificato (Quality Growth) e bond societari.",
+        },
+        {
+            "Scenario": "⚠️ HARD LANDING (Recessione)",
+            "Crescita Economica (PIL)": "Forte contrazione o crescita negativa (< 0.5% / recessione)",
+            "Dinamica Inflazione": "Rapida caduta disinflazionistica da distruzione della domanda",
+            "Mercato del Lavoro": "Ondate di licenziamenti (sussidi > 260k, disoccupazione > 5.0%)",
+            "Politica Monetaria Fed": "Tagli d'emergenza aggressivi (-50 bps per meeting)",
+            "Impatto Asset Allocation": "Flight-to-safety: Long Treasuries (TLT), Bund, Cash monetario, Oro difensivo. Bear market equity.",
+        },
+    ])
+    st.dataframe(df_landing_guide, use_container_width=True, hide_index=True)
+
+    st.markdown(f"""
+    <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 14px; margin-top: 14px;">
+        <div style="font-size: 12px; font-weight: 700; color: #38BDF8; text-transform: uppercase;">💼 Implicazione Tattica di Portafoglio SPIDER:</div>
+        <div style="font-size: 13px; color: #E2E8F0; margin-top: 4px;">{ls.market_implication}</div>
+        <div style="font-size: 12px; font-weight: 700; color: #F59E0B; text-transform: uppercase; margin-top: 8px;">🏛️ Reazione Attesa delle Banche Centrali:</div>
+        <div style="font-size: 13px; color: #CBD5E1; margin-top: 4px;">{ls.policy_reaction}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+k1, k2, k3, k4, k5, k6 = st.columns(6)
 with k1:
     st.markdown(f"""
     <div class="spider-kpi">
         <div class="kpi-title">Regime Macroeconomico</div>
-        <div class="kpi-main-val" style="font-size: 16px; color: #38BDF8;">{core_state.macro_regime.split('/')[0]}</div>
+        <div class="kpi-main-val" style="font-size: 15px; color: #38BDF8;">{core_state.macro_regime.split('/')[0].split('(')[0].strip()}</div>
         <div class="kpi-sub-val">Growth: {core_state.growth_score:+.2f} | Inf: {core_state.inflation_score:+.2f}</div>
     </div>
     """, unsafe_allow_html=True)
 with k2:
+    ls_obj = core_state.landing_scenario
+    st.markdown(f"""
+    <div class="spider-kpi" style="border-left: 3px solid {ls_obj.color_hex}; cursor: pointer;">
+        <div class="kpi-title">Scenario Atterraggio (Landing)</div>
+        <div class="kpi-main-val" style="font-size: 15px; color: {ls_obj.color_hex};">{ls_obj.scenario_badge}</div>
+        <div class="kpi-sub-val">Confidenza: {ls_obj.confidence_pct:.1f}% (NoLand {ls_obj.prob_no_landing:.0f}%)</div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("ℹ️ Dettagli Landing", key="btn_open_landing_modal", use_container_width=True, type="secondary"):
+        show_landing_scenario_modal()
+with k3:
     st.markdown(f"""
     <div class="spider-kpi">
         <div class="kpi-title">Tensione Sistemica Tela</div>
@@ -359,15 +449,15 @@ with k2:
         <div class="kpi-sub-val">{core_state.web_tension_status.split('(')[0]}</div>
     </div>
     """, unsafe_allow_html=True)
-with k3:
+with k4:
     st.markdown(f"""
     <div class="spider-kpi">
         <div class="kpi-title">Bias Banche Centrali</div>
-        <div class="kpi-main-val" style="font-size: 16px; color: #A78BFA;">{core_state.central_bank_bias.split('(')[0]}</div>
+        <div class="kpi-main-val" style="font-size: 15px; color: #A78BFA;">{core_state.central_bank_bias.split('(')[0]}</div>
         <div class="kpi-sub-val">FED Reale: {core_state.fed_real_rate:+.2f}% | BCE: {core_state.ecb_real_rate:+.2f}%</div>
     </div>
     """, unsafe_allow_html=True)
-with k4:
+with k5:
     st.markdown(f"""
     <div class="spider-kpi">
         <div class="kpi-title">Taylor Rule Gap</div>
@@ -375,10 +465,10 @@ with k4:
         <div class="kpi-sub-val">Tasso Reale Restrittivo</div>
     </div>
     """, unsafe_allow_html=True)
-with k5:
+with k6:
     st.markdown(f"""
     <div class="spider-kpi">
-        <div class="kpi-title">Nodi Attivi / Monitorati</div>
+        <div class="kpi-title">Nodi Monitorati</div>
         <div class="kpi-main-val" style="color: #F8FAFC;">{len(node_states)} / 30</div>
         <div class="kpi-sub-val">10 Fili Maestri + 16 Spokes</div>
     </div>
@@ -629,14 +719,23 @@ with tabs[1]:
         st.plotly_chart(fig_matrix, use_container_width=True)
 
     with col_mat_r:
-        st.markdown("##### 📊 Diagnosi Istituzionale del Regime")
+        st.markdown("##### 📊 Diagnosi Istituzionale del Regime & Scenario di Atterraggio")
+        ls_tab = core_state.landing_scenario
         st.markdown(f"""
-        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 18px; margin-bottom: 16px;">
-            <div style="font-size: 13px; color: #94A3B8; text-transform: uppercase; font-weight: 700;">Regime Corrente Certificato</div>
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 18px; margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 12px; color: #94A3B8; text-transform: uppercase; font-weight: 700;">Regime Corrente Certificato</div>
+                <span style="background: {ls_tab.color_hex}22; border: 1px solid {ls_tab.color_hex}; color: {ls_tab.color_hex}; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 700;">{ls_tab.scenario_badge}</span>
+            </div>
             <div style="font-size: 22px; font-weight: 800; color: #38BDF8; margin-top: 4px;">{core_state.macro_regime}</div>
             <p style="font-size: 13px; color: #CBD5E1; margin-top: 8px; line-height: 1.5;">{core_state.macro_regime_desc}</p>
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 12px; color: #94A3B8;">
+                <b>Scenario di Atterraggio (Landing):</b> <span style="color: {ls_tab.color_hex}; font-weight: 700;">{ls_tab.scenario_title}</span> ({ls_tab.confidence_pct:.1f}% confidenza).
+            </div>
         </div>
         """, unsafe_allow_html=True)
+        if st.button("🔎 Esplora Modello & Matrice di Atterraggio (Soft vs Hard vs No Landing)", key="btn_open_landing_modal_tab2", use_container_width=True, type="secondary"):
+            show_landing_scenario_modal()
 
         st.markdown("##### 🏛️ Termometro Politica Monetaria (FED & BCE)")
         col_fed1, col_fed2 = st.columns(2)

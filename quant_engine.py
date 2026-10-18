@@ -79,6 +79,21 @@ class LinkState:
 
 
 @dataclass
+class LandingScenarioState:
+    scenario: str              # "NO_LANDING", "SOFT_LANDING", "HARD_LANDING"
+    scenario_title: str        # e.g., "No Landing (Riacidificazione Inflattiva & Crescita Forte)"
+    scenario_badge: str        # e.g., "🔥 NO LANDING"
+    color_hex: str             # "#F59E0B" (orange/amber) for No Landing, "#10B981" for Soft, "#EF4444" for Hard
+    confidence_pct: float      # e.g., 78.5%
+    prob_no_landing: float     # 0-100
+    prob_soft_landing: float   # 0-100
+    prob_hard_landing: float   # 0-100
+    key_drivers: List[str]     # Key empirical observations justifying the diagnosis
+    market_implication: str    # Summary of investment implications
+    policy_reaction: str       # Anticipated Fed/central bank move
+
+
+@dataclass
 class SpiderCoreState:
     macro_regime: str
     macro_regime_desc: str
@@ -93,6 +108,7 @@ class SpiderCoreState:
     ecb_real_rate: float
     taylor_rate_gap_bps: float
     active_critical_alerts: List[str]
+    landing_scenario: LandingScenarioState
 
 
 class SpiderQuantEngine:
@@ -594,6 +610,123 @@ class SpiderQuantEngine:
             for l in master_links if l.status == "Divergenza Critica"
         ]
 
+        # 4. Quantitative Landing Scenario Engine (Soft vs Hard vs No Landing)
+        # Factors:
+        # - Growth resilience (GDP > 2.0%, IndPro > 1.5%, Retail > 4.0%, Claims < 220k)
+        # - Inflation stickiness (Core PCE > 2.7%, Headline CPI > 3.0%, Oil > $85)
+        # - Yield curve geometry (Inverted vs Normalizing vs Steep)
+        # - Credit spreads (High yield spread compression < 3.8% vs stress > 5.0%)
+        unrate_val = node_states["LAB_UNRATE"].current_value if "LAB_UNRATE" in node_states else 4.2
+        claims_val = node_states["LAB_CLAIMS"].current_value if "LAB_CLAIMS" in node_states else 199000.0
+        hy_val = node_states["CRED_HY"].current_value if "CRED_HY" in node_states else 3.23
+        curve_val = node_states["CURVE_10_2"].current_value if "CURVE_10_2" in node_states else 0.35
+        oil_val = node_states["COM_OIL"].current_value if "COM_OIL" in node_states else 99.0
+
+        # Raw scenario score accumulator
+        score_no = 0.0
+        score_soft = 0.0
+        score_hard = 0.0
+
+        # Growth contribution:
+        if gdp_val >= 2.0:
+            score_no += 30.0
+            score_soft += 20.0
+        elif gdp_val >= 1.0:
+            score_soft += 35.0
+            score_no += 10.0
+        else:
+            score_hard += 40.0
+
+        # Labor market contribution:
+        if unrate_val <= 4.3 and claims_val <= 215000:
+            score_no += 30.0
+            score_soft += 20.0
+        elif unrate_val <= 4.8:
+            score_soft += 30.0
+            score_hard += 10.0
+        else:
+            score_hard += 35.0
+
+        # Inflation & Commodity contribution:
+        if us_pce >= 2.8 or oil_val >= 85.0:
+            score_no += 35.0
+            score_soft += 5.0
+        elif us_pce <= 2.3 and oil_val < 75.0:
+            score_soft += 35.0
+        else:
+            score_soft += 25.0
+            score_no += 15.0
+
+        # Credit & Curve contribution:
+        if hy_val < 3.6 and curve_val >= 0:
+            score_no += 20.0
+            score_soft += 20.0
+        elif hy_val >= 4.8 or curve_val < -20:
+            score_hard += 35.0
+        else:
+            score_soft += 15.0
+
+        tot_score = max(1.0, score_no + score_soft + score_hard)
+        prob_no = round((score_no / tot_score) * 100.0, 1)
+        prob_soft = round((score_soft / tot_score) * 100.0, 1)
+        prob_hard = round((score_hard / tot_score) * 100.0, 1)
+
+        # Select dominant scenario
+        if prob_no >= prob_soft and prob_no >= prob_hard:
+            l_scen = "NO_LANDING"
+            l_title = "No Landing (Crescita Forte & Riacidificazione Inflattiva)"
+            l_badge = "🔥 NO LANDING"
+            l_color = "#F59E0B"
+            l_conf = prob_no
+            l_drivers = [
+                f"PIL Reale al {gdp_val:.2f}% (superiore al potenziale del 2.0%).",
+                f"Piena occupazione solida (Disoccupazione al {unrate_val:.1f}%, Sussidi a {claims_val:,.0f}).",
+                f"Core PCE al {us_pce:.2f}% e Petrolio a ${oil_val:.2f}/bbl: inflazione 'appiccicosa' sopra il target Fed.",
+                f"Spread High Yield compressi a {hy_val:.2f}%: nessun sintomo di deterioramento creditizio.",
+            ]
+            l_market = "Tassi d'interesse a lungo termine elevati ('higher for longer'), dollaro solido, sovraperformance di materie prime, energia e ciclici; pressione sui titoli growth ad alto multiplo."
+            l_policy = "La Federal Reserve è costretta a posticipare o cancellare i tagli dei tassi, mantenendo un orientamento restrittivo (Hawkish Pause o rialzi tattici)."
+        elif prob_soft >= prob_no and prob_soft >= prob_hard:
+            l_scen = "SOFT_LANDING"
+            l_title = "Soft Landing (Atterraggio Morbido & Disinflazione Ordinata)"
+            l_badge = "🛬 SOFT LANDING"
+            l_color = "#10B981"
+            l_conf = prob_soft
+            l_drivers = [
+                f"Crescita moderata sostenibile senza contrazione dell'output.",
+                f"Progressivo rientro dell'inflazione verso il target del 2.0%.",
+                f"Mercato del lavoro in graduale ribilanciamento senza ondate di licenziamenti.",
+            ]
+            l_market = "Scenario ideale 'Goldilocks' per l'azionario diversificato, compressione dei premi al rischio e rally obbligazionario progressivo."
+            l_policy = "La Federal Reserve avvia tagli calibrati e preventivi (tassi verso il livello neutrale ~3.0%)."
+        else:
+            l_scen = "HARD_LANDING"
+            l_title = "Hard Landing (Atterraggio Brusco / Rischio Recessione)"
+            l_badge = "⚠️ HARD LANDING"
+            l_color = "#EF4444"
+            l_conf = prob_hard
+            l_drivers = [
+                f"Forte rallentamento del PIL o contrazione dell'attività economica.",
+                f"Deterioramento accelerato dei sussidi di disoccupazione e allargamento spread creditizi.",
+                f"Impatti ritardati della stretta monetaria sui bilanci di famiglie e imprese.",
+            ]
+            l_market = "Forte avversione al rischio (Risk-Off), sell-off su equity e credito corporate; flight-to-safety verso Treasury a lunga scadenza (TLT) e cash.",
+            l_policy = "La Federal Reserve interviene con tagli d'emergenza da 50 bps per arginare il ciclo recessivo."
+
+        landing_state = LandingScenarioState(
+            scenario=l_scen,
+            scenario_title=l_title,
+            scenario_badge=l_badge,
+            color_hex=l_color,
+            confidence_pct=l_conf,
+            prob_no_landing=prob_no,
+            prob_soft_landing=prob_soft,
+            prob_hard_landing=prob_hard,
+            key_drivers=l_drivers,
+            market_implication=l_market,
+            policy_reaction=l_policy,
+        )
+
         return SpiderCoreState(
             macro_regime=regime,
             macro_regime_desc=desc,
@@ -608,6 +741,7 @@ class SpiderQuantEngine:
             ecb_real_rate=ecb_real_rate,
             taylor_rate_gap_bps=taylor_gap_bps,
             active_critical_alerts=critical_alerts,
+            landing_scenario=landing_state,
         )
 
 
