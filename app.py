@@ -1921,77 +1921,87 @@ with tabs[7]:
     is_high_tension = (core_state.systemic_web_tension >= 2.0)
     oil_high = (st.session_state.get("what_if_oil", 0.0) >= 15.0)
 
+    # Consistent Asset Colors (matching institutional standards and the reference slide)
+    # Azioni: Giallo/Ambra (#EAB308), Obbligazioni: Grigio Ardesia (#64748B), Oro: Oro Puro Lucido (#F59E0B), Commodity: Rosso Mattone (#DC2626), Liquidità/Cash: Celeste/Azzurro (#38BDF8)
+    ASSET_COLORS = {
+        "Azioni": "#EAB308",
+        "Obbligazioni": "#64748B",
+        "Oro": "#F59E0B",
+        "Commodity": "#DC2626",
+        "Cash / Liquidità": "#38BDF8",
+    }
+
     # Strategy definitions matching the user's reference infografica
     portfolios_data = {
         "PORT_60_40": {
             "num": 1,
             "id": "PORT_60_40",
-            "name": "60/40 Classico",
+            "title_line1": "60/40",
+            "title_line2": "Classico",
             "author": "Modello Istituzionale Standard",
             "weights": {"Azioni": 60, "Obbligazioni": 40},
-            "colors": ["#F59E0B", "#64748B"],
             "features": [
-                "60% Azioni (Equity Core)",
-                "40% Obbligazioni (Bonds Investment Grade)",
-                "Nessuna terza gamba (0% Hard Assets)"
+                "<b>60% Azioni</b> (Equity Core)",
+                "<b>40% Obbligazioni</b> (Bonds Investment Grade)",
+                "<b>Nessuna terza gamba</b>"
             ],
-            "note": "Ottimale in Espansione Disinflattiva / Goldilocks con correlazione azioni-bond negativa.",
-            "best_regime": "ESPANSIONE_GOLDILOCKS",
+            "analysis": "<b>Analisi Strategica & Ciclica:</b><br>È il benchmark universale della finanza moderna. Si basa sull'ipotesi che le recessioni portino a un taglio dei tassi, facendo salire il valore dei bond per compensare il calo azionario. È <b>imbattibile nei regimi disinflattivi di espansione (Goldilocks)</b>, ma soffre fortemente nei contesti di inflazione elevata o tassi in rialzo dove la correlazione tra azioni e bond diventa positiva (come nel 2022).",
+            "note": "Ideale in: Espansione Economica & Disinflazione Ordinata.",
             "match_condition": lambda r, t, o: ("ESPANSIONE" in r or "GOLDILOCKS" in r) and not o and not (t >= 2.0),
             "verdict": "Massimizza il rendimento reale durante i cicli di crescita solida e inflazione controllata, dove i bond offrono diversificazione efficace contro ribassi azionari isolati.",
         },
         "PORT_ALL_WEATHER": {
             "num": 2,
             "id": "PORT_ALL_WEATHER",
-            "name": "All Weather",
+            "title_line1": "All Weather",
+            "title_line2": "(Ray Dalio)",
             "author": "Ray Dalio (Bridgewater)",
             "weights": {"Azioni": 30, "Obbligazioni": 55, "Oro": 7.5, "Commodity": 7.5},
-            "colors": ["#F59E0B", "#64748B", "#FBBF24", "#EF4444"],
             "features": [
-                "30% Azioni (Growth risk)",
-                "55% Obbligazioni (40% Long-Term + 15% Intermediate)",
-                "7.5% Oro (Copertura monetaria)",
-                "7.5% Commodity (Shock offerta)"
+                "<b>30% Azioni</b> (Crescita)",
+                "<b>55% Obbligazioni</b> (40% Long-Term + 15% Intermedie)",
+                "<b>7.5% Oro</b>",
+                "<b>7.5% Commodity</b>"
             ],
-            "note": "~15% Hard Assets: Progettato per resistere a shock inflattivi e transizioni di ciclo.",
-            "best_regime": "SURRISCALDAMENTO_INFLATIVO",
+            "analysis": "<b>Analisi Strategica & Ciclica:</b><br>Costruito sul principio del <i>Risk Parity</i>, equipara il contributo di volatilità di 4 stagioni macro (crescita +/- e inflazione +/-). La forte componente obbligazionaria a lunga duration è bilanciata da un <b>15% di Hard Assets (Oro + Commodity)</b>, capaci di proteggere il portafoglio da shock improvvisi sui costi energetici e fiammate inflattive.",
+            "note": "Nota: ~15% hard assets per neutralizzare shock da offerta.",
             "match_condition": lambda r, t, o: ("SURRISCALDAMENTO" in r or "INFLAZION" in r or o) and not ("STAGFLAZIONE" in r),
-            "verdict": "La ripartizione bilanciata del rischio di rischio (Risk Parity) neutralizza le sorprese sull'inflazione e sulla crescita grazie al 15% di commodities e oro.",
+            "verdict": "La ripartizione bilanciata del rischio neutralizza le sorprese sull'inflazione e sulla crescita grazie al 15% in materie prime energetiche e metalli preziosi.",
         },
         "PORT_GOLDEN_BUTTERFLY": {
             "num": 3,
             "id": "PORT_GOLDEN_BUTTERFLY",
-            "name": "Golden Butterfly",
+            "title_line1": "Golden Butterfly",
+            "title_line2": "",
             "author": "Tyler (Portfolio Charts)",
             "weights": {"Azioni": 40, "Obbligazioni": 40, "Oro": 20},
-            "colors": ["#F59E0B", "#64748B", "#FBBF24"],
             "features": [
-                "40% Azioni (20% Large-Cap + 20% Small-Cap Value)",
-                "40% Obbligazioni (20% Short-Term + 20% Long-Term)",
-                "20% Oro (Alta protezione da svalutazione)"
+                "<b>40% Azioni</b> (20% Large-Cap + 20% Small-Cap Value)",
+                "<b>40% Obbligazioni</b> (20% Breve Termine + 20% Lungo)",
+                "<b>20% Oro</b>"
             ],
-            "note": "20% Oro: Motore di crescita ad alta velocità con solido paracadute anticrisi.",
-            "best_regime": "STAGFLAZIONE",
+            "analysis": "<b>Analisi Strategica & Ciclica:</b><br>Evoluzione aggressiva del Permanent Portfolio: mantiene una massiccia quota del <b>20% in Oro fisico</b> come ancora contro la svalutazione monetaria e l'inflazione persistente, ma raddoppia il potenziale di crescita azionaria introducendo le Small-Cap Value. È la strategia più resistente e reattiva in scenari di <b>Stagflazione o tassi elevati prolungati</b>.",
+            "note": "Alta protezione da svalutazione con forte motore di ripartenza.",
             "match_condition": lambda r, t, o: ("STAGFLAZIONE" in r) or (t >= 2.0 and ("INFLAZION" in r or o)),
             "verdict": "La robusta esposizione all'oro (20%) unita alle small cap value protegge il potere d'acquisto e ammortizza la rottura di correlazione tra azioni e titoli di stato.",
         },
         "PORT_PERMANENT": {
             "num": 4,
             "id": "PORT_PERMANENT",
-            "name": "Permanent Portfolio",
+            "title_line1": "Permanent Portfolio",
+            "title_line2": "(Harry Browne)",
             "author": "Harry Browne",
             "weights": {"Azioni": 25, "Obbligazioni": 25, "Oro": 25, "Cash / Liquidità": 25},
-            "colors": ["#F59E0B", "#64748B", "#FBBF24", "#38BDF8"],
             "features": [
-                "25% Azioni (Espansione economica)",
-                "25% Obbligazioni (Deflazione / Calo tassi)",
-                "25% Oro (Inflazione / Svalutazione valutaria)",
-                "25% Cash / Liquidità (Recessione / Stretta monetaria)"
+                "<b>25% Azioni</b> (Espansione economica)",
+                "<b>25% Obbligazioni</b> (Deflazione / Calo tassi)",
+                "<b>25% Oro</b> (Inflazione / Crisi valutaria)",
+                "<b>25% Cash / Liquidità</b> (Recessione / Stretta)"
             ],
-            "note": "Equipartito 4x25%: Massima conservazione del capitale e drawdown minimi storici.",
-            "best_regime": "DEFLAZIONE_RECESSIONE",
+            "analysis": "<b>Analisi Strategica & Ciclica:</b><br>Architettura simmetrica a 4 pilastri da 25%. È pensato per eliminare completamente il rischio di rovina finanziaria: la quota del <b>25% in pura liquidità monetaria a breve</b> garantisce potere d'acquisto durante recessioni severe, credit crunch o crolli generalizzati di borsa, azzerando quasi totalmente i drawdown storici.",
+            "note": "Equipartito 4x25%: Massima conservazione del capitale e drawdown minimi.",
             "match_condition": lambda r, t, o: ("DEFLAZIONE" in r or "RECESSIONE" in r or "HARD" in str(core_state.landing_scenario.scenario).upper()) or (t >= 2.2),
-            "verdict": "La quota del 25% in pura liquidità unita all'oro protegge il capitale contro violenti credit crunch, shock sistemici e repentini crolli di liquidità intermarket.",
+            "verdict": "La quota del 25% in liquidità monetaria unita all'oro protegge il capitale contro violenti credit crunch, shock sistemici e repentini crolli di liquidità intermarket.",
         },
     }
 
@@ -2017,7 +2027,7 @@ with tabs[7]:
                 🎯 PORTAFOGLIO OTTIMALE RACCOMANDATO PER IL CICLO CORRENTE
             </div>
             <div style="font-size: 22px; font-weight: 800; color: #F8FAFC; margin-top: 3px;">
-                ⭐ {rec_info['name']} <span style="font-size: 14px; color: #94A3B8; font-weight: 500;">({rec_info['author']})</span>
+                ⭐ {rec_info['title_line1']} {rec_info['title_line2']} <span style="font-size: 14px; color: #94A3B8; font-weight: 500;">({rec_info['author']})</span>
             </div>
             <div style="font-size: 13px; color: #CBD5E1; margin-top: 4px; max-width: 850px;">
                 <b>Motivazione Macroeconomica SPIDER:</b> {rec_info['verdict']}
@@ -2031,48 +2041,70 @@ with tabs[7]:
     </div>
     """, unsafe_allow_html=True)
 
+    # Legenda cromatica univoca degli Asset
+    st.markdown("""
+    <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 16px; padding: 10px 14px; background: rgba(15,23,42,0.5); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; font-size: 12px;">
+        <span style="color: #94A3B8; font-weight: 700; text-transform: uppercase; font-size: 11px;">🎨 Legenda Asset:</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #EAB308; display: inline-block;"></span> Azioni</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #64748B; display: inline-block;"></span> Obbligazioni</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #F59E0B; display: inline-block;"></span> Oro</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #DC2626; display: inline-block;"></span> Commodity</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #38BDF8; display: inline-block;"></span> Cash / Liquidità</span>
+    </div>
+    """, unsafe_allow_html=True)
+
     # Render 4 Columns for the 4 Strategic Portfolios
     p_col1, p_col2, p_col3, p_col4 = st.columns(4)
     cols_list = [p_col1, p_col2, p_col3, p_col4]
 
     for (p_key, p_data), cur_col in zip(portfolios_data.items(), cols_list):
         is_selected = (p_key == chosen_port_id)
-        border_style = "2px solid #38BDF8; box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);" if is_selected else "1px solid rgba(255, 255, 255, 0.1);"
-        badge_header = f"""
-        <div style="background: #38BDF8; color: #0B0F19; font-size: 10.5px; font-weight: 800; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px;">
-            ⭐ PIÙ ADATTO AL REGIME
-        </div>
-        """ if is_selected else f"""
-        <div style="color: #94A3B8; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">
-            Modello Strategico #{p_data['num']}
-        </div>
-        """
+        border_color = "#38BDF8" if is_selected else "rgba(255, 255, 255, 0.12)"
+        box_shadow = "0 0 25px rgba(56, 189, 248, 0.3)" if is_selected else "none"
 
         with cur_col:
+            # Header card matching the user's uploaded slide exactly
+            badge_html = f"""
+            <div style="background: #38BDF8; color: #0B0F19; font-size: 10px; font-weight: 800; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px;">
+                ⭐ PIÙ ADATTO AL REGIME
+            </div>
+            """ if is_selected else f"""
+            <div style="color: #64748B; font-size: 10.5px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">
+                STRATEGIA #{p_data['num']}
+            </div>
+            """
+
             st.markdown(f"""
-            <div style="background: rgba(15, 23, 42, 0.85); border: {border_style}; border-radius: 12px; padding: 16px; min-height: 230px;">
-                {badge_header}
-                <div style="display: flex; align-items: baseline; gap: 8px;">
-                    <span style="background: rgba(245, 158, 11, 0.2); color: #F59E0B; border: 1px solid #F59E0B; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px;">{p_data['num']}</span>
-                    <span style="font-size: 17px; font-weight: 800; color: #F8FAFC;">{p_data['name']}</span>
+            <div style="background: rgba(15, 23, 42, 0.9); border: 2px solid {border_color}; border-radius: 12px; padding: 16px; box-shadow: {box_shadow}; min-height: 125px;">
+                {badge_html}
+                <div style="display: flex; align-items: flex-start; gap: 10px;">
+                    <span style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1.5px solid #F59E0B; border-radius: 50%; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0;">
+                        {p_data['num']}
+                    </span>
+                    <div>
+                        <div style="font-size: 18px; font-weight: 800; color: #F8FAFC; line-height: 1.2;">
+                            {p_data['title_line1']}
+                        </div>
+                        {f'<div style="font-size: 15px; font-weight: 700; color: #E2E8F0; line-height: 1.2;">' + p_data["title_line2"] + '</div>' if p_data["title_line2"] else ''}
+                    </div>
                 </div>
-                <div style="font-size: 11.5px; color: #94A3B8; margin-top: 2px;">{p_data['author']}</div>
             </div>
             """, unsafe_allow_html=True)
 
-            # Donut chart for asset allocation percentages
+            # Donut chart for asset allocation percentages with consistent color mapping
+            slice_colors = [ASSET_COLORS.get(label, "#94A3B8") for label in p_data["weights"].keys()]
             fig_donut = go.Figure(data=[go.Pie(
                 labels=list(p_data["weights"].keys()),
                 values=list(p_data["weights"].values()),
                 hole=0.55,
-                marker=dict(colors=p_data["colors"], line=dict(color="#0B0F19", width=2)),
+                marker=dict(colors=slice_colors, line=dict(color="#0B0F19", width=2)),
                 textinfo="label+percent",
                 textposition="inside",
                 showlegend=False,
                 hoverinfo="label+value+percent",
             )])
             fig_donut.update_layout(
-                height=180,
+                height=190,
                 margin=dict(l=5, r=5, t=5, b=5),
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
@@ -2081,23 +2113,31 @@ with tabs[7]:
             st.plotly_chart(fig_donut, use_container_width=True, key=f"donut_port_{p_data['num']}")
 
             # Features list
-            features_html = "".join([f"<li style='margin-bottom: 4px;'>{f}</li>" for f in p_data["features"]])
+            features_html = "".join([f"<li style='margin-bottom: 5px;'>{f}</li>" for f in p_data["features"]])
             st.markdown(f"""
-            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; font-size: 12px; color: #CBD5E1; margin-top: 8px;">
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; font-size: 12px; color: #CBD5E1;">
                 <ul style="padding-left: 16px; margin: 0;">
                     {features_html}
                 </ul>
-                <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 8px; padding-top: 6px; font-size: 11px; color: #94A3B8; font-style: italic;">
+                <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 8px; padding-top: 6px; font-size: 11px; color: #F59E0B; font-weight: 500;">
                     {p_data['note']}
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
+            # Detailed economic analysis explanation
+            st.markdown(f"""
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; margin-top: 8px; font-size: 11.5px; color: #94A3B8; line-height: 1.45;">
+                {p_data['analysis']}
+            </div>
+            """, unsafe_allow_html=True)
+
     st.markdown("""
     <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px 18px; margin-top: 16px; font-size: 12px; color: #94A3B8;">
-        <div>🛡️ <b>Diversificazione. Disciplina. Resilienza:</b> Strategie progettate per diverse congiunture di mercato e correlazioni intermarket.</div>
-        <div>📈 <b>Nessuna strategia è superiore in assoluto:</b> Ciascuna risponde a regimi di volatilità, orizzonti temporali e shock esogeni differenti.</div>
+        <div>🛡️ <b>DIVERSIFICAZIONE. DISCIPLINA. RESILIENZA:</b> Strategie progettate per diverse congiunture di mercato e correlazioni intermarket.</div>
+        <div>📈 <b>NESSUNA STRATEGIA È SUPERIORE IN ASSOLUTO:</b> Ciascuna risponde a obiettivi, orizzonti temporali e tolleranza al rischio differenti.</div>
     </div>
     """, unsafe_allow_html=True)
+
 
 
