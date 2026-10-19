@@ -135,6 +135,34 @@ st.markdown("""
         100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
 
+    /* Flashing animation for active What-If stress simulator banner */
+    .simulator-active-flash {
+        background: rgba(245, 158, 11, 0.15);
+        border: 1.5px solid #F59E0B;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin: 14px 0;
+        animation: flash-border 1.5s infinite ease-in-out;
+    }
+    .simulator-flash-title {
+        color: #F59E0B;
+        font-weight: 800;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        animation: flash-text 1.2s infinite alternate;
+        display: inline-block;
+    }
+    @keyframes flash-text {
+        0% { opacity: 1; text-shadow: 0 0 8px rgba(245, 158, 11, 0.8); }
+        50% { opacity: 0.35; text-shadow: none; }
+        100% { opacity: 1; text-shadow: 0 0 12px rgba(245, 158, 11, 1); }
+    }
+    @keyframes flash-border {
+        0% { border-color: rgba(245, 158, 11, 0.4); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+        50% { border-color: rgba(245, 158, 11, 1); box-shadow: 0 0 15px rgba(245, 158, 11, 0.35); }
+        100% { border-color: rgba(245, 158, 11, 0.4); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+
     .spider-kpi {
         background: rgba(15, 23, 42, 0.7);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1713,7 +1741,18 @@ with tabs[6]:
 
     is_shock_active = (shock_oil != 0 or shock_tips != 0 or shock_hy != 0)
     if is_shock_active:
-        st.warning(f"⚠️ **Simulatore Attivo:** Shock in corso [Petrolio: {shock_oil:+.1f}$, TIPS Reale: {shock_tips:+.2f}%, Spread HY: {shock_hy:+.2f}%]. Il grafico e i parametri sottostanti riflettono istantaneamente lo scenario simulato.")
+        st.markdown(f"""
+        <div class="simulator-active-flash">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="simulator-flash-title">⚠️ SIMULATORE ATTIVO: SHOCK IN CORSO</span>
+            </div>
+            <div style="color: #F8FAFC; font-size: 13.5px; margin-top: 6px; font-weight: 500;">
+                Shock applicati: <b style="color: #FCD34D;">[Petrolio: {shock_oil:+.1f}$, TIPS Reale: {shock_tips:+.2f}%, Spread HY: {shock_hy:+.2f}%]</b>.
+                <br>
+                <span style="color: #CBD5E1; font-size: 12.5px;">Il grafico e i parametri sottostanti riflettono istantaneamente lo scenario simulato.</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     else:
         st.info("💡 **Nessuno shock applicato:** I nodi e i fili della tela sottostante mostrano i dati certificati correnti. Muovi gli slider in alto per simulare uno scenario di stress estremo.")
 
