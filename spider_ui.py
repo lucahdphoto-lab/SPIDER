@@ -836,3 +836,218 @@ def build_spider_web_3d_figure(
 
     return fig
 
+
+def build_zscore_distribution_figure(
+    node_states: Dict[str, NodeState],
+    dark_mode: bool = True,
+) -> go.Figure:
+    """
+    Costruisce il grafico a barre orizzontali degli Z-Score dei 30 Nodi Macro-Finanziari,
+    con visualizzazione standardizzata (-3 a +3), asse centrale allo zero,
+    e codifica a 3 colori istituzionali:
+    - 🟦 Estremo (|Z| >= 2.0)
+    - 🟥 Attenzione (1.25 <= |Z| < 2.0)
+    - 🟨 Normale (|Z| < 1.25)
+    """
+    sorted_nodes = sorted(node_states.values(), key=lambda x: x.z_score)
+
+    names = [ns.name for ns in sorted_nodes]
+    z_scores = [ns.z_score for ns in sorted_nodes]
+    values_str = [f"{ns.current_value:,.2f} {ns.unit}" for ns in sorted_nodes]
+    statuses = [ns.status for ns in sorted_nodes]
+
+    colors = []
+    for z in z_scores:
+        abs_z = abs(z)
+        if abs_z >= 2.0:
+            colors.append("#3B82F6")  # Estremo (Blu)
+        elif abs_z >= 1.25:
+            colors.append("#EF4444")  # Attenzione (Rosso)
+        else:
+            colors.append("#F59E0B")  # Normale (Giallo/Oro)
+
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "rgba(15, 23, 42, 0.7)" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+    grid_color = "rgba(255, 255, 255, 0.08)" if dark_mode else "rgba(15, 23, 42, 0.08)"
+
+    fig = go.Figure()
+
+    # Barre orizzontali principali
+    customdata = list(zip(values_str, statuses))
+    fig.add_trace(go.Bar(
+        y=names,
+        x=z_scores,
+        orientation="h",
+        marker=dict(
+            color=colors,
+            line=dict(width=0),
+        ),
+        customdata=customdata,
+        hovertemplate="<b>%{y}</b><br>Z-Score Standardizzato: <b>%{x:+.2f}</b><br>Valore Attuale: %{customdata[0]}<br>Stato: %{customdata[1]}<extra></extra>",
+        showlegend=False,
+    ))
+
+    # Tracce fittizie per la legenda a 3 voci (Estremo, Attenzione, Normale) identica allo screenshot
+    fig.add_trace(go.Bar(
+        x=[None], y=[None], orientation="h",
+        name="Estremo",
+        marker=dict(color="#3B82F6"),
+        showlegend=True,
+    ))
+    fig.add_trace(go.Bar(
+        x=[None], y=[None], orientation="h",
+        name="Attenzione",
+        marker=dict(color="#EF4444"),
+        showlegend=True,
+    ))
+    fig.add_trace(go.Bar(
+        x=[None], y=[None], orientation="h",
+        name="Normale",
+        marker=dict(color="#F59E0B"),
+        showlegend=True,
+    ))
+
+    # Forme geometriche (linea zero centrale + soglie di allerta tratteggiate)
+    shapes = [
+        # Linea dello zero centrale
+        dict(
+            type="line",
+            x0=0, x1=0,
+            y0=-0.5, y1=len(names) - 0.5,
+            line=dict(color="#94A3B8" if dark_mode else "#334155", width=2),
+        ),
+        # Soglia Estremo -2.0
+        dict(
+            type="line",
+            x0=-2.0, x1=-2.0,
+            y0=-0.5, y1=len(names) - 0.5,
+            line=dict(color="rgba(59, 130, 246, 0.45)", width=1.2, dash="dash"),
+        ),
+        # Soglia Estremo +2.0
+        dict(
+            type="line",
+            x0=2.0, x1=2.0,
+            y0=-0.5, y1=len(names) - 0.5,
+            line=dict(color="rgba(59, 130, 246, 0.45)", width=1.2, dash="dash"),
+        ),
+        # Soglia Attenzione -1.25
+        dict(
+            type="line",
+            x0=-1.25, x1=-1.25,
+            y0=-0.5, y1=len(names) - 0.5,
+            line=dict(color="rgba(239, 68, 68, 0.3)", width=1, dash="dot"),
+        ),
+        # Soglia Attenzione +1.25
+        dict(
+            type="line",
+            x0=1.25, x1=1.25,
+            y0=-0.5, y1=len(names) - 0.5,
+            line=dict(color="rgba(239, 68, 68, 0.3)", width=1, dash="dot"),
+        ),
+    ]
+
+    fig.update_layout(
+        title=dict(
+            text="<b>Z-Score degli Indicatori Macro-Finanziari (30 Nodi)</b>",
+            font=dict(size=17, color=text_color, family="Inter, sans-serif"),
+            x=0.03,
+            y=0.98,
+        ),
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        shapes=shapes,
+        xaxis=dict(
+            title=dict(text="Z-Score Standardizzato", font=dict(size=12, color="#94A3B8")),
+            range=[-3.0, 3.0],
+            tickmode="linear",
+            tick0=-3,
+            dtick=1,
+            gridcolor=grid_color,
+            zeroline=False,
+            tickfont=dict(color="#CBD5E1", size=11),
+        ),
+        yaxis=dict(
+            title=dict(text="Indicatore", font=dict(size=12, color="#94A3B8")),
+            autorange="reversed",  # Mette i negativi in alto esattamente come nello screenshot!
+            tickfont=dict(color="#CBD5E1", size=11),
+            gridcolor="rgba(0,0,0,0)",
+        ),
+        margin=dict(l=190, r=30, t=50, b=65),
+        height=740,
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.08,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=12, color=text_color),
+        ),
+        hoverlabel=dict(
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            bordercolor="#38BDF8",
+            font_size=12,
+            font_color="#F8FAFC",
+        ),
+    )
+
+    return fig
+
+
+def generate_zscore_mini_svg(node_states: Dict[str, NodeState]) -> str:
+    """Genera una rappresentazione grafica vettoriale SVG compatta (riepilogo) dello Z-Score per il box KPI."""
+    sorted_nodes = sorted(node_states.values(), key=lambda x: x.z_score)
+    svg_bars = []
+
+    center_x = 110.0
+    scale = 30.0  # 30px per unità Z (da -3 a +3 => 110 - 90 = 20, 110 + 90 = 200)
+
+    y_start = 5.0
+    bar_height = 1.9
+    step_y = 2.45  # 30 * 2.45 = ~74px
+
+    for i, ns in enumerate(sorted_nodes):
+        z = ns.z_score
+        y = y_start + i * step_y
+        abs_z = abs(z)
+        if abs_z >= 2.0:
+            color = "#3B82F6"
+        elif abs_z >= 1.25:
+            color = "#EF4444"
+        else:
+            color = "#F59E0B"
+
+        bar_w = min(max(abs_z * scale, 1.0), 92.0)
+        if z < 0:
+            bx = center_x - bar_w
+        else:
+            bx = center_x
+
+        svg_bars.append(f'<rect x="{bx:.1f}" y="{y:.1f}" width="{bar_w:.1f}" height="{bar_height:.1f}" rx="0.5" fill="{color}" opacity="0.9"/>')
+
+    bars_html = "\n".join(svg_bars)
+
+    svg = f"""
+    <div style="width: 100%; display: flex; justify-content: center; margin: 2px 0;">
+        <svg viewBox="0 0 220 86" style="width: 100%; max-height: 78px; overflow: visible;">
+            <!-- Linee di griglia di fondo -->
+            <line x1="20" y1="3" x2="20" y2="78" stroke="rgba(255,255,255,0.08)" stroke-width="0.7" stroke-dasharray="2,2"/>
+            <line x1="50" y1="3" x2="50" y2="78" stroke="rgba(59,130,246,0.25)" stroke-width="0.8" stroke-dasharray="2,2"/>
+            <line x1="170" y1="3" x2="170" y2="78" stroke="rgba(59,130,246,0.25)" stroke-width="0.8" stroke-dasharray="2,2"/>
+            <line x1="200" y1="3" x2="200" y2="78" stroke="rgba(255,255,255,0.08)" stroke-width="0.7" stroke-dasharray="2,2"/>
+            <!-- Linea dello zero centrale -->
+            <line x1="{center_x:.1f}" y1="1" x2="{center_x:.1f}" y2="79" stroke="#94A3B8" stroke-width="1.2"/>
+            <!-- Barre orizzontali dei 30 nodi -->
+            {bars_html}
+            <!-- Asse X Z-Score -->
+            <text x="20" y="85" fill="#64748B" font-size="7" font-family="monospace" text-anchor="middle">-3</text>
+            <text x="50" y="85" fill="#3B82F6" font-size="7" font-family="monospace" text-anchor="middle">-2</text>
+            <text x="{center_x:.1f}" y="85" fill="#94A3B8" font-size="7" font-family="monospace" text-anchor="middle">0</text>
+            <text x="170" y="85" fill="#3B82F6" font-size="7" font-family="monospace" text-anchor="middle">+2</text>
+            <text x="200" y="85" fill="#64748B" font-size="7" font-family="monospace" text-anchor="middle">+3</text>
+        </svg>
+    </div>
+    """
+    return svg
+
+

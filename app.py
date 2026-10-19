@@ -45,6 +45,8 @@ from spider_ui import (
     build_macro_regime_matrix_figure,
     build_spider_web_figure,
     build_spider_web_3d_figure,
+    build_zscore_distribution_figure,
+    generate_zscore_mini_svg,
     generate_links_dataframe,
     generate_nodes_dataframe,
 )
@@ -830,8 +832,80 @@ def show_network_nodes_modal():
     st.dataframe(pd.DataFrame(nodes_summary_table), use_container_width=True, hide_index=True)
 
 
+# Modal Dialog 7: Distribuzione e Diagnosi Z-Score dei 30 Nodi
+@st.dialog("📊 Z-Score degli Indicatori Macro-Finanziari (30 Nodi)", width="large")
+def show_zscore_modal():
+    st.markdown("""
+    <div style="background: rgba(15, 23, 42, 0.85); border: 1.5px solid #38BDF8; border-radius: 10px; padding: 14px 18px; margin-bottom: 16px;">
+        <div style="font-size: 14px; font-weight: 800; color: #38BDF8; margin-bottom: 4px;">
+            📐 STANDARDIZZAZIONE STATISTICA Z-SCORE (ROLLING WINDOW 1Y)
+        </div>
+        <div style="font-size: 12px; color: #CBD5E1; line-height: 1.5;">
+            Lo <b>Z-Score</b> normalizza tutte le 30 variabili macro-finanziarie calcolando quante deviazioni standard il valore odierno dista dalla propria media storica mobile:
+            <span style="font-family: monospace; color: #F8FAFC; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">Z = (X_t - μ) / σ</span>.
+            Ciò consente un confronto quantitativo immediato e neutrale tra scale dimensionali profondamente disomogenee (tassi in %, borse in punti, greggio in $/barile, spread di credito in bps).
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-k1, k2, k3, k4, k5, k6 = st.columns(6)
+    n_ext = sum(1 for ns in node_states.values() if abs(ns.z_score) >= 2.0)
+    n_att = sum(1 for ns in node_states.values() if 1.25 <= abs(ns.z_score) < 2.0)
+    n_norm = sum(1 for ns in node_states.values() if abs(ns.z_score) < 1.25)
+
+    # 3 Colonne di KPI di sintesi dello Z-Score
+    zc1, zc2, zc3 = st.columns(3)
+    with zc1:
+        st.markdown(f"""
+        <div style="background: rgba(59, 130, 246, 0.1); border: 1.5px solid #3B82F6; border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #3B82F6; font-weight: 700;">🟦 Regime Estremo (|Z| ≥ 2.0)</div>
+            <div style="font-size: 24px; font-weight: 800; color: #3B82F6; font-family: monospace;">{n_ext} Nodi</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Anomalie Critiche / Shock di Mercato</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with zc2:
+        st.markdown(f"""
+        <div style="background: rgba(239, 68, 68, 0.1); border: 1.5px solid #EF4444; border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #EF4444; font-weight: 700;">🟥 In Attenzione (1.25 ≤ |Z| < 2.0)</div>
+            <div style="font-size: 24px; font-weight: 800; color: #EF4444; font-family: monospace;">{n_att} Nodi</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Surriscaldamento / Tensione Ciclica</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with zc3:
+        st.markdown(f"""
+        <div style="background: rgba(245, 158, 11, 0.1); border: 1.5px solid #F59E0B; border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #F59E0B; font-weight: 700;">🟨 In Equilibrio (|Z| < 1.25)</div>
+            <div style="font-size: 24px; font-weight: 800; color: #F59E0B; font-family: monospace;">{n_norm} Nodi</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Range Statistico Normale (±1.25σ)</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Grafico a barre orizzontali ad alta risoluzione (identico allo screenshot dell'utente)
+    fig_zscore = build_zscore_distribution_figure(node_states, dark_mode=True)
+    st.plotly_chart(fig_zscore, use_container_width=True)
+
+    st.markdown("<hr style='margin: 16px 0; border-color: rgba(255,255,255,0.08);'>", unsafe_allow_html=True)
+    st.markdown("#### 📋 Tabella Analitica Completa Ordinata per Deviazione Z-Score:")
+
+    table_z_data = []
+    for ns in sorted(node_states.values(), key=lambda x: abs(x.z_score), reverse=True):
+        table_z_data.append({
+            "Indicatore": ns.name,
+            "ID Ticker": ns.official_ticker,
+            "Anello": f"Anello {ns.ring}",
+            "Quadrante": ns.quadrant,
+            "Valore Attuale": f"{ns.current_value:,.2f} {ns.unit}",
+            "Z-Score Standardizzato": f"{ns.z_score:+.2f}",
+            "Stato Rete": ns.status,
+            "Delta Periodo": f"{ns.delta_period:+.2f} ({ns.delta_period_pct:+.2f}%)"
+        })
+    st.dataframe(pd.DataFrame(table_z_data), use_container_width=True, hide_index=True)
+
+
+
+# 7 Colonne di KPI Superiori (con Box Z-Score riepilogativo)
+k1, k2, k3, k4, k5, k6, k7 = st.columns([1, 1, 1, 1, 1, 1, 1.35])
 with k1:
     st.markdown(f"""
     <div class="spider-kpi">
@@ -893,6 +967,27 @@ with k6:
     """, unsafe_allow_html=True)
     if st.button("ℹ️ Dettagli Nodi", key="btn_open_nodes_modal", use_container_width=True, type="secondary"):
         show_network_nodes_modal()
+with k7:
+    n_ext_tot = sum(1 for ns in node_states.values() if abs(ns.z_score) >= 2.0)
+    n_att_tot = sum(1 for ns in node_states.values() if 1.25 <= abs(ns.z_score) < 2.0)
+    n_norm_tot = sum(1 for ns in node_states.values() if abs(ns.z_score) < 1.25)
+    z_mini_svg = generate_zscore_mini_svg(node_states)
+    st.markdown(f"""
+    <div class="spider-kpi" style="padding: 10px 12px; margin-bottom: 8px;">
+        <div class="kpi-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            <span>Z-Score (30 Nodi)</span>
+            <span style="font-size: 10px; color: #38BDF8; font-weight: 700;">{n_ext_tot} Estremi</span>
+        </div>
+        {z_mini_svg}
+        <div style="font-size: 9.5px; color: #CBD5E1; text-align: center; margin-top: 3px; display: flex; justify-content: space-between;">
+            <span><b style="color: #3B82F6;">{n_ext_tot}</b> Estremi</span>
+            <span><b style="color: #EF4444;">{n_att_tot}</b> Attenz.</span>
+            <span><b style="color: #F59E0B;">{n_norm_tot}</b> Norm.</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("ℹ️ Dettagli Zscore", key="btn_open_zscore_modal", use_container_width=True, type="secondary"):
+        show_zscore_modal()
 
 
 # ================= GENERAZIONE SNAPSHOT GLOBALE (FILE A & FILE B) =================
