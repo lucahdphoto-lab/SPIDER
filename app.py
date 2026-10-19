@@ -895,6 +895,287 @@ with k6:
         show_network_nodes_modal()
 
 
+# ================= DIALOG: SPIDER CORE FOCUS =================
+@st.dialog("🕷️ SPIDER_CORE: Centro di Controllo Macro-Finanziario & Tensione Sistemica", width="large")
+def show_spider_core_modal():
+    t_val = core_state.systemic_web_tension
+    t_color = "#EF4444" if t_val >= 2.0 else ("#F59E0B" if t_val >= 1.25 else "#10B981")
+    
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(168, 85, 247, 0.12)); border: 2px solid #38BDF8; border-radius: 12px; padding: 18px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <span style="font-size: 11px; text-transform: uppercase; color: #38BDF8; font-weight: 800; letter-spacing: 0.8px;">SINTESI SISTEMICA CENTRALE (RAGGIO 0)</span>
+                <div style="font-size: 24px; font-weight: 800; color: #F8FAFC; margin-top: 2px;">SPIDER_CORE • Centro di Controllo Istituzionale</div>
+                <div style="font-size: 13px; color: #CBD5E1; margin-top: 4px;">Topologia causale della rete: riceve i vettori di impulso monetario, fondamentale e intermarket sintetizzandoli in un unico tensore di stato.</div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.9); border: 1.5px solid {t_color}; border-radius: 10px; padding: 12px 18px; text-align: center; min-width: 170px;">
+                <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Tensione Globale Tela</div>
+                <div style="font-size: 28px; font-weight: 800; color: {t_color}; font-family: monospace;">|Z| = {t_val:.2f}</div>
+                <div style="font-size: 11px; color: {t_color}; font-weight: 700;">{core_state.web_tension_status.split('(')[0].strip()}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    c_sc1, c_sc2, c_sc3, c_sc4 = st.columns(4)
+    with c_sc1:
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Regime Macro Attivo</div>
+            <div style="font-size: 16px; font-weight: 800; color: #38BDF8; margin-top: 4px;">{core_state.macro_regime.split('/')[0].strip()}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Growth: {core_state.growth_score:+.2f} | Inf: {core_state.inflation_score:+.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c_sc2:
+        ls_s = core_state.landing_scenario
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Scenario Ciclico Landing</div>
+            <div style="font-size: 16px; font-weight: 800; color: {ls_s.color_hex}; margin-top: 4px;">{ls_s.scenario_badge}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Confidenza: {ls_s.confidence_pct:.1f}%</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c_sc3:
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Banche Centrali & Policy</div>
+            <div style="font-size: 16px; font-weight: 800; color: #A78BFA; margin-top: 4px;">{core_state.central_bank_bias.split('(')[0].strip()}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Taylor Gap: {core_state.taylor_rate_gap_bps:+.0f} bps</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c_sc4:
+        yc_s = yield_curve_engine.get_curve_regime_state()
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Curva dei Rendimenti</div>
+            <div style="font-size: 16px; font-weight: 800; color: {yc_s.color_hex}; margin-top: 4px;">{yc_s.regime_name}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Rank #{yc_s.rank} Ciclo Economico</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("#### ⚡ Matrice Anomalie Critiche & Fili Maestri in Tensione:")
+    crit_links = [l for l in link_states if l.is_master]
+    df_core_links = pd.DataFrame([
+        {
+            "Filo": l.id,
+            "Relazione": f"{l.node_a_name} ↔ {l.node_b_name}",
+            "Corr. Rolling": f"{l.active_corr:+.2f}",
+            "Corr. Teorica": f"{l.theoretical_corr:+d}",
+            "Tensione (|Z|)": f"{l.z_score_tension:.2f}",
+            "Stato": l.status,
+            "Diagnosi Macro": l.alert_description,
+        }
+        for l in crit_links
+    ])
+    st.dataframe(df_core_links, use_container_width=True, hide_index=True)
+
+
+# ================= BARRA SALVATAGGIO SITUAZIONE GLOBALE & SPIDER CORE =================
+st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
+c_glob_box1, c_glob_box2 = st.columns([1.6, 1.4])
+
+# Costruzione del File A: File di Testo (.txt) con tutti i parametri salvati di tutte le sezioni
+now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+yc_state_curr = yield_curve_engine.get_curve_regime_state()
+pring_engine_curr = PringCycleEngine(aligned_df)
+pring_res_curr = pring_engine_curr.analyze()
+
+file_a_text = f"""================================================================================
+SPIDER • SNAPSHOT DI STATO GLOBALE DEL SISTEMA MACRO-FINANZIARIO
+Data e Ora Salvataggio: {now_iso}
+Ambiente: SPIDER Institutional Network Engine (30 Nodi, 10 Fili Maestri)
+================================================================================
+
+1. PARAMETRI DI CONFIGURAZIONE & FILTRI ATTIVI (CONFIGURAZIONE DI PARTENZA)
+--------------------------------------------------------------------------------
+- Finestra Temporale Correlazioni (Rolling Window): {st.session_state.get('time_window', '1Y')}
+- Metodo Matematico Correlazione: {'Spearman (Ranghi Non-Parametrici)' if st.session_state.get('use_spearman', False) else 'Pearson (Lineare)'}
+- Filtro Quadrante Macro Attivo: {st.session_state.get('filter_quadrant', 'TUTTI')}
+- Filtro Anello Concentrico Attivo: {st.session_state.get('filter_ring', 0)} ({'Tutti gli Anelli' if st.session_state.get('filter_ring', 0) == 0 else f'Anello {st.session_state.get("filter_ring")}'})
+- Focus Nodo Selezionato: {st.session_state.get('selected_node', 'TUTTI (Visualizzazione Globale)')}
+- Parametri What-If Stress Attivi:
+  * Shock Petrolio (WTI Delta %): {st.session_state.get('what_if_oil', 0.0):+.1f}%
+  * Tassi Reali TIPS 10Y (Delta bps): {st.session_state.get('what_if_real_yield', 0.0):+.0f} bps
+  * Spread High Yield (Delta bps): {st.session_state.get('what_if_hy', 0.0):+.0f} bps
+
+2. SPIDER_CORE: CENTRO DI CONTROLLO & DIAGNOSI SISTEMICA
+--------------------------------------------------------------------------------
+- Regime Macroeconomico Attivo: {core_state.macro_regime}
+- Growth Score: {core_state.growth_score:+.2f}
+- Inflation Score: {core_state.inflation_score:+.2f}
+- Coordinate Spaziali Regimi: ({core_state.regime_coords[0]:.2f}, {core_state.regime_coords[1]:.2f})
+- Tensione Sistemica della Tela: |Z| = {core_state.systemic_web_tension:.2f} ({core_state.web_tension_status})
+- Bias Banche Centrali: {core_state.central_bank_bias}
+- Tasso Reale FED: {core_state.fed_real_rate:+.2f}% | Tasso Reale BCE: {core_state.ecb_real_rate:+.2f}%
+- Taylor Rule Gap: {core_state.taylor_rate_gap_bps:+.0f} bps (Posizione: {'Restrittiva (Surplus)' if core_state.taylor_rate_gap_bps >= 0 else 'Accomodante (Deficit / Behind the curve)'})
+- Numero Anomalie Critiche (|Z| >= 2.0): {len(core_state.active_critical_alerts)}
+- Allarmi Critici:
+  * {chr(10).join('  * ' + alt for alt in core_state.active_critical_alerts) if core_state.active_critical_alerts else 'Nessuna rottura sistemica critica rilevata.'}
+
+3. SCENARIO DI ATTERRAGGIO (LANDING SCENARIO)
+--------------------------------------------------------------------------------
+- Scenario Rilevato: {core_state.landing_scenario.scenario_title} ({core_state.landing_scenario.scenario_badge})
+- Confidenza Modello: {core_state.landing_scenario.confidence_pct:.1f}%
+- Probabilità No Landing: {core_state.landing_scenario.prob_no_landing:.1f}%
+- Probabilità Soft Landing: {core_state.landing_scenario.prob_soft_landing:.1f}%
+- Probabilità Hard Landing: {core_state.landing_scenario.prob_hard_landing:.1f}%
+- Implicazione di Mercato: {core_state.landing_scenario.market_implication}
+- Reazione Banche Centrali: {core_state.landing_scenario.policy_reaction}
+
+4. TEORIA DEI CICLI INTERMARKET (MARTIN PRING)
+--------------------------------------------------------------------------------
+- Fase Ciclica Attuale: {pring_res_curr.stage_title}
+- Descrizione Fase: {pring_res_curr.stage_desc}
+- Confidenza: {pring_res_curr.confidence_pct:.1f}%
+- Regime Pring: {pring_res_curr.stage_regime}
+- Stato Obbligazioni: {'BULL' if pring_res_curr.asset_statuses['BONDS'].is_bullish else 'BEAR'} (Trend: {pring_res_curr.asset_statuses['BONDS'].trend_200d}, Mom: {pring_res_curr.asset_statuses['BONDS'].momentum_60d_pct:+.2f}%)
+- Stato Azioni: {'BULL' if pring_res_curr.asset_statuses['STOCKS'].is_bullish else 'BEAR'} (Trend: {pring_res_curr.asset_statuses['STOCKS'].trend_200d}, Mom: {pring_res_curr.asset_statuses['STOCKS'].momentum_60d_pct:+.2f}%)
+- Stato Materie Prime: {'BULL' if pring_res_curr.asset_statuses['COMMODITIES'].is_bullish else 'BEAR'} (Trend: {pring_res_curr.asset_statuses['COMMODITIES'].trend_200d}, Mom: {pring_res_curr.asset_statuses['COMMODITIES'].momentum_60d_pct:+.2f}%)
+- Asset Favoriti da Pring: {', '.join(pring_res_curr.favored_assets)}
+- Settori Azionari Favoriti da Pring: {', '.join(pring_res_curr.favored_sectors)}
+
+5. CURVA DEI RENDIMENTI & REGIMI (STENO RESEARCH FRAMEWORK)
+--------------------------------------------------------------------------------
+- Regime Curva Rilevato: {yc_state_curr.regime_name} (Rank Ciclo: #{yc_state_curr.rank})
+- Delta Tasso Breve (2Y): {yc_state_curr.short_rate_delta_bps:+.1f} bps
+- Delta Tasso Lungo (10Y): {yc_state_curr.long_rate_delta_bps:+.1f} bps
+- Variazione Slope (Pendenza): {yc_state_curr.slope_delta_bps:+.1f} bps
+- Impatto Motore del Credito: {yc_state_curr.impact_credit_engine}
+- Diagnosi SLOOS & Fido: {yc_state_curr.credit_analysis.bank_lending_standards}
+- Asset Curva Favoriti: {', '.join(yc_state_curr.favored_assets)}
+- Asset Curva Sfavoriti: {', '.join(yc_state_curr.unfavored_assets)}
+
+6. ASSET ALLOCATION STRATEGICA & SCENARIO DINAMICO SPIDER
+--------------------------------------------------------------------------------
+- Modello Selezionato: SPIDER Dynamic (Macro-Adaptive)
+- Allocazione Ottimizzata Multi-Fattore:
+  * 35% Azioni (Quality FCF + Energy Tilt)
+  * 15% Obbligazioni (Short-Duration 1-3Y / T-Bills)
+  * 20% Oro Fisico (Hedge Debito & De-dollarizzazione LINK_03)
+  * 15% Commodity (Focus Petrolio / Offerta rigida LINK_04)
+  * 10% Cash / Liquidità Monetaria (Rendimento privo di rischio al 5%)
+  * 5% Crypto (Bitcoin - Debasement hedge asimmetrico e liquidità globale)
+
+================================================================================
+Fine Report Snapshot SPIDER.
+================================================================================
+"""
+
+# Costruzione del File B: Tabella Completa dei Dati Numerici (CSV & Excel)
+# Raccoglie tutti i 30 nodi con valore attuale, prev, delta, z-score, min, max, e tutti i 10 fili con correlazione e tensione
+nodes_num_data = []
+for n_id, ns in node_states.items():
+    nd = NODES.get(n_id)
+    nodes_num_data.append({
+        "Sezione": "NODO_TELA",
+        "ID": n_id,
+        "Nome": ns.name,
+        "Categoria": nd.category if nd else "",
+        "Anello": ns.ring,
+        "Quadrante": ns.quadrant,
+        "Valore_Attuale": ns.current_value,
+        "Valore_Precedente": ns.prev_value,
+        "Unita": ns.unit,
+        "Delta_Periodo": ns.delta_period,
+        "Delta_Periodo_Pct": ns.delta_period_pct,
+        "Delta_YoY_1A": ns.delta_yoy,
+        "Z_Score": round(ns.z_score, 4),
+        "Stato": ns.status,
+        "Ticker_Ufficiale": ns.official_ticker,
+        "Fonte": ns.source,
+        "Ultimo_Aggiornamento": ns.last_timestamp,
+    })
+df_file_b_nodes = pd.DataFrame(nodes_num_data)
+
+links_num_data = []
+for l in link_states:
+    links_num_data.append({
+        "ID_Filo": l.id,
+        "Nodo_A": l.node_a_id,
+        "Nome_A": l.node_a_name,
+        "Valore_A": l.node_a_val,
+        "Nodo_B": l.node_b_id,
+        "Nome_B": l.node_b_name,
+        "Valore_B": l.node_b_val,
+        "Tipo": "Filo Maestro" if l.is_master else "Spoke",
+        "Correlazione_Rolling": round(l.active_corr, 4),
+        "Correlazione_Teorica": l.theoretical_corr,
+        "Tensione_ZScore": round(l.z_score_tension, 4),
+        "Stato_Tensione": l.status,
+        "Meccanismo": l.mechanism,
+        "Diagnosi_Anomalia": l.alert_description,
+    })
+df_file_b_links = pd.DataFrame(links_num_data)
+
+# Unione in unico CSV completo (o Excel a due schede)
+file_b_csv = df_file_b_nodes.to_csv(index=False).encode("utf-8")
+
+excel_b_buffer = io.BytesIO()
+with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
+    df_file_b_nodes.to_excel(writer, index=False, sheet_name="Dati_Numerici_30_Nodi")
+    df_file_b_links.to_excel(writer, index=False, sheet_name="Correlazioni_10_Fili")
+    pd.DataFrame([{
+        "Data_Snapshot": now_iso,
+        "Macro_Regime": core_state.macro_regime,
+        "Tensione_Sistemica_Z": core_state.systemic_web_tension,
+        "Landing_Scenario": core_state.landing_scenario.scenario_title,
+        "Prob_No_Landing": core_state.landing_scenario.prob_no_landing,
+        "Pring_Stage": pring_res_curr.stage_title,
+        "Yield_Curve_Regime": yc_state_curr.regime_name,
+        "Taylor_Gap_Bps": core_state.taylor_rate_gap_bps,
+        "Fed_Real_Rate": core_state.fed_real_rate,
+        "ECB_Real_Rate": core_state.ecb_real_rate,
+    }]).to_excel(writer, index=False, sheet_name="Sintesi_SPIDER_CORE")
+file_b_excel_bytes = excel_b_buffer.getvalue()
+
+with c_glob_box1:
+    st.markdown(f"""
+    <div style="background: rgba(15, 23, 42, 0.85); border: 1.5px solid #38BDF8; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+        <div>
+            <div style="font-size: 13.5px; font-weight: 800; color: #F8FAFC;">
+                💾 <b>SALVATAGGIO SITUAZIONE GLOBALE</b>
+            </div>
+            <div style="font-size: 11.5px; color: #94A3B8; margin-top: 2px;">
+                Estrai istantaneamente l'intero stato operativo della piattaforma in due formati sincronizzati:
+                <br>• <b>File A:</b> Report di testo (.txt) con tutti i parametri salvati di ogni pagina e configurazione iniziale.
+                <br>• <b>File B:</b> Tabella completa di tutti i dati numerici (.csv / .xlsx).
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with c_glob_box2:
+    st.markdown("<div style='display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;'>", unsafe_allow_html=True)
+    c_btn_a, c_btn_b, c_btn_core = st.columns([1.1, 1.2, 1.1])
+    with c_btn_a:
+        st.download_button(
+            "📄 File A (.txt)\nParametri Completi",
+            data=file_a_text,
+            file_name=f"SPIDER_Snapshot_Parametri_{datetime.date.today()}.txt",
+            mime="text/plain",
+            use_container_width=True,
+            type="primary",
+            help="Scarica il file di testo con tutti i parametri delle 8 pagine e la configurazione di partenza."
+        )
+    with c_btn_b:
+        st.download_button(
+            "📊 File B (.xlsx)\nTabella Dati Numerici",
+            data=file_b_excel_bytes,
+            file_name=f"SPIDER_Dati_Numerici_{datetime.date.today()}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            help="Scarica la cartella Excel completa con i dati numerici certificati di tutti i 30 Nodi e 10 Fili."
+        )
+    with c_btn_core:
+        if st.button("🕷️ SPIDER CORE\nVista Centro Controllo", use_container_width=True, type="secondary", help="Apri il pannello di dettaglio visivo dello SPIDER_CORE"):
+            show_spider_core_modal()
+    st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
+
+
 tabs = st.tabs([
     "🕸️ Tela di Ragno (Spider Web Graph)",
     "🎯 Centro di Controllo (Macro Matrix)",
