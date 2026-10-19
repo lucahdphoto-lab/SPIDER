@@ -2059,40 +2059,37 @@ with tabs[7]:
     rec_info = portfolios_data[chosen_port_id]
 
     # Banner unificato con diagnosi SPIDER completa (Regime + Tassi Reali + Anomalie)
-    st.markdown(f"""
-    <div style="background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(245, 158, 11, 0.15)); border: 1.5px solid #38BDF8; border-radius: 12px; padding: 18px 22px; margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
-            <div>
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                    <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #38BDF8; font-weight: 700;">
-                        🎯 PORTAFOGLIO OTTIMALE SELEZIONATO DAL MOTORE SPIDER
-                    </span>
-                    <span style="background: rgba(56, 189, 248, 0.2); border: 1px solid #38BDF8; color: #38BDF8; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
-                        INTEGRAZIONE MULTI-FATTORE ATTIVA
-                    </span>
-                </div>
-                <div style="font-size: 24px; font-weight: 800; color: #F8FAFC;">
-                    ⭐ {rec_info['title_line1']} {rec_info['title_line2']} <span style="font-size: 15px; color: #94A3B8; font-weight: 500;">({rec_info['author']})</span>
-                </div>
-                <div style="font-size: 13px; color: #CBD5E1; margin-top: 6px; max-width: 850px;">
-                    <b>Motivazione Macroeconomica SPIDER:</b> {match_rationale}
-                </div>
-            </div>
-            <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 12px 18px; text-align: right; min-width: 220px;">
-                <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Regime Rilevato</div>
-                <div style="font-size: 16px; font-weight: 800; color: #38BDF8;">{core_state.macro_regime.split('/')[0].split('(')[0].strip()}</div>
-                <div style="font-size: 11.5px; color: #F59E0B; margin-top: 3px;">Tensione Rete: <b>|Z|={t_val:.2f}</b></div>
-                <div style="font-size: 11.5px; color: #A78BFA; margin-top: 2px;">Taylor Gap: <b>{taylor_gap:+.0f} bps</b> ({core_state.central_bank_bias.split('(')[0].strip()})</div>
-            </div>
-        </div>
-        
-        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1); display: flex; flex-wrap: wrap; gap: 24px; font-size: 12px; color: #94A3B8;">
-            <div>⚡ <b>Scenario Ciclico:</b> <span style="color: {core_state.landing_scenario.color_hex}; font-weight: 600;">{core_state.landing_scenario.scenario_badge} ({core_state.landing_scenario.confidence_pct:.1f}%)</span></div>
-            <div>📊 <b>Fattore Rame (LINK_09):</b> <span style="color: #10B981; font-weight: 600;">Leading Expansion (+2.25% Prod. Ind.)</span></div>
-            <div>💵 <b>Fattore Dollaro/Azioni (LINK_08):</b> <span style="color: #38BDF8; font-weight: 600;">Polo di Attrazione Liquidità Globale</span></div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div style="background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(245, 158, 11, 0.15)); border: 1.5px solid #38BDF8; border-radius: 12px; padding: 18px 22px; margin-bottom: 20px;">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+<div>
+<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+<span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #38BDF8; font-weight: 700;">
+🎯 PORTAFOGLIO OTTIMALE SELEZIONATO DAL MOTORE SPIDER
+</span>
+<span style="background: rgba(56, 189, 248, 0.2); border: 1px solid #38BDF8; color: #38BDF8; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
+INTEGRAZIONE MULTI-FATTORE ATTIVA
+</span>
+</div>
+<div style="font-size: 24px; font-weight: 800; color: #F8FAFC;">
+⭐ {rec_info['title_line1']} {rec_info['title_line2']} <span style="font-size: 15px; color: #94A3B8; font-weight: 500;">({rec_info['author']})</span>
+</div>
+<div style="font-size: 13px; color: #CBD5E1; margin-top: 6px; max-width: 850px;">
+<b>Motivazione Macroeconomica SPIDER:</b> {match_rationale}
+</div>
+</div>
+<div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 12px 18px; text-align: right; min-width: 220px;">
+<div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Regime Rilevato</div>
+<div style="font-size: 16px; font-weight: 800; color: #38BDF8;">{core_state.macro_regime.split('/')[0].split('(')[0].strip()}</div>
+<div style="font-size: 11.5px; color: #F59E0B; margin-top: 3px;">Tensione Rete: <b>|Z|={t_val:.2f}</b></div>
+<div style="font-size: 11.5px; color: #A78BFA; margin-top: 2px;">Taylor Gap: <b>{taylor_gap:+.0f} bps</b> ({core_state.central_bank_bias.split('(')[0].strip()})</div>
+</div>
+</div>
+<div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1); display: flex; flex-wrap: wrap; gap: 24px; font-size: 12px; color: #94A3B8;">
+<div>⚡ <b>Scenario Ciclico:</b> <span style="color: {core_state.landing_scenario.color_hex}; font-weight: 600;">{core_state.landing_scenario.scenario_badge} ({core_state.landing_scenario.confidence_pct:.1f}%)</span></div>
+<div>📊 <b>Fattore Rame (LINK_09):</b> <span style="color: #10B981; font-weight: 600;">Leading Expansion (+2.25% Prod. Ind.)</span></div>
+<div>💵 <b>Fattore Dollaro/Azioni (LINK_08):</b> <span style="color: #38BDF8; font-weight: 600;">Polo di Attrazione Liquidità Globale</span></div>
+</div>
+</div>""", unsafe_allow_html=True)
 
 
     # Legenda cromatica univoca degli Asset
