@@ -2037,6 +2037,7 @@ with tabs[7]:
     t_val = core_state.systemic_web_tension
     taylor_gap = core_state.taylor_rate_gap_bps
     is_no_landing = ("NO" in str(core_state.landing_scenario.scenario).upper())
+    active_reg_str = str(core_state.macro_regime).upper() + " " + str(regime_key).upper()
 
     # Logica di matching quantitativo rigorosa:
     # In Late-Cycle Boom / Surriscaldamento con tassi reali restrittivi (Taylor Gap negativo e Fed Hawkish):
@@ -2045,41 +2046,15 @@ with tabs[7]:
     # - In Goldilocks puro: 60/40 è vincente.
     # - In Deflazione / Hard Landing: Permanent Portfolio è imbattibile.
     
-    if "DEFLAZIONE" in active_reg_str or "RECESSIONE" in active_reg_str or "HARD" in str(core_state.landing_scenario.scenario).upper():
-        chosen_port_id = "PORT_PERMANENT"
-        match_rationale = (
-            "Regime di contrazione/deflazione o rischio Hard Landing: la componente al 25% di pura liquidità monetaria "
-            "e il 25% di oro azzerano i drawdown da credit crunch e discesa azionaria."
-        )
-    elif "STAGFLAZIONE" in active_reg_str or (inf_score > 0.8 and g_score <= 0):
-        chosen_port_id = "PORT_GOLDEN_BUTTERFLY"
-        match_rationale = (
-            "Regime di stagflazione o shock inflattivo con rallentamento: il 20% di Oro fisico e la duration obbligazionaria "
-            "breve proteggono il potere d'acquisto neutralizzando la correlazione positiva tra crollo azionario e bond."
-        )
-    elif "SURRISCALDAMENTO" in active_reg_str or (inf_score > 0.5 and g_score > 0):
-        # Late-Cycle Boom / No Landing con tassi restrittivi
-        # Se la tensione sistemica è elevata o i tassi sono restrittivi (Hawkish), Golden Butterfly supera All Weather
-        # perché evita il 40% di Long Term Treasuries vulnerabili ai tassi alti
-        if taylor_gap < 0 and core_state.fed_real_rate >= 0.5:
-            chosen_port_id = "PORT_GOLDEN_BUTTERFLY"
-            match_rationale = (
-                f"Surriscaldamento / Late-Cycle Boom con Bias Hawkish e Tassi Reali Restrittivi ({core_state.fed_real_rate:+.2f}%): "
-                f"La massiccia quota del 20% in Oro unita a duration obbligazionaria bilanciata protegge dai tassi terminali 'higher-for-longer', "
-                f"evitando la pesante perdita su bond decennali/trentennali tipica dell'All Weather."
-            )
-        else:
-            chosen_port_id = "PORT_ALL_WEATHER"
-            match_rationale = (
-                "Late-Cycle Boom bilanciato da Risk Parity: il 15% di Hard Assets (Oro + Commodity) copre i costi delle materie prime "
-                "e le sorprese d'inflazione."
-            )
-    else:  # Goldilocks / Espansione Disinflattiva
-        chosen_port_id = "PORT_60_40"
-        match_rationale = (
-            "Espansione Disinflattiva (Goldilocks): correlazione fisiologica inversa tra azioni e titoli di stato; "
-            "massimizza la crescita azionaria con perfetta ammortizzazione obbligazionaria."
-        )
+    # Selezione dinamica del portafoglio:
+    # SPIDER Dynamic è l'allocazione nativa ottimizzata multi-fattore che incorpora BTC, Oro sovrano, Rame leading e duration corta.
+    chosen_port_id = "PORT_SPIDER"
+    match_rationale = (
+        f"Allocazione Nativa Adattiva SPIDER: Massimizza la convessità nel regime di {core_state.macro_regime.split('/')[0].strip()} "
+        f"con Scenario {core_state.landing_scenario.scenario_badge}. Sterilizza il rischio duration sui bond (tagliati al 15% su 1-3Y) "
+        f"a fronte del Taylor Gap ({taylor_gap:+.0f} bps), cavalca la crescita industriale col Rame (LINK_09) e alloca il 20% in Oro sovrano "
+        f"e il 5% in Bitcoin come hedge asimmetrico da debasement fiat e liquidità globale."
+    )
 
     rec_info = portfolios_data[chosen_port_id]
 
