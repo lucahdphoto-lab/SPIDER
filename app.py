@@ -2063,6 +2063,11 @@ with tabs[7]:
         box_shadow = "0 0 25px rgba(56, 189, 248, 0.3)" if is_selected else "none"
 
         with cur_col:
+            badge_html = (
+                '<div style="background: #38BDF8; color: #0B0F19; font-size: 10px; font-weight: 800; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px;">⭐ PIÙ ADATTO AL REGIME</div>'
+                if is_selected else
+                f'<div style="color: #64748B; font-size: 10.5px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">STRATEGIA #{p_data["num"]}</div>'
+            )
             title2_part = f'<div style="font-size: 15px; font-weight: 700; color: #E2E8F0; line-height: 1.2;">{p_data["title_line2"]}</div>' if p_data.get("title_line2") else ""
             card_header_html = (
                 f'<div style="background: rgba(15, 23, 42, 0.9); border: 2px solid {border_color}; border-radius: 12px; padding: 16px; box-shadow: {box_shadow}; min-height: 120px;">'
