@@ -16,6 +16,11 @@ DATA_DIR = os.path.join(BASE_DIR, "data")
 CACHE_DB_PATH = os.path.join(DATA_DIR, "spider_cache.db")
 os.makedirs(DATA_DIR, exist_ok=True)
 
+# Application Version
+APP_VERSION = "V1.0"
+APP_NAME = "SPIDER"
+APP_FULL_NAME = f"SPIDER {APP_VERSION}"
+
 # API Keys (Optional FRED key, default to institutional direct endpoints)
 FRED_API_KEY = os.environ.get("FRED_API_KEY", "")
 

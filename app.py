@@ -17,6 +17,8 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from config import (
+    APP_VERSION,
+    APP_FULL_NAME,
     DEFAULT_TIME_WINDOW,
     MASTER_LINKS,
     NODES,
@@ -54,7 +56,7 @@ from spider_ui import (
 
 # Page configuration
 st.set_page_config(
-    page_title="SPIDER • Macro & Market Network Monitor",
+    page_title=f"{APP_FULL_NAME} • Macro & Market Network Monitor",
     page_icon="🕷️",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -289,7 +291,7 @@ if (st.session_state["what_if_oil"] != 0.0 or
 
 # ================= SIDEBAR =================
 with st.sidebar:
-    st.markdown("## 🕷️ **SPIDER CORE**")
+    st.markdown(f"## 🕷️ **SPIDER CORE** <span style='font-size: 12px; color: #38BDF8; font-weight: 700; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.35); padding: 2px 7px; border-radius: 5px; vertical-align: middle;'>{APP_VERSION}</span>", unsafe_allow_html=True)
     st.caption("Macro & Market Network Monitor • Standard Istituzionale")
     st.markdown("<hr style='margin: 8px 0 16px 0; border-color: rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
 
@@ -391,7 +393,7 @@ st.markdown(f"""
 <div class="spider-header">
     <div class="spider-title-row">
         <div class="spider-title">
-            <span>🕷️ <b>SPIDER</b></span>
+            <span>🕷️ <b>SPIDER</b> <span style="font-size: 13px; font-weight: 700; color: #38BDF8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); padding: 2px 7px; border-radius: 6px; vertical-align: middle;">{APP_VERSION}</span></span>
             <span class="spider-badge">Macro & Market Network Monitor</span>
         </div>
         {alert_badge_html}
@@ -1018,9 +1020,10 @@ for rank_i, ns in enumerate(sorted_nodes_z, 1):
 z_score_table_formatted = "\n".join(z_score_rows_text)
 
 file_a_text = f"""================================================================================
-SPIDER • SNAPSHOT DI STATO GLOBALE DEL SISTEMA MACRO-FINANZIARIO
+SPIDER {APP_VERSION} • SNAPSHOT DI STATO GLOBALE DEL SISTEMA MACRO-FINANZIARIO
 Data e Ora Salvataggio: {now_iso}
-Ambiente: SPIDER Institutional Network Engine (30 Nodi, 10 Fili Maestri)
+Ambiente: SPIDER {APP_VERSION} Institutional Network Engine (30 Nodi, 10 Fili Maestri)
+Versione Software: {APP_VERSION} (Institutional Quantitative Architecture)
 ================================================================================
 
 1. PARAMETRI DI CONFIGURAZIONE & FILTRI ATTIVI (CONFIGURAZIONE DI PARTENZA)
@@ -1111,7 +1114,7 @@ Ambiente: SPIDER Institutional Network Engine (30 Nodi, 10 Fili Maestri)
 {z_score_table_formatted}
 
 ================================================================================
-Fine Report Snapshot SPIDER.
+Fine Report Snapshot SPIDER {APP_VERSION}.
 ================================================================================
 """
 
@@ -1119,6 +1122,7 @@ nodes_num_data = []
 for n_id, ns in node_states.items():
     nd = NODES.get(n_id)
     nodes_num_data.append({
+        "Versione_SPIDER": APP_VERSION,
         "Sezione": "NODO_TELA",
         "ID": n_id,
         "Nome": ns.name,
@@ -1142,6 +1146,7 @@ df_file_b_nodes = pd.DataFrame(nodes_num_data)
 links_num_data = []
 for l in link_states:
     links_num_data.append({
+        "Versione_SPIDER": APP_VERSION,
         "ID_Filo": l.id,
         "Nodo_A": l.node_a_id,
         "Nome_A": l.node_a_name,
@@ -1174,6 +1179,7 @@ for rank_i, ns in enumerate(sorted_nodes_z, 1):
         col_hex = "#F59E0B"
     nd = NODES.get(ns.id)
     zscore_table_data.append({
+        "Versione_SPIDER": APP_VERSION,
         "Rank_Grafico": rank_i,
         "ID_Nodo": ns.id,
         "Nome_Indicatore": ns.name,
@@ -1201,6 +1207,7 @@ with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
     df_file_b_links.to_excel(writer, index=False, sheet_name="Correlazioni_10_Fili")
     df_file_b_zscore.to_excel(writer, index=False, sheet_name="Distribuzione_ZScore_30_Nodi")
     pd.DataFrame([{
+        "Versione_SPIDER": APP_VERSION,
         "Data_Snapshot": now_iso,
         "Macro_Regime": core_state.macro_regime,
         "Tensione_Sistemica_Z": core_state.systemic_web_tension,
@@ -1223,7 +1230,7 @@ file_b_excel_bytes = excel_b_buffer.getvalue()
 
 
 # ================= DIALOG: SPIDER CORE FOCUS =================
-@st.dialog("🕷️ SPIDER_CORE: Centro di Controllo Macro-Finanziario & Tensione Sistemica", width="large")
+@st.dialog(f"🕷️ SPIDER_CORE {APP_VERSION}: Centro di Controllo Macro-Finanziario & Tensione Sistemica", width="large")
 def show_spider_core_modal():
     t_val = core_state.systemic_web_tension
     t_color = "#EF4444" if t_val >= 2.0 else ("#F59E0B" if t_val >= 1.25 else "#10B981")
@@ -1232,8 +1239,8 @@ def show_spider_core_modal():
     <div style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(168, 85, 247, 0.12)); border: 2px solid #38BDF8; border-radius: 12px; padding: 18px; margin-bottom: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
             <div>
-                <span style="font-size: 11px; text-transform: uppercase; color: #38BDF8; font-weight: 800; letter-spacing: 0.8px;">SINTESI SISTEMICA CENTRALE (RAGGIO 0)</span>
-                <div style="font-size: 24px; font-weight: 800; color: #F8FAFC; margin-top: 2px;">SPIDER_CORE • Centro di Controllo Istituzionale</div>
+                <span style="font-size: 11px; text-transform: uppercase; color: #38BDF8; font-weight: 800; letter-spacing: 0.8px;">SINTESI SISTEMICA CENTRALE (RAGGIO 0) • {APP_VERSION}</span>
+                <div style="font-size: 24px; font-weight: 800; color: #F8FAFC; margin-top: 2px;">SPIDER_CORE {APP_VERSION} • Centro di Controllo Istituzionale</div>
                 <div style="font-size: 13px; color: #CBD5E1; margin-top: 4px;">Topologia causale della rete: riceve i vettori di impulso monetario, fondamentale e intermarket sintetizzandoli in un unico tensore di stato.</div>
             </div>
             <div style="background: rgba(15, 23, 42, 0.9); border: 1.5px solid {t_color}; border-radius: 10px; padding: 12px 18px; text-align: center; min-width: 170px;">
@@ -1262,7 +1269,7 @@ def show_spider_core_modal():
         st.download_button(
             "📄 Scarica File A (.txt) • Parametri Completi",
             data=file_a_text,
-            file_name=f"SPIDER_CORE_Snapshot_Parametri_{datetime.date.today()}.txt",
+            file_name=f"SPIDER_{APP_VERSION}_Snapshot_Parametri_{datetime.date.today()}.txt",
             mime="text/plain",
             use_container_width=True,
             type="primary",
@@ -1273,7 +1280,7 @@ def show_spider_core_modal():
         st.download_button(
             "📊 Scarica File B (.xlsx) • Tabella Dati Numerici",
             data=file_b_excel_bytes,
-            file_name=f"SPIDER_CORE_Dati_Numerici_{datetime.date.today()}.xlsx",
+            file_name=f"SPIDER_{APP_VERSION}_Dati_Numerici_{datetime.date.today()}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
             key="dl_btn_core_file_b",
@@ -1359,7 +1366,7 @@ with c_glob_box2:
         st.download_button(
             "📄 File A (.txt)\nParametri Completi",
             data=file_a_text,
-            file_name=f"SPIDER_Snapshot_Parametri_{datetime.date.today()}.txt",
+            file_name=f"SPIDER_{APP_VERSION}_Snapshot_Parametri_{datetime.date.today()}.txt",
             mime="text/plain",
             use_container_width=True,
             type="primary",
@@ -1369,7 +1376,7 @@ with c_glob_box2:
         st.download_button(
             "📊 File B (.xlsx)\nTabella Dati Numerici",
             data=file_b_excel_bytes,
-            file_name=f"SPIDER_Dati_Numerici_{datetime.date.today()}.xlsx",
+            file_name=f"SPIDER_{APP_VERSION}_Dati_Numerici_{datetime.date.today()}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
             help="Scarica la cartella Excel completa con i dati numerici certificati di tutti i 30 Nodi e 10 Fili."
@@ -1434,9 +1441,9 @@ with tabs[0]:
             st.rerun()
 
     # Modal Dialog definition for Spider Web User Manual & Guide
-    @st.dialog("📖 Manuale Istituzionale: Guida alla Struttura & Lettura della Tela SPIDER", width="large")
+    @st.dialog(f"📖 Manuale Istituzionale SPIDER {APP_VERSION}: Guida alla Struttura & Lettura della Tela", width="large")
     def show_spider_info_modal():
-        st.markdown("### 🕸️ Architettura & Manuale di Utilizzo della Tela di Ragno")
+        st.markdown(f"### 🕸️ Architettura & Manuale di Utilizzo della Tela di Ragno SPIDER {APP_VERSION}")
         st.caption("Guida operativa istituzionale alla comprensione dei 3 Anelli Concentrici, dei 4 Quadranti Macro, della Tensione dei Fili e della Sintesi Sistemica.")
 
         st.markdown("""
@@ -1730,7 +1737,7 @@ with tabs[0]:
         """)
 
         st.markdown("---")
-        st.markdown("#### 5. 📚 Enciclopedia Analitica dei 30 Nodi Istituzionali SPIDER")
+        st.markdown(f"#### 5. 📚 Enciclopedia Analitica dei 30 Nodi Istituzionali SPIDER {APP_VERSION}")
         st.caption("Scheda tecnica strutturata per ciascuno dei 30 nodi: **Definizione**, **Cosa misura esattamente**, **Interpretazione**, **Perché è rilevante**, **Fonti e ticker**.")
         for nid, entry in NODE_ENCYCLOPEDIA.items():
             with st.expander(f"🔹 [{entry.id}] {entry.name} • {RINGS[entry.ring]['name']} • {QUADRANTS[entry.quadrant]['name']}", expanded=False):
