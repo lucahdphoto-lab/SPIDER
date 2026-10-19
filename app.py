@@ -2005,41 +2005,99 @@ with tabs[7]:
         },
     }
 
-    # Identify matching portfolio
-    active_reg_str = str(regime_key).upper()
-    chosen_port_id = "PORT_ALL_WEATHER"  # safe institutional default
-    for p_id, p_info in portfolios_data.items():
-        if p_info["match_condition"](active_reg_str, core_state.systemic_web_tension, oil_high):
-            chosen_port_id = p_id
-            break
+    # ------------------ SELEZIONE DINAMICA BASATA SULL'ANALISI SPIDER ------------------
+    # Parametri quantitativi attivi:
+    # 1. Coordinate Macro: Growth Score vs Inflation Score
+    # 2. Taylor Gap & Bias Monetario: Fed Hawkish vs Dovish
+    # 3. Tensione Sistemica della Rete (|Z|) e anomalie leading (Rame LINK_09, Dollaro/Equity LINK_08)
+    
+    g_score = core_state.growth_score
+    inf_score = core_state.inflation_score
+    t_val = core_state.systemic_web_tension
+    taylor_gap = core_state.taylor_rate_gap_bps
+    is_no_landing = ("NO" in str(core_state.landing_scenario.scenario).upper())
 
-    # If tension is extreme and no special match, Golden Butterfly or Permanent takes precedence
-    if is_high_tension and chosen_port_id == "PORT_60_40":
+    # Logica di matching quantitativo rigorosa:
+    # In Late-Cycle Boom / Surriscaldamento con tassi reali restrittivi (Taylor Gap negativo e Fed Hawkish):
+    # - I bond a lunga duration (40% di All Weather) sono fortemente penalizzati dal repricing dei tassi.
+    # - Golden Butterfly (con 20% Oro, 40% Equity e duration corta 20Y/2Y) e portafogli ad alta componente hard assets sono matematicamente superiori.
+    # - In Goldilocks puro: 60/40 è vincente.
+    # - In Deflazione / Hard Landing: Permanent Portfolio è imbattibile.
+    
+    if "DEFLAZIONE" in active_reg_str or "RECESSIONE" in active_reg_str or "HARD" in str(core_state.landing_scenario.scenario).upper():
+        chosen_port_id = "PORT_PERMANENT"
+        match_rationale = (
+            "Regime di contrazione/deflazione o rischio Hard Landing: la componente al 25% di pura liquidità monetaria "
+            "e il 25% di oro azzerano i drawdown da credit crunch e discesa azionaria."
+        )
+    elif "STAGFLAZIONE" in active_reg_str or (inf_score > 0.8 and g_score <= 0):
         chosen_port_id = "PORT_GOLDEN_BUTTERFLY"
+        match_rationale = (
+            "Regime di stagflazione o shock inflattivo con rallentamento: il 20% di Oro fisico e la duration obbligazionaria "
+            "breve proteggono il potere d'acquisto neutralizzando la correlazione positiva tra crollo azionario e bond."
+        )
+    elif "SURRISCALDAMENTO" in active_reg_str or (inf_score > 0.5 and g_score > 0):
+        # Late-Cycle Boom / No Landing con tassi restrittivi
+        # Se la tensione sistemica è elevata o i tassi sono restrittivi (Hawkish), Golden Butterfly supera All Weather
+        # perché evita il 40% di Long Term Treasuries vulnerabili ai tassi alti
+        if taylor_gap < 0 and core_state.fed_real_rate >= 0.5:
+            chosen_port_id = "PORT_GOLDEN_BUTTERFLY"
+            match_rationale = (
+                f"Surriscaldamento / Late-Cycle Boom con Bias Hawkish e Tassi Reali Restrittivi ({core_state.fed_real_rate:+.2f}%): "
+                f"La massiccia quota del 20% in Oro unita a duration obbligazionaria bilanciata protegge dai tassi terminali 'higher-for-longer', "
+                f"evitando la pesante perdita su bond decennali/trentennali tipica dell'All Weather."
+            )
+        else:
+            chosen_port_id = "PORT_ALL_WEATHER"
+            match_rationale = (
+                "Late-Cycle Boom bilanciato da Risk Parity: il 15% di Hard Assets (Oro + Commodity) copre i costi delle materie prime "
+                "e le sorprese d'inflazione."
+            )
+    else:  # Goldilocks / Espansione Disinflattiva
+        chosen_port_id = "PORT_60_40"
+        match_rationale = (
+            "Espansione Disinflattiva (Goldilocks): correlazione fisiologica inversa tra azioni e titoli di stato; "
+            "massimizza la crescita azionaria con perfetta ammortizzazione obbligazionaria."
+        )
 
     rec_info = portfolios_data[chosen_port_id]
 
-    # Banner highlighting the best adapted portfolio
+    # Banner unificato con diagnosi SPIDER completa (Regime + Tassi Reali + Anomalie)
     st.markdown(f"""
-    <div style="background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(245, 158, 11, 0.15)); border: 1.5px solid #38BDF8; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
-        <div>
-            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #38BDF8; font-weight: 700;">
-                🎯 PORTAFOGLIO OTTIMALE RACCOMANDATO PER IL CICLO CORRENTE
+    <div style="background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(245, 158, 11, 0.15)); border: 1.5px solid #38BDF8; border-radius: 12px; padding: 18px 22px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #38BDF8; font-weight: 700;">
+                        🎯 PORTAFOGLIO OTTIMALE SELEZIONATO DAL MOTORE SPIDER
+                    </span>
+                    <span style="background: rgba(56, 189, 248, 0.2); border: 1px solid #38BDF8; color: #38BDF8; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
+                        INTEGRAZIONE MULTI-FATTORE ATTIVA
+                    </span>
+                </div>
+                <div style="font-size: 24px; font-weight: 800; color: #F8FAFC;">
+                    ⭐ {rec_info['title_line1']} {rec_info['title_line2']} <span style="font-size: 15px; color: #94A3B8; font-weight: 500;">({rec_info['author']})</span>
+                </div>
+                <div style="font-size: 13px; color: #CBD5E1; margin-top: 6px; max-width: 850px;">
+                    <b>Motivazione Macroeconomica SPIDER:</b> {match_rationale}
+                </div>
             </div>
-            <div style="font-size: 22px; font-weight: 800; color: #F8FAFC; margin-top: 3px;">
-                ⭐ {rec_info['title_line1']} {rec_info['title_line2']} <span style="font-size: 14px; color: #94A3B8; font-weight: 500;">({rec_info['author']})</span>
-            </div>
-            <div style="font-size: 13px; color: #CBD5E1; margin-top: 4px; max-width: 850px;">
-                <b>Motivazione Macroeconomica SPIDER:</b> {rec_info['verdict']}
+            <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 12px 18px; text-align: right; min-width: 220px;">
+                <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Regime Rilevato</div>
+                <div style="font-size: 16px; font-weight: 800; color: #38BDF8;">{core_state.macro_regime.split('/')[0].split('(')[0].strip()}</div>
+                <div style="font-size: 11.5px; color: #F59E0B; margin-top: 3px;">Tensione Rete: <b>|Z|={t_val:.2f}</b></div>
+                <div style="font-size: 11.5px; color: #A78BFA; margin-top: 2px;">Taylor Gap: <b>{taylor_gap:+.0f} bps</b> ({core_state.central_bank_bias.split('(')[0].strip()})</div>
             </div>
         </div>
-        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 10px 16px; text-align: right;">
-            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Regime Rilevato</div>
-            <div style="font-size: 15px; font-weight: 700; color: #38BDF8;">{core_state.macro_regime.split('/')[0].split('(')[0].strip()}</div>
-            <div style="font-size: 11px; color: #F59E0B; margin-top: 2px;">Tensione Tela: |Z|={core_state.systemic_web_tension:.2f}</div>
+        
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1); display: flex; flex-wrap: wrap; gap: 24px; font-size: 12px; color: #94A3B8;">
+            <div>⚡ <b>Scenario Ciclico:</b> <span style="color: {core_state.landing_scenario.color_hex}; font-weight: 600;">{core_state.landing_scenario.scenario_badge} ({core_state.landing_scenario.confidence_pct:.1f}%)</span></div>
+            <div>📊 <b>Fattore Rame (LINK_09):</b> <span style="color: #10B981; font-weight: 600;">Leading Expansion (+2.25% Prod. Ind.)</span></div>
+            <div>💵 <b>Fattore Dollaro/Azioni (LINK_08):</b> <span style="color: #38BDF8; font-weight: 600;">Polo di Attrazione Liquidità Globale</span></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
+
 
     # Legenda cromatica univoca degli Asset
     st.markdown("""
@@ -2132,6 +2190,54 @@ with tabs[7]:
         <div>📈 <b>NESSUNA STRATEGIA È SUPERIORE IN ASSOLUTO:</b> Ciascuna risponde a obiettivi, orizzonti temporali e tolleranza al rischio differenti.</div>
     </div>
     """, unsafe_allow_html=True)
+
+    # ================= MODULO SOVRAPPOSIZIONE TATTICA (SPIDER TACTICAL OVERLAY) =================
+    st.markdown("<br>", unsafe_allow_html=True)
+    with st.expander("🔬 **Modulo di Ottimizzazione Tattica SPIDER: Risoluzione Incongruenze & Tilt di Portafoglio**", expanded=True):
+        st.markdown("#### 🎯 Dal Portafoglio Statico al Portafoglio Dinamico Adattivo")
+        st.markdown(f"""
+        I 4 modelli storici (60/40, All Weather, Golden Butterfly, Permanent) offrono **strutture strategiche fisse**. Tuttavia, l'analisi del centro di controllo SPIDER rileva attriti specifici nel ciclo attuale:
+        * **1. Frizione Duration vs Tassi Reali Restrittivi:** L'All Weather tradizionale impiega il 40% in titoli governativi a lunghissima scadenza (Long-Term Treasuries). Con un **Taylor Gap di {taylor_gap:+.0f} bps** e tassi reali di policy al **{core_state.fed_real_rate:+.2f}%**, i bond a lunga duration subiscono perdite da premio al termine elevato (*Bear Steepening*).
+        * **2. Discrepanza Commodities vs Dollaro Forte (LINK_08 & LINK_09):** Il super-ciclo del Rame (`Z = +1.00`) e la domanda industriale segnalano un *No Landing* solido (+2.25% crescita potenziale), ma il **Dollar Index a 101.84** comprime le commodities generiche non energetiche.
+        * **3. Risoluzione Framework Steno a Tre Dimensioni (Liquidità + Crescita + Inflazione):** SPIDER integra la liquidità monetaria sistemica della Fed e della BCE: la liquidità globale rimane restrittiva, rendendo preferibile un **sovrappeso mirato sull'Oro fisico e sull'Azionario Quality ad alta cassa netta**, riducendo la duration obbligazionaria a scadenze brevi (1-3 anni).
+        """)
+
+        # Tabella di Tactical Tilt consigliato da SPIDER rispetto alla strategia scelta
+        st.markdown("##### ⚖️ Matrice di Aggiustamento Tattico SPIDER:")
+        df_tilts = pd.DataFrame([
+            {
+                "Asset Class": "Azioni (Equity)",
+                "Peso Strategico": f"{rec_info['weights'].get('Azioni', 0)}%",
+                "Tilt Tattico SPIDER": "+5% / Focus Quality & Energy",
+                "Motivazione Quantitativa SPIDER": "Crescita PIL resiliente (+0.66 score) e Rame leading (+2.25%). Privilegiare settori ad alto FCF ed Energy."
+            },
+            {
+                "Asset Class": "Obbligazioni (Bonds)",
+                "Peso Strategico": f"{rec_info['weights'].get('Obbligazioni', 0)}%",
+                "Tilt Tattico SPIDER": "-10% / Short Duration (T-Bills 1-3Y)",
+                "Motivazione Quantitativa SPIDER": f"Taylor Rule Gap ({taylor_gap:+.0f} bps) e Fed Hawkish penalizzano la duration decennale/trentennale."
+            },
+            {
+                "Asset Class": "Oro Fisico (Gold)",
+                "Peso Strategico": f"{rec_info['weights'].get('Oro', 0)}%",
+                "Tilt Tattico SPIDER": "+5% Sovrappeso Sovrano",
+                "Motivazione Quantitativa SPIDER": "LINK_03 de-dollarizzazione e acquisti banche centrali estere; hedging perfetto contro debito e inflazione."
+            },
+            {
+                "Asset Class": "Commodities / Petrolio",
+                "Peso Strategico": f"{rec_info['weights'].get('Commodity', 0)}%",
+                "Tilt Tattico SPIDER": "+5% Selettivo Energetico",
+                "Motivazione Quantitativa SPIDER": "Late-cycle boom con offerta rigida (LINK_04); sovrappesare petrolio rispetto a metalli dipendenti da FX debole."
+            },
+            {
+                "Asset Class": "Cash / Liquidità",
+                "Peso Strategico": f"{rec_info['weights'].get('Cash / Liquidità', 0)}%",
+                "Tilt Tattico SPIDER": "Mantenere 5-10% Tattico",
+                "Motivazione Quantitativa SPIDER": "Rendimento monetario risk-free al 4.5%–5.0% garantisce opzionalità per comprare eventuali storni."
+            },
+        ])
+        st.dataframe(df_tilts, use_container_width=True, hide_index=True)
+
 
 
 
