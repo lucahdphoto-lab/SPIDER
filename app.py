@@ -243,6 +243,10 @@ if (st.session_state["what_if_oil"] != 0.0 or
         ns.current_value += st.session_state["what_if_hy"]
         ns.z_score += (st.session_state["what_if_hy"] / 0.50)
 
+    # Recalculate link states and spider core to reflect the stress scenario across the entire web
+    link_states = engine.compute_link_states(node_states, window_key=st.session_state["time_window"], use_spearman=st.session_state["use_spearman"])
+    core_state = engine.compute_spider_core(node_states, link_states)
+
 
 # ================= SIDEBAR =================
 with st.sidebar:
@@ -1696,8 +1700,86 @@ with tabs[6]:
         shock_hy = st.slider("Variazione Spread High Yield (%):", -1.50, +3.00, float(st.session_state["what_if_hy"]), step=0.25)
         st.session_state["what_if_hy"] = shock_hy
 
-    if st.button("🔥 Applica Shock e Ricalcola Tensione Tela", type="primary"):
-        st.rerun()
+    col_btn1, col_btn2 = st.columns([1, 1])
+    with col_btn1:
+        if st.button("🔥 Applica Shock e Ricalcola Tensione Tela", type="primary", use_container_width=True):
+            st.rerun()
+    with col_btn2:
+        if st.button("🧹 Ripristina Dati Senza Shock (Reset Stress)", use_container_width=True):
+            st.session_state["what_if_oil"] = 0.0
+            st.session_state["what_if_real_yield"] = 0.0
+            st.session_state["what_if_hy"] = 0.0
+            st.rerun()
 
-    if (shock_oil != 0 or shock_tips != 0 or shock_hy != 0):
-        st.warning(f"⚠️ **Simulatore Attivo:** Shock in corso [Petrolio: {shock_oil:+.1f}$, TIPS Reale: {shock_tips:+.2f}%, Spread HY: {shock_hy:+.2f}%]. Clicca su 'Reset Filtri' nella sidebar per tornare ai dati certificati.")
+    is_shock_active = (shock_oil != 0 or shock_tips != 0 or shock_hy != 0)
+    if is_shock_active:
+        st.warning(f"⚠️ **Simulatore Attivo:** Shock in corso [Petrolio: {shock_oil:+.1f}$, TIPS Reale: {shock_tips:+.2f}%, Spread HY: {shock_hy:+.2f}%]. Il grafico e i parametri sottostanti riflettono istantaneamente lo scenario simulato.")
+    else:
+        st.info("💡 **Nessuno shock applicato:** I nodi e i fili della tela sottostante mostrano i dati certificati correnti. Muovi gli slider in alto per simulare uno scenario di stress estremo.")
+
+    # Shock Impact Diagnostics Bar
+    st.markdown("---")
+    st.markdown("##### 🔬 Risposta Sistemica della Rete allo Scenario di Stress")
+    w_col1, w_col2, w_col3, w_col4 = st.columns(4)
+    with w_col1:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Tensione Sistemica (|Z|)</div>
+            <div style="font-size: 22px; font-weight: 800; color: {'#EF4444' if core_state.systemic_web_tension >= 2.0 else ('#F59E0B' if core_state.systemic_web_tension >= 1.25 else '#10B981')}; font-family: monospace;">{core_state.systemic_web_tension:.2f}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 3px;">{core_state.web_tension_status.split('(')[0]}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with w_col2:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Regime Macroeconomico</div>
+            <div style="font-size: 16px; font-weight: 800; color: #38BDF8; margin-top: 4px;">{core_state.macro_regime.split('/')[0].split('(')[0].strip()}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 3px;">Score G: {core_state.growth_score:+.2f} | Inf: {core_state.inflation_score:+.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with w_col3:
+        ls_whatif = core_state.landing_scenario
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Scenario di Landing</div>
+            <div style="font-size: 16px; font-weight: 800; color: {ls_whatif.color_hex}; margin-top: 4px;">{ls_whatif.scenario_badge}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 3px;">Confidenza: {ls_whatif.confidence_pct:.1f}%</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with w_col4:
+        n_crit_whatif = len(core_state.active_critical_alerts)
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Divergenze Critiche</div>
+            <div style="font-size: 22px; font-weight: 800; color: {'#EF4444' if n_crit_whatif > 0 else '#10B981'}; font-family: monospace;">{n_crit_whatif}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 3px;">Fili con |Z| &ge; 2.0</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("#### 🕸️ Visualizzazione Radiale Spider Web dello Scenario di Stress")
+    st.caption("La tela sottostante è generata in tempo reale con i valori ricalcolati: osserva la deformazione dello spessore e del colore dei fili (in giallo/viola neon le connessioni sotto frizione o rottura).")
+
+    # Interactive controls for the what-if spider web view
+    w_ctl1, w_ctl2 = st.columns([3, 1])
+    with w_ctl1:
+        st.caption("💡 Passa con il mouse sui nodi e sui fili per visualizzare lo Z-score simulato e i nuovi scostamenti.")
+    with w_ctl2:
+        whatif_toggle_labels = st.checkbox("Mostra Ticker sulla Tela", value=True, key="whatif_toggle_labels")
+
+    fig_whatif_web = build_spider_web_figure(
+        node_states=node_states,
+        link_states=link_states,
+        core_state=core_state,
+        selected_node_id=active_isolated_id,
+        filter_quadrant="TUTTI",
+        filter_ring=0,
+        show_labels=whatif_toggle_labels,
+        dark_mode=True,
+    )
+
+    st.plotly_chart(
+        fig_whatif_web,
+        use_container_width=True,
+        key="spider_whatif_web_chart"
+    )
