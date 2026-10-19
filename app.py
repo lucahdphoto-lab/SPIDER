@@ -1922,16 +1922,17 @@ with tabs[7]:
     oil_high = (st.session_state.get("what_if_oil", 0.0) >= 15.0)
 
     # Consistent Asset Colors (matching institutional standards and the reference slide)
-    # Azioni: Giallo/Ambra (#EAB308), Obbligazioni: Grigio Ardesia (#64748B), Oro: Oro Puro Lucido (#F59E0B), Commodity: Rosso Mattone (#DC2626), Liquidità/Cash: Celeste/Azzurro (#38BDF8)
+    # Azioni: Giallo/Ambra (#EAB308), Obbligazioni: Grigio Ardesia (#64748B), Oro: Oro Puro Lucido (#F59E0B), Commodity: Rosso Mattone (#DC2626), Liquidità/Cash: Celeste/Azzurro (#38BDF8), Crypto: Arancione Bitcoin (#F7931A)
     ASSET_COLORS = {
         "Azioni": "#EAB308",
         "Obbligazioni": "#64748B",
         "Oro": "#F59E0B",
         "Commodity": "#DC2626",
         "Cash / Liquidità": "#38BDF8",
+        "Crypto (BTC)": "#F7931A",
     }
 
-    # Strategy definitions matching the user's reference infografica
+    # Strategy definitions matching the user's reference infografica + 5° Scenario Nativo SPIDER
     portfolios_data = {
         "PORT_60_40": {
             "num": 1,
@@ -2002,6 +2003,26 @@ with tabs[7]:
             "note": "Equipartito 4x25%: Massima conservazione del capitale e drawdown minimi.",
             "match_condition": lambda r, t, o: ("DEFLAZIONE" in r or "RECESSIONE" in r or "HARD" in str(core_state.landing_scenario.scenario).upper()) or (t >= 2.2),
             "verdict": "La quota del 25% in liquidità monetaria unita all'oro protegge il capitale contro violenti credit crunch, shock sistemici e repentini crolli di liquidità intermarket.",
+        },
+        "PORT_SPIDER": {
+            "num": 5,
+            "id": "PORT_SPIDER",
+            "title_line1": "SPIDER Dynamic",
+            "title_line2": "(Macro-Adaptive)",
+            "author": "SPIDER Engine & Steno Model",
+            "weights": {"Azioni": 35, "Obbligazioni": 15, "Oro": 20, "Commodity": 15, "Cash / Liquidità": 10, "Crypto (BTC)": 5},
+            "features": [
+                "<b>35% Azioni</b> (Quality FCF + Energy Tilt)",
+                "<b>15% Obbligazioni</b> (Short-Duration 1-3Y / T-Bills)",
+                "<b>20% Oro Fisico</b> (Hedge Debito & De-dollarizzazione)",
+                "<b>15% Commodity</b> (Focus Petrolio / Offerta rigida)",
+                "<b>10% Cash</b> (Opzionalità rendimento 5%)",
+                "<b>5% Crypto (BTC)</b> (Debasement hedge asimmetrico)"
+            ],
+            "analysis": "<b>Analisi Strategica & Ciclica:</b><br>Architettura dinamica nativa calcolata direttamente dall'analisi di rete SPIDER: risolve l'incongruenza della duration abbattendo i bond a lunga scadenza a favore di governativi a breve termine (1-3Y). Capitalizza sul leading del rame e petrolio (LINK_09/04), integra l'Oro sovrano (LINK_03) e include un'allocazione asimmetrica al <b>5% in Bitcoin</b> come copertura pura da svalutazione monetaria e polarizzatore di liquidità globale.",
+            "note": "Ottimizzazione integrata: 30 nodi + 10 fili maestri + Liquidità globale.",
+            "match_condition": lambda r, t, o: True,
+            "verdict": "Configurazione allineata alla matrice SPIDER: massima convessità, duration compressa contro tassi terminali elevati e protezione totale da shock monetari e inflattivi.",
         },
     }
 
@@ -2108,14 +2129,14 @@ with tabs[7]:
         <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #F59E0B; display: inline-block;"></span> Oro</span>
         <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #DC2626; display: inline-block;"></span> Commodity</span>
         <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #38BDF8; display: inline-block;"></span> Cash / Liquidità</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #F7931A; display: inline-block;"></span> Crypto (BTC)</span>
     </div>
     """, unsafe_allow_html=True)
 
-    # Render 4 Columns for the 4 Strategic Portfolios
-    p_col1, p_col2, p_col3, p_col4 = st.columns(4)
-    cols_list = [p_col1, p_col2, p_col3, p_col4]
+    # Render 5 Columns for the 5 Strategic Portfolios (4 Classici + 1 SPIDER Dynamic)
+    p_cols = st.columns(5)
 
-    for (p_key, p_data), cur_col in zip(portfolios_data.items(), cols_list):
+    for (p_key, p_data), cur_col in zip(portfolios_data.items(), p_cols):
         is_selected = (p_key == chosen_port_id)
         border_color = "#38BDF8" if is_selected else "rgba(255, 255, 255, 0.12)"
         box_shadow = "0 0 25px rgba(56, 189, 248, 0.3)" if is_selected else "none"
@@ -2126,16 +2147,16 @@ with tabs[7]:
                 if is_selected else
                 f'<div style="color: #64748B; font-size: 10.5px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">STRATEGIA #{p_data["num"]}</div>'
             )
-            title2_part = f'<div style="font-size: 15px; font-weight: 700; color: #E2E8F0; line-height: 1.2;">{p_data["title_line2"]}</div>' if p_data.get("title_line2") else ""
+            title2_part = f'<div style="font-size: 14px; font-weight: 700; color: #E2E8F0; line-height: 1.2;">{p_data["title_line2"]}</div>' if p_data.get("title_line2") else ""
             card_header_html = (
-                f'<div style="background: rgba(15, 23, 42, 0.9); border: 2px solid {border_color}; border-radius: 12px; padding: 16px; box-shadow: {box_shadow}; min-height: 120px;">'
+                f'<div style="background: rgba(15, 23, 42, 0.9); border: 2px solid {border_color}; border-radius: 12px; padding: 14px; box-shadow: {box_shadow}; min-height: 125px;">'
                 f'{badge_html}'
-                f'<div style="display: flex; align-items: flex-start; gap: 10px;">'
-                f'<span style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1.5px solid #F59E0B; border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0;">'
+                f'<div style="display: flex; align-items: flex-start; gap: 8px;">'
+                f'<span style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1.5px solid #F59E0B; border-radius: 50%; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0;">'
                 f'{p_data["num"]}'
                 f'</span>'
                 f'<div>'
-                f'<div style="font-size: 18px; font-weight: 800; color: #F8FAFC; line-height: 1.2;">{p_data["title_line1"]}</div>'
+                f'<div style="font-size: 16px; font-weight: 800; color: #F8FAFC; line-height: 1.2;">{p_data["title_line1"]}</div>'
                 f'{title2_part}'
                 f'</div>'
                 f'</div>'
@@ -2156,22 +2177,22 @@ with tabs[7]:
                 hoverinfo="label+value+percent",
             )])
             fig_donut.update_layout(
-                height=190,
-                margin=dict(l=5, r=5, t=5, b=5),
+                height=185,
+                margin=dict(l=4, r=4, t=4, b=4),
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#F8FAFC", size=10),
+                font=dict(color="#F8FAFC", size=9.5),
             )
             st.plotly_chart(fig_donut, use_container_width=True, key=f"donut_port_{p_data['num']}")
 
             # Features list
-            features_html = "".join([f"<li style='margin-bottom: 5px;'>{f}</li>" for f in p_data["features"]])
+            features_html = "".join([f"<li style='margin-bottom: 4px;'>{f}</li>" for f in p_data["features"]])
             st.markdown(f"""
-            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; font-size: 12px; color: #CBD5E1;">
-                <ul style="padding-left: 16px; margin: 0;">
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px; font-size: 11px; color: #CBD5E1;">
+                <ul style="padding-left: 14px; margin: 0;">
                     {features_html}
                 </ul>
-                <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 8px; padding-top: 6px; font-size: 11px; color: #F59E0B; font-weight: 500;">
+                <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 6px; padding-top: 5px; font-size: 10.5px; color: #F59E0B; font-weight: 500;">
                     {p_data['note']}
                 </div>
             </div>
@@ -2179,7 +2200,7 @@ with tabs[7]:
 
             # Detailed economic analysis explanation
             st.markdown(f"""
-            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; margin-top: 8px; font-size: 11.5px; color: #94A3B8; line-height: 1.45;">
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 10px; margin-top: 6px; font-size: 11px; color: #94A3B8; line-height: 1.4;">
                 {p_data['analysis']}
             </div>
             """, unsafe_allow_html=True)
@@ -2193,47 +2214,59 @@ with tabs[7]:
 
     # ================= MODULO SOVRAPPOSIZIONE TATTICA (SPIDER TACTICAL OVERLAY) =================
     st.markdown("<br>", unsafe_allow_html=True)
-    with st.expander("🔬 **Modulo di Ottimizzazione Tattica SPIDER: Risoluzione Incongruenze & Tilt di Portafoglio**", expanded=True):
-        st.markdown("#### 🎯 Dal Portafoglio Statico al Portafoglio Dinamico Adattivo")
+    with st.expander("🔬 **Modulo di Ottimizzazione Tattica SPIDER: Risoluzione Incongruenze & Allocazione Dinamica**", expanded=True):
+        st.markdown("#### 🎯 Dal Portafoglio Statico al Portafoglio Dinamico Adattivo SPIDER")
         st.markdown(f"""
         I 4 modelli storici (60/40, All Weather, Golden Butterfly, Permanent) offrono **strutture strategiche fisse**. Tuttavia, l'analisi del centro di controllo SPIDER rileva attriti specifici nel ciclo attuale:
-        * **1. Frizione Duration vs Tassi Reali Restrittivi:** L'All Weather tradizionale impiega il 40% in titoli governativi a lunghissima scadenza (Long-Term Treasuries). Con un **Taylor Gap di {taylor_gap:+.0f} bps** e tassi reali di policy al **{core_state.fed_real_rate:+.2f}%**, i bond a lunga duration subiscono perdite da premio al termine elevato (*Bear Steepening*).
-        * **2. Discrepanza Commodities vs Dollaro Forte (LINK_08 & LINK_09):** Il super-ciclo del Rame (`Z = +1.00`) e la domanda industriale segnalano un *No Landing* solido (+2.25% crescita potenziale), ma il **Dollar Index a 101.84** comprime le commodities generiche non energetiche.
-        * **3. Risoluzione Framework Steno a Tre Dimensioni (Liquidità + Crescita + Inflazione):** SPIDER integra la liquidità monetaria sistemica della Fed e della BCE: la liquidità globale rimane restrittiva, rendendo preferibile un **sovrappeso mirato sull'Oro fisico e sull'Azionario Quality ad alta cassa netta**, riducendo la duration obbligazionaria a scadenze brevi (1-3 anni).
+        * **1. Frizione Duration vs Tassi Reali Restrittivi:** L'All Weather tradizionale impiega il 40% in titoli governativi a lunghissima scadenza (Long-Term Treasuries). Con un **Taylor Gap di {taylor_gap:+.0f} bps** e tassi reali di policy al **{core_state.fed_real_rate:+.2f}%**, i bond a lunga duration subiscono perdite da premio al termine elevato (*Bear Steepening*). Lo scenario SPIDER corregge questa debolezza tagliando i bond al 15% (solo scadenze 1-3Y).
+        * **2. Discrepanza Commodities vs Dollaro Forte (LINK_08 & LINK_09):** Il super-ciclo del Rame (`Z = +1.00`) e la domanda industriale segnalano un *No Landing* solido (+2.25% crescita potenziale), ma il **Dollar Index a 101.84** comprime le commodities generiche non energetiche. Lo scenario SPIDER sovrappesa il comparto petrolio/energia (+15%) e l'azionario ciclico Quality (+35%).
+        * **3. Asset Asimmetrici & Debasement Hedge (Oro + Bitcoin):** In un contesto di debito sovrano ai massimi storici e banche centrali che accumulano riserve non-dollaro (`LINK_03`), SPIDER alloca il **20% in Oro Fisico** e integra un **5% in Crypto (Bitcoin)** come collaterale incorruttibile e call option asimmetrica sulla liquidità monetaria globale.
         """)
 
         # Tabella di Tactical Tilt consigliato da SPIDER rispetto alla strategia scelta
-        st.markdown("##### ⚖️ Matrice di Aggiustamento Tattico SPIDER:")
+        st.markdown("##### ⚖️ Matrice di Allocazione & Tilt SPIDER vs Benchmark Selezionato:")
         df_tilts = pd.DataFrame([
             {
                 "Asset Class": "Azioni (Equity)",
                 "Peso Strategico": f"{rec_info['weights'].get('Azioni', 0)}%",
+                "Peso SPIDER Dynamic": "35%",
                 "Tilt Tattico SPIDER": "+5% / Focus Quality & Energy",
                 "Motivazione Quantitativa SPIDER": "Crescita PIL resiliente (+0.66 score) e Rame leading (+2.25%). Privilegiare settori ad alto FCF ed Energy."
             },
             {
                 "Asset Class": "Obbligazioni (Bonds)",
                 "Peso Strategico": f"{rec_info['weights'].get('Obbligazioni', 0)}%",
+                "Peso SPIDER Dynamic": "15%",
                 "Tilt Tattico SPIDER": "-10% / Short Duration (T-Bills 1-3Y)",
                 "Motivazione Quantitativa SPIDER": f"Taylor Rule Gap ({taylor_gap:+.0f} bps) e Fed Hawkish penalizzano la duration decennale/trentennale."
             },
             {
                 "Asset Class": "Oro Fisico (Gold)",
                 "Peso Strategico": f"{rec_info['weights'].get('Oro', 0)}%",
+                "Peso SPIDER Dynamic": "20%",
                 "Tilt Tattico SPIDER": "+5% Sovrappeso Sovrano",
                 "Motivazione Quantitativa SPIDER": "LINK_03 de-dollarizzazione e acquisti banche centrali estere; hedging perfetto contro debito e inflazione."
             },
             {
                 "Asset Class": "Commodities / Petrolio",
                 "Peso Strategico": f"{rec_info['weights'].get('Commodity', 0)}%",
+                "Peso SPIDER Dynamic": "15%",
                 "Tilt Tattico SPIDER": "+5% Selettivo Energetico",
                 "Motivazione Quantitativa SPIDER": "Late-cycle boom con offerta rigida (LINK_04); sovrappesare petrolio rispetto a metalli dipendenti da FX debole."
             },
             {
                 "Asset Class": "Cash / Liquidità",
                 "Peso Strategico": f"{rec_info['weights'].get('Cash / Liquidità', 0)}%",
-                "Tilt Tattico SPIDER": "Mantenere 5-10% Tattico",
+                "Peso SPIDER Dynamic": "10%",
+                "Tilt Tattico SPIDER": "Mantenere 10% Tattico",
                 "Motivazione Quantitativa SPIDER": "Rendimento monetario risk-free al 4.5%–5.0% garantisce opzionalità per comprare eventuali storni."
+            },
+            {
+                "Asset Class": "Crypto (BTC)",
+                "Peso Strategico": f"{rec_info['weights'].get('Crypto (BTC)', 0)}%",
+                "Peso SPIDER Dynamic": "5%",
+                "Tilt Tattico SPIDER": "+5% Asset Asimmetrico",
+                "Motivazione Quantitativa SPIDER": "Protezione pura da debasement fiat monetario; massima sensibilità positiva all'espansione della liquidità globale (Steno Model)."
             },
         ])
         st.dataframe(df_tilts, use_container_width=True, hide_index=True)
