@@ -403,9 +403,20 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 if core_state.active_critical_alerts:
-    with st.expander(f"⚠️ **ATTENZIONE: Rilevate {n_crit_alerts} divergenze anomale tra nodi macro** (Clicca per espandere)", expanded=True):
+    var_warning_html = ""
+    if n_crit_alerts >= 3:
+        var_warning_html = f"""
+        <div style="background: rgba(239, 68, 68, 0.15); border: 1.5px solid #EF4444; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; color: #FECACA; font-size: 12.5px;">
+            🚨 <b>SOGLIA CRITICA VAR SUPERATA ({n_crit_alerts}/10 Fili in Rottura Sistemica |Z| &ge; 2.0):</b><br>
+            L'instabilità statistica della matrice di correlazione compromette l'affidabilità dei modelli <i>Value-at-Risk (VaR)</i> di portafoglio, esponendo le strategie multi-asset a correlazioni di coda impreviste. Attivare protocollo di de-risking o coperture di convessità asimmetriche.
+        </div>
+        """
+    with st.expander(f"⚠️ **ATTENZIONE SISTEMICA: Rilevate {n_crit_alerts} divergenze anomale tra nodi macro** (Clicca per espandere)", expanded=True):
+        if var_warning_html:
+            st.markdown(var_warning_html, unsafe_allow_html=True)
         for alt in core_state.active_critical_alerts:
             st.error(alt)
+
 
 # Modal Dialog definition for Landing Scenario Analysis (Soft vs Hard vs No Landing)
 @st.dialog("🛬 Analisi del Ciclo di Atterraggio: Soft vs Hard vs No Landing", width="large")
@@ -625,6 +636,28 @@ def show_web_tension_modal():
             })
     st.dataframe(pd.DataFrame(master_links_data), use_container_width=True, hide_index=True)
 
+    with st.expander("🔬 **Decomposizione Micro-Strutturale & Diagnosi Economica Anomalie Critiche**", expanded=True):
+        st.caption("Analisi quantitativa dei driver esogeni responsabili della deviazione empirica rispetto alla teoria istituzionale:")
+        for l in link_states:
+            if l.is_master and l.z_score_tension >= 1.25:
+                tag_color = "#D946EF" if l.z_score_tension >= 2.0 else "#F59E0B"
+                st.markdown(f"""
+                <div style="background: rgba(255,255,255,0.03); border-left: 4px solid {tag_color}; border-radius: 6px; padding: 12px 16px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-weight: 700; color: #F8FAFC; font-size: 13.5px;">{l.id}: {l.node_a_name} ⟷ {l.node_b_name}</span>
+                        <span style="background: {tag_color}22; border: 1px solid {tag_color}; color: {tag_color}; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 700;">{l.status} (|Z| = {l.z_score_tension:.2f})</span>
+                    </div>
+                    <div style="font-size: 12.5px; color: #CBD5E1; margin-bottom: 4px;"><b>Meccanismo Istituzionale Atteso:</b> {l.mechanism}</div>
+                    <div style="font-size: 12px; color: #94A3B8; margin-bottom: 6px;"><b>Diagnosi SPIDER:</b> {l.alert_description}</div>
+                    <div style="font-size: 12px; color: #38BDF8;">
+                        • <b>Correlazione Attiva:</b> <code>{l.active_corr:+.2f}</code> vs <b>Teorica:</b> <code>{l.theoretical_corr:+d}</code> | 
+                        • <b>Nodo A ({l.node_a_id}):</b> {l.node_a_val:,.2f} ({l.node_a_delta:+.2f}) | 
+                        • <b>Nodo B ({l.node_b_id}):</b> {l.node_b_val:,.2f} ({l.node_b_delta:+.2f})
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+
 
 # Modal Dialog 4: Bias Banche Centrali (Central Bank Policy Bias)
 @st.dialog("🏛️ Dettaglio Analitico: Bias e Tassi Reali delle Banche Centrali", width="large")
@@ -723,10 +756,16 @@ def show_taylor_rule_modal():
     """)
 
     st.markdown("#### 💡 Lettura dell'Indicatore:")
-    st.markdown(f"""
-    - **Taylor Gap $> 0$ (Valore attuale: {core_state.taylor_rate_gap_bps:+.0f} bps):** La banca centrale sta applicando un tasso superiore al benchmark teorico. Ciò esercita una pressione deflattiva sull'economia, riducendo l'eccesso di domanda.
-    - **Taylor Gap $< 0$:** La banca centrale è in ritardo rispetto all'inflazione ("*behind the curve*"), alimentando bolle speculative o riaccelerazioni inflattive.
-    """)
+    if core_state.taylor_rate_gap_bps >= 0:
+        st.markdown(f"""
+        - **Taylor Gap $\\ge 0$ (Valore attuale: {core_state.taylor_rate_gap_bps:+.0f} bps):** La Federal Reserve applica un tasso effettivo superiore al benchmark teorico di Taylor (**Restrittiva / Surplus di policy**). Ciò esercita una pressione disinflattiva sull'economia reale, raffreddando la domanda aggregata.
+        - **Taylor Gap $< 0$:** Condizione in cui il tasso effettivo è inferiore alla prescrizione teorica (*behind the curve* / accomodante).
+        """)
+    else:
+        st.markdown(f"""
+        - **Taylor Gap $< 0$ (Valore attuale: {core_state.taylor_rate_gap_bps:+.0f} bps):** La Federal Reserve applica un tasso effettivo inferiore al benchmark teorico prescritto di Taylor ({fed_rate:.2f}% effettivo vs {taylor_prescribed:.2f}% prescritto $\\rightarrow$ **Accomodante / Deficit di policy**). La banca centrale risulta in ritardo rispetto all'inflazione ("*behind the curve*"), mantenendo condizioni finanziarie ancora espansive.
+        - **Taylor Gap $> 0$:** Condizione in cui il tasso effettivo è superiore alla prescrizione teorica (*ahead of the curve* / restrittiva).
+        """)
 
 
 # Modal Dialog 6: Nodi Monitorati & Architettura Radiale
@@ -736,27 +775,30 @@ def show_network_nodes_modal():
     st.caption("Topologia concentrica distribuita su 3 Anelli Gerarchici e 4 Quadranti Macroeconomici.")
 
     nc1, nc2, nc3 = st.columns(3)
+    r1_count = sum(1 for ns in node_states.values() if ns.ring == 1)
+    r2_count = sum(1 for ns in node_states.values() if ns.ring == 2)
+    r3_count = sum(1 for ns in node_states.values() if ns.ring == 3)
     with nc1:
-        st.markdown("""
+        st.markdown(f"""
         <div style="background: rgba(56, 189, 248, 0.1); border: 1.5px solid #38BDF8; border-radius: 10px; padding: 12px; text-align: center;">
-            <div style="font-size: 11px; text-transform: uppercase; color: #38BDF8; font-weight: 700;">Anello 1 (Core)</div>
-            <div style="font-size: 24px; font-weight: 800; color: #38BDF8; font-family: monospace;">6 Nodi</div>
+            <div style="font-size: 11px; text-transform: uppercase; color: #38BDF8; font-weight: 700;">Anello 1 (Interno)</div>
+            <div style="font-size: 24px; font-weight: 800; color: #38BDF8; font-family: monospace;">{r1_count} Nodi</div>
             <div style="font-size: 11px; color: #CBD5E1; margin-top: 3px;">Politica Monetaria & Tassi Ufficiali</div>
         </div>
         """, unsafe_allow_html=True)
     with nc2:
-        st.markdown("""
+        st.markdown(f"""
         <div style="background: rgba(168, 85, 247, 0.1); border: 1.5px solid #A855F7; border-radius: 10px; padding: 12px; text-align: center;">
-            <div style="font-size: 11px; text-transform: uppercase; color: #A855F7; font-weight: 700;">Anello 2 (Macro)</div>
-            <div style="font-size: 24px; font-weight: 800; color: #A855F7; font-family: monospace;">12 Nodi</div>
+            <div style="font-size: 11px; text-transform: uppercase; color: #A855F7; font-weight: 700;">Anello 2 (Intermedio)</div>
+            <div style="font-size: 24px; font-weight: 800; color: #A855F7; font-family: monospace;">{r2_count} Nodi</div>
             <div style="font-size: 11px; color: #CBD5E1; margin-top: 3px;">Fondamentali Reali, PIL, Inflazione & Lavoro</div>
         </div>
         """, unsafe_allow_html=True)
     with nc3:
-        st.markdown("""
+        st.markdown(f"""
         <div style="background: rgba(16, 185, 129, 0.1); border: 1.5px solid #10B981; border-radius: 10px; padding: 12px; text-align: center;">
-            <div style="font-size: 11px; text-transform: uppercase; color: #10B981; font-weight: 700;">Anello 3 (Mercati)</div>
-            <div style="font-size: 24px; font-weight: 800; color: #10B981; font-family: monospace;">12 Nodi</div>
+            <div style="font-size: 11px; text-transform: uppercase; color: #10B981; font-weight: 700;">Anello 3 (Esterno)</div>
+            <div style="font-size: 24px; font-weight: 800; color: #10B981; font-family: monospace;">{r3_count} Nodi</div>
             <div style="font-size: 11px; color: #CBD5E1; margin-top: 3px;">Asset Intermarket (Azionario, Bond, Commodity, FX)</div>
         </div>
         """, unsafe_allow_html=True)
@@ -767,10 +809,10 @@ def show_network_nodes_modal():
     for n_id, ns in node_states.items():
         q_counts[ns.quadrant] = q_counts.get(ns.quadrant, 0) + 1
     
-    st.write(f"- **POLITICA_MONETARIA:** {q_counts.get('POLITICA_MONETARIA', 0)} serie storiche (Fed Funds, Tasso BCE, Bilanci CB, Curve dei rendimenti)")
-    st.write(f"- **CRESCITA_LAVORO:** {q_counts.get('CRESCITA_LAVORO', 0)} serie storiche (Real GDP, Produzione Industriale, Disoccupazione, Claims, Ordini Manifatturieri)")
-    st.write(f"- **INFLAZIONE_COMMODITIES:** {q_counts.get('INFLAZIONE_COMMODITIES', 0)} serie storiche (Core PCE, Headline CPI, HICP Eurozona, Petrolio WTI, Rame, Oro)")
-    st.write(f"- **MERCATI_RISCHIO:** {q_counts.get('MERCATI_RISCHIO', 0)} serie storiche (S&P 500, Nasdaq 100, EuroStoxx 50, Spread HY, VIX, DXY)")
+    st.write(f"- **🟡 INFLAZIONE & ASPETTATIVE (`INFLATION`):** {q_counts.get('INFLATION', 0)} serie storiche (Core PCE, Headline CPI, HICP Eurozona, 5Y Breakeven, Petrolio WTI, Oro, TIPS Reale)")
+    st.write(f"- **🟢 CRESCITA & PRODUZIONE (`GROWTH`):** {q_counts.get('GROWTH', 0)} serie storiche (Real GDP, Produzione Industriale, Vendite al Dettaglio, Rame, Pendenza Curva 10Y-2Y, Borse USA/UE)")
+    st.write(f"- **🔵 LAVORO & OCCUPAZIONE (`LABOR`):** {q_counts.get('LABOR', 0)} serie storiche (Tasso Disoccupazione U3, Buste Paga NFP, Sussidi di Disoccupazione Initial Claims)")
+    st.write(f"- **🟣 LIQUIDITÀ, RISCHIO & TASSI (`LIQUIDITY_RISK`):** {q_counts.get('LIQUIDITY_RISK', 0)} serie storiche (Fed Funds, Tasso BCE, Treasury 2Y e 10Y, Bund 10Y, Spread BTP/Bund, Dollaro DXY, VIX, Spread High Yield)")
 
     st.markdown("#### 📊 Sintesi Nodi e Z-Score:")
     nodes_summary_table = []
