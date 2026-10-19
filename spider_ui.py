@@ -42,66 +42,68 @@ def build_spider_web_figure(
     axis_color = "rgba(255, 255, 255, 0.20)" if dark_mode else "rgba(15, 23, 42, 0.20)"
     text_color = "#F1F5F9" if dark_mode else "#0F172A"
 
-    # 0. Subtle Macro Heatmap Background Shading (Bilanciamento Macro, Gravità & Causa-Effetto)
-    # Calcola l'intensità in base agli Z-score e al disequilibrio (Crescita vs Inflazione, Rischio Tassi/Spread)
+    # 0. Pointillism Radial Micro-Particle Constellation Field (Trama a Micro-Punti Sfumata ad Alta Definizione)
+    # Crea una matrice radiale di micro-punti luminosi che sfumano verso l'esterno, accendendosi nei quadranti dominanti
     g_score = core_state.growth_score
     inf_score = core_state.inflation_score
     t_val = core_state.systemic_web_tension
 
-    # Settori angolari per i 4 quadranti (sfumature tenui non invasive)
-    # Intensità calibrata: da 0.02 (fisiologico) a 0.08 (severo)
-    q_angles = {
-        "INFLAZIONE": np.linspace(0, np.pi/2, 40),
-        "CRESCITA": np.linspace(np.pi/2, np.pi, 40),
-        "LAVORO": np.linspace(np.pi, 3*np.pi/2, 40),
-        "LIQUIDITA": np.linspace(3*np.pi/2, 2*np.pi, 40),
-    }
+    # Griglia polare di micro-punti (36 raggi concentrici x 48 passi angolari)
+    dot_radii = np.linspace(0.4, 3.25, 24)
+    dot_angles = np.linspace(0, 2 * np.pi, 64, endpoint=False)
+    
+    mesh_r, mesh_theta = np.meshgrid(dot_radii, dot_angles)
+    pts_x = (mesh_r * np.cos(mesh_theta)).flatten()
+    pts_y = (mesh_r * np.sin(mesh_theta)).flatten()
+    pts_r = mesh_r.flatten()
+    pts_th = (mesh_theta.flatten() % (2 * np.pi))
 
-    # Opacità dinamica in base alle tensioni di ciascun polo
-    # 1. Se tira verso destra (Inflazione alta) -> alone ambra sfumato
-    inf_alpha = min(0.09, max(0.02, 0.02 + max(0.0, inf_score) * 0.035))
-    th_inf = q_angles["INFLAZIONE"]
-    x_inf = np.concatenate([[0], 3.25 * np.cos(th_inf), [0]])
-    y_inf = np.concatenate([[0], 3.25 * np.sin(th_inf), [0]])
-    fig.add_trace(go.Scatter(
-        x=x_inf, y=y_inf, fill="toself",
-        fillcolor=f"rgba(245, 158, 11, {inf_alpha:.3f})",
-        line=dict(width=0), hoverinfo="skip", showlegend=False, name="BG_Inflazione"
-    ))
+    # Calcola il colore e l'intensità di ciascun micro-punto in base al quadrante e alla gravità
+    pts_colors = []
+    pts_sizes = []
+    for px, py, pr, pth in zip(pts_x, pts_y, pts_r, pts_th):
+        # Gradiente radiale: la densità/luminosità cresce dal centro verso gli anelli esterni
+        dist_factor = (pr / 3.25) ** 1.3
+        
+        # Quadrante 1: Inflazione & Commodities (0° - 90°) -> Giallo/Ambra Oro Vivace
+        if 0 <= pth < np.pi / 2:
+            base_rgb = (245, 158, 11)   # #F59E0B
+            tension_boost = max(0.0, inf_score) * 0.4
+            alpha = min(0.65, max(0.08, (0.15 + tension_boost) * dist_factor))
+            sz = 2.0 + 1.8 * dist_factor
+        # Quadrante 2: Crescita & Produzione (90° - 180°) -> Verde Smeraldo / Ciano Vivace
+        elif np.pi / 2 <= pth < np.pi:
+            base_rgb = (16, 185, 129)   # #10B981
+            tension_boost = max(0.0, g_score) * 0.4
+            alpha = min(0.65, max(0.08, (0.15 + tension_boost) * dist_factor))
+            sz = 2.0 + 1.8 * dist_factor
+        # Quadrante 3: Lavoro & Occupazione (180° - 270°) -> Blu Elettrico
+        elif np.pi <= pth < 3 * np.pi / 2:
+            base_rgb = (59, 130, 246)   # #3B82F6
+            unrate_z = node_states["LAB_UNRATE"].z_score if "LAB_UNRATE" in node_states else 0.0
+            alpha = min(0.60, max(0.08, (0.14 + max(0.0, unrate_z) * 0.25) * dist_factor))
+            sz = 2.0 + 1.5 * dist_factor
+        # Quadrante 4: Liquidità & Rischio (270° - 360°) -> Magenta / Fucsia Neon
+        else:
+            base_rgb = (236, 72, 153)   # #EC4899
+            hy_z = node_states["CRED_HY"].z_score if "CRED_HY" in node_states else 0.0
+            alpha = min(0.65, max(0.08, (0.15 + max(0.0, hy_z) * 0.3) * dist_factor))
+            sz = 2.0 + 1.8 * dist_factor
 
-    # 2. Se tira verso sinistra (Crescita/Produzione forte) -> alone verde smeraldo tenue
-    gro_alpha = min(0.09, max(0.02, 0.02 + max(0.0, g_score) * 0.035))
-    th_gro = q_angles["CRESCITA"]
-    x_gro = np.concatenate([[0], 3.25 * np.cos(th_gro), [0]])
-    y_gro = np.concatenate([[0], 3.25 * np.sin(th_gro), [0]])
-    fig.add_trace(go.Scatter(
-        x=x_gro, y=y_gro, fill="toself",
-        fillcolor=f"rgba(16, 185, 129, {gro_alpha:.3f})",
-        line=dict(width=0), hoverinfo="skip", showlegend=False, name="BG_Crescita"
-    ))
+        pts_colors.append(f"rgba({base_rgb[0]}, {base_rgb[1]}, {base_rgb[2]}, {alpha:.3f})")
+        pts_sizes.append(sz)
 
-    # 3. Se tira verso il basso a sinistra (Stress Occupazionale) -> alone blu tenue
-    unrate_z = node_states["LAB_UNRATE"].z_score if "LAB_UNRATE" in node_states else 0.0
-    lab_alpha = min(0.09, max(0.02, 0.02 + max(0.0, unrate_z) * 0.03))
-    th_lab = q_angles["LAVORO"]
-    x_lab = np.concatenate([[0], 3.25 * np.cos(th_lab), [0]])
-    y_lab = np.concatenate([[0], 3.25 * np.sin(th_lab), [0]])
     fig.add_trace(go.Scatter(
-        x=x_lab, y=y_lab, fill="toself",
-        fillcolor=f"rgba(59, 130, 246, {lab_alpha:.3f})",
-        line=dict(width=0), hoverinfo="skip", showlegend=False, name="BG_Lavoro"
-    ))
-
-    # 4. Se tira verso il basso a destra (Stretta monetaria / Rischio Liquidità & Spread) -> alone viola/magenta
-    hy_z = node_states["CRED_HY"].z_score if "CRED_HY" in node_states else 0.0
-    liq_alpha = min(0.09, max(0.02, 0.02 + max(0.0, hy_z) * 0.035))
-    th_liq = q_angles["LIQUIDITA"]
-    x_liq = np.concatenate([[0], 3.25 * np.cos(th_liq), [0]])
-    y_liq = np.concatenate([[0], 3.25 * np.sin(th_liq), [0]])
-    fig.add_trace(go.Scatter(
-        x=x_liq, y=y_liq, fill="toself",
-        fillcolor=f"rgba(236, 72, 153, {liq_alpha:.3f})",
-        line=dict(width=0), hoverinfo="skip", showlegend=False, name="BG_Liquidita"
+        x=pts_x,
+        y=pts_y,
+        mode="markers",
+        marker=dict(
+            size=pts_sizes,
+            color=pts_colors,
+        ),
+        hoverinfo="skip",
+        showlegend=False,
+        name="Macro_Pointillism_Field",
     ))
 
     # 1. Concentric Geometric Rings con sfumature delicate di anello (Causa-Effetto: Anello 1 -> Anello 2 -> Anello 3)
