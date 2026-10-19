@@ -853,14 +853,19 @@ with tabs[0]:
     st.markdown("#### 🕸️ Visualizzazione Radiale Concentrica a Tela di Ragno")
     st.caption("I cerchi concentrici separano Politica Monetaria (Anello 1), Fondamentali Macro (Anello 2) e Asset Intermarket (Anello 3). Lo spessore e il colore dei fili indicano la forza e la tensione della relazione.")
 
-    col_ctl1, col_ctl2, col_ctl3, col_ctl4 = st.columns([2, 1, 1, 1])
+    col_ctl1, col_ctl2, col_ctl3, col_ctl4 = st.columns([1.8, 1.2, 1.0, 1.0])
     with col_ctl1:
         if active_isolated_id:
             st.info(f"🔍 **Modalità Focus Attiva:** Isolamento del nodo `{active_isolated_id}` ({node_states[active_isolated_id].name if active_isolated_id in node_states else ''}) e di tutte le sue connessioni dirette.")
         else:
-            st.write("Passa il mouse su qualsiasi nodo o filo per visualizzare la scheda analitica istituzionale.")
+            st.write("💡 Disegna con il mouse un **Lazo a mano libera** o un **Rettangolo** per selezionare porzioni di tela, oppure clicca su un singolo nodo.")
     with col_ctl2:
-        toggle_labels = st.checkbox("Mostra Etichette Ticker", value=True)
+        c_mode1, c_mode2 = st.columns(2)
+        with c_mode1:
+            toggle_labels = st.checkbox("Mostra Ticker", value=True)
+        with c_mode2:
+            sel_tool = st.selectbox("Strumento Selezione:", ["Lazo Libero (Lasso)", "Rettangolo (Box)"], index=0, label_visibility="collapsed")
+            active_dragmode = "lasso" if "Lazo" in sel_tool else "select"
     with col_ctl3:
         if active_isolated_id and st.button("Mostra Tutta la Tela", use_container_width=True):
             st.session_state["selected_node"] = "TUTTI (Visualizzazione Globale)"
@@ -942,25 +947,30 @@ with tabs[0]:
         show_labels=toggle_labels,
         dark_mode=True,
     )
+    if "active_dragmode" in locals():
+        fig_web.update_layout(dragmode=active_dragmode)
     
     chart_event = st.plotly_chart(
         fig_web,
         use_container_width=True,
         on_select="rerun",
-        selection_mode=["points"],
+        selection_mode=["points", "box", "lasso"],
         key="spider_web_chart_selection"
     )
 
-    # If the user clicks on any node directly on the web, isolate it instantly!
+    # If the user selects a node or an area directly on the web, isolate it instantly!
     if chart_event and "selection" in chart_event and chart_event["selection"].get("points"):
         pts = chart_event["selection"]["points"]
-        if pts and "customdata" in pts[0] and pts[0]["customdata"]:
-            clicked_node = pts[0]["customdata"]
-            if isinstance(clicked_node, list):
-                clicked_node = clicked_node[0]
-            if clicked_node in NODES and st.session_state.get("selected_node") != clicked_node:
-                st.session_state["selected_node"] = clicked_node
-                st.rerun()
+        if pts:
+            # If multiple nodes are captured by the lasso or box, select the primary one or last clicked
+            first_pt = pts[0]
+            if "customdata" in first_pt and first_pt["customdata"]:
+                clicked_node = first_pt["customdata"]
+                if isinstance(clicked_node, list):
+                    clicked_node = clicked_node[0]
+                if clicked_node in NODES and st.session_state.get("selected_node") != clicked_node:
+                    st.session_state["selected_node"] = clicked_node
+                    st.rerun()
 
     # External dedicated analytical card (displayed cleanly outside the graph canvas so it never blocks nodes)
     displayed_node_id = active_isolated_id if (active_isolated_id and active_isolated_id in node_states) else None

@@ -58,29 +58,33 @@ def build_spider_web_figure(
             name=f"Ring_{ring_num}",
         ))
         fig.add_annotation(
-            x=0,
-            y=r + 0.12,
-            text=f"<b>{r_info['name']}</b>: {r_info['label']}",
+            x=-r * 0.707,
+            y=-r * 0.707 - 0.10,
+            text=f"<b>{r_info['name']}</b>",
             showarrow=False,
-            font=dict(size=10, color="#94A3B8" if dark_mode else "#64748B"),
+            font=dict(size=9.5, color="#94A3B8" if dark_mode else "#64748B"),
+            bgcolor="rgba(11, 15, 25, 0.75)" if dark_mode else "rgba(248, 250, 252, 0.75)",
+            bordercolor="rgba(255, 255, 255, 0.12)",
+            borderwidth=1,
+            borderpad=3,
         )
 
-    # 2. Quadrant Axes & Watermarks
+    # 2. Quadrant Axes & Styled Headers
     max_r = 3.4
     fig.add_trace(go.Scatter(
         x=[-max_r, max_r, None, 0, 0],
         y=[0, 0, None, -max_r, max_r],
         mode="lines",
-        line=dict(color=axis_color, width=1.0, dash="dash"),
+        line=dict(color=axis_color, width=1.2, dash="dash"),
         hoverinfo="skip",
         showlegend=False,
     ))
 
     quad_watermarks = [
-        (2.3, 2.3, "INFLAZIONE & COMMODITIES", "#F59E0B"),
-        (-2.3, 2.3, "CRESCITA & PRODUZIONE", "#10B981"),
-        (-2.3, -2.3, "LAVORO & OCCUPAZIONE", "#3B82F6"),
-        (2.3, -2.3, "LIQUIDITÀ & RISCHIO", "#EC4899"),
+        (2.45, 2.45, "INFLAZIONE & COMMODITIES", "#F59E0B"),
+        (-2.45, 2.45, "CRESCITA & PRODUZIONE", "#10B981"),
+        (-2.45, -2.45, "LAVORO & OCCUPAZIONE", "#3B82F6"),
+        (2.45, -2.45, "LIQUIDITÀ & RISCHIO", "#EC4899"),
     ]
     for qx, qy, qtxt, qcol in quad_watermarks:
         fig.add_annotation(
@@ -89,15 +93,41 @@ def build_spider_web_figure(
             text=f"<b>{qtxt}</b>",
             showarrow=False,
             font=dict(size=11, color=qcol),
-            opacity=0.75,
+            bgcolor="rgba(15, 23, 42, 0.65)" if dark_mode else "rgba(255, 255, 255, 0.65)",
+            bordercolor=qcol,
+            borderwidth=1,
+            borderpad=4,
+            opacity=0.90,
         )
 
     # Polar to cartesian
     coords: Dict[str, Tuple[float, float]] = {"SPIDER_CORE": (0.0, 0.0)}
+    node_textpositions: Dict[str, str] = {}
     for n_id, n_def in NODES.items():
         rad = RINGS[n_def.ring]["radius"]
         angle_rad = math.radians(n_def.angle_deg)
         coords[n_id] = (rad * math.cos(angle_rad), rad * math.sin(angle_rad))
+        
+        # Determine dynamic radial textposition to prevent labels from overlapping nodes and links
+        # Radial projection: push label away from center
+        deg = n_def.angle_deg % 360
+        if 22.5 <= deg < 67.5:
+            pos = "top right"
+        elif 67.5 <= deg < 112.5:
+            pos = "top center"
+        elif 112.5 <= deg < 157.5:
+            pos = "top left"
+        elif 157.5 <= deg < 202.5:
+            pos = "middle left"
+        elif 202.5 <= deg < 247.5:
+            pos = "bottom left"
+        elif 247.5 <= deg < 292.5:
+            pos = "bottom center"
+        elif 292.5 <= deg < 337.5:
+            pos = "bottom right"
+        else:
+            pos = "middle right"
+        node_textpositions[n_id] = pos
 
     # Focus connections
     active_connected_nodes = set()
@@ -264,6 +294,8 @@ def build_spider_web_figure(
         )
         node_hovertexts.append(hover_card)
 
+    node_pos_list = [node_textpositions.get(nid, "top center") for nid in node_customdata]
+
     fig.add_trace(go.Scatter(
         x=node_x,
         y=node_y,
@@ -274,7 +306,7 @@ def build_spider_web_figure(
             line=dict(color=node_border_colors, width=2.0),
         ),
         text=node_labels,
-        textposition="top center",
+        textposition=node_pos_list,
         textfont=dict(size=9.5, color=text_color, family="Inter, sans-serif"),
         hovertext=node_hovertexts,
         customdata=node_customdata,
@@ -324,6 +356,7 @@ def build_spider_web_figure(
     fig.update_layout(
         paper_bgcolor=bg_color,
         plot_bgcolor=bg_color,
+        dragmode="lasso",  # Default freeform lasso selection enabled
         margin=dict(l=10, r=10, t=20, b=20),
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-3.6, 3.6]),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-3.6, 3.6], scaleanchor="x", scaleratio=1),
@@ -336,6 +369,7 @@ def build_spider_web_figure(
         ),
     )
     return fig
+
 
 
 def build_macro_regime_matrix_figure(core_state: SpiderCoreState, dark_mode: bool = True) -> go.Figure:
