@@ -42,7 +42,69 @@ def build_spider_web_figure(
     axis_color = "rgba(255, 255, 255, 0.20)" if dark_mode else "rgba(15, 23, 42, 0.20)"
     text_color = "#F1F5F9" if dark_mode else "#0F172A"
 
-    # 1. Concentric Geometric Rings
+    # 0. Subtle Macro Heatmap Background Shading (Bilanciamento Macro, Gravità & Causa-Effetto)
+    # Calcola l'intensità in base agli Z-score e al disequilibrio (Crescita vs Inflazione, Rischio Tassi/Spread)
+    g_score = core_state.growth_score
+    inf_score = core_state.inflation_score
+    t_val = core_state.systemic_web_tension
+
+    # Settori angolari per i 4 quadranti (sfumature tenui non invasive)
+    # Intensità calibrata: da 0.02 (fisiologico) a 0.08 (severo)
+    q_angles = {
+        "INFLAZIONE": np.linspace(0, np.pi/2, 40),
+        "CRESCITA": np.linspace(np.pi/2, np.pi, 40),
+        "LAVORO": np.linspace(np.pi, 3*np.pi/2, 40),
+        "LIQUIDITA": np.linspace(3*np.pi/2, 2*np.pi, 40),
+    }
+
+    # Opacità dinamica in base alle tensioni di ciascun polo
+    # 1. Se tira verso destra (Inflazione alta) -> alone ambra sfumato
+    inf_alpha = min(0.09, max(0.02, 0.02 + max(0.0, inf_score) * 0.035))
+    th_inf = q_angles["INFLAZIONE"]
+    x_inf = np.concatenate([[0], 3.25 * np.cos(th_inf), [0]])
+    y_inf = np.concatenate([[0], 3.25 * np.sin(th_inf), [0]])
+    fig.add_trace(go.Scatter(
+        x=x_inf, y=y_inf, fill="toself",
+        fillcolor=f"rgba(245, 158, 11, {inf_alpha:.3f})",
+        line=dict(width=0), hoverinfo="skip", showlegend=False, name="BG_Inflazione"
+    ))
+
+    # 2. Se tira verso sinistra (Crescita/Produzione forte) -> alone verde smeraldo tenue
+    gro_alpha = min(0.09, max(0.02, 0.02 + max(0.0, g_score) * 0.035))
+    th_gro = q_angles["CRESCITA"]
+    x_gro = np.concatenate([[0], 3.25 * np.cos(th_gro), [0]])
+    y_gro = np.concatenate([[0], 3.25 * np.sin(th_gro), [0]])
+    fig.add_trace(go.Scatter(
+        x=x_gro, y=y_gro, fill="toself",
+        fillcolor=f"rgba(16, 185, 129, {gro_alpha:.3f})",
+        line=dict(width=0), hoverinfo="skip", showlegend=False, name="BG_Crescita"
+    ))
+
+    # 3. Se tira verso il basso a sinistra (Stress Occupazionale) -> alone blu tenue
+    unrate_z = node_states["LAB_UNRATE"].z_score if "LAB_UNRATE" in node_states else 0.0
+    lab_alpha = min(0.09, max(0.02, 0.02 + max(0.0, unrate_z) * 0.03))
+    th_lab = q_angles["LAVORO"]
+    x_lab = np.concatenate([[0], 3.25 * np.cos(th_lab), [0]])
+    y_lab = np.concatenate([[0], 3.25 * np.sin(th_lab), [0]])
+    fig.add_trace(go.Scatter(
+        x=x_lab, y=y_lab, fill="toself",
+        fillcolor=f"rgba(59, 130, 246, {lab_alpha:.3f})",
+        line=dict(width=0), hoverinfo="skip", showlegend=False, name="BG_Lavoro"
+    ))
+
+    # 4. Se tira verso il basso a destra (Stretta monetaria / Rischio Liquidità & Spread) -> alone viola/magenta
+    hy_z = node_states["CRED_HY"].z_score if "CRED_HY" in node_states else 0.0
+    liq_alpha = min(0.09, max(0.02, 0.02 + max(0.0, hy_z) * 0.035))
+    th_liq = q_angles["LIQUIDITA"]
+    x_liq = np.concatenate([[0], 3.25 * np.cos(th_liq), [0]])
+    y_liq = np.concatenate([[0], 3.25 * np.sin(th_liq), [0]])
+    fig.add_trace(go.Scatter(
+        x=x_liq, y=y_liq, fill="toself",
+        fillcolor=f"rgba(236, 72, 153, {liq_alpha:.3f})",
+        line=dict(width=0), hoverinfo="skip", showlegend=False, name="BG_Liquidita"
+    ))
+
+    # 1. Concentric Geometric Rings con sfumature delicate di anello (Causa-Effetto: Anello 1 -> Anello 2 -> Anello 3)
     theta_circle = np.linspace(0, 2 * np.pi, 200)
     for ring_num, r_info in RINGS.items():
         r = r_info["radius"]
@@ -173,6 +235,17 @@ def build_spider_web_figure(
             line_width = link.line_width if is_focused else 0.8
             dash_style = link.line_dash if is_focused else "dot"
 
+        # Se il filo è in rottura o divergenza critica (|Z| >= 2.0), aggiungi un alone di sottofondo sfumato
+        if link.z_score_tension >= Z_SCORE_CRITICAL:
+            fig.add_trace(go.Scatter(
+                x=[xA, xB],
+                y=[yA, yB],
+                mode="lines",
+                line=dict(color="rgba(217, 70, 239, 0.18)", width=line_width * 3.5),
+                hoverinfo="none",
+                showlegend=False,
+            ))
+
         fig.add_trace(go.Scatter(
             x=[xA, xB],
             y=[yA, yB],
@@ -181,6 +254,7 @@ def build_spider_web_figure(
             hoverinfo="none",
             showlegend=False,
         ))
+
 
         if is_focused and (link.is_master or (selected_node_id and is_focused)):
             x_mid = (xA + xB) / 2.0
