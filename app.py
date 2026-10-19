@@ -237,6 +237,13 @@ if "what_if_hy" not in st.session_state:
     st.session_state["what_if_hy"] = 0.0
 
 
+def reset_node_selection():
+    st.session_state["selected_node"] = "TUTTI (Visualizzazione Globale)"
+    st.session_state["sel_node_sidebar"] = "TUTTI (Visualizzazione Globale)"
+    if "spider_web_chart_selection" in st.session_state:
+        del st.session_state["spider_web_chart_selection"]
+
+
 @st.cache_data(ttl=900, show_spinner=False)
 def get_computed_engine_data(window_key: str, use_spearman: bool, refresh_id: int):
     aligned_df = engine.load_and_align_data(force_refresh=(refresh_id > 0))
@@ -334,12 +341,19 @@ with st.sidebar:
     st.session_state["filter_ring"] = sel_ring
 
     all_nodes_list = ["TUTTI (Visualizzazione Globale)", "SPIDER_CORE (Centro di Controllo)"] + list(NODES.keys())
+    if "sel_node_sidebar" not in st.session_state or st.session_state["sel_node_sidebar"] != st.session_state["selected_node"]:
+        st.session_state["sel_node_sidebar"] = st.session_state["selected_node"]
+    
     sel_node = st.selectbox(
         "Isola Nodo & Collegamenti (Focus):",
         options=all_nodes_list,
-        index=all_nodes_list.index(st.session_state["selected_node"]) if st.session_state["selected_node"] in all_nodes_list else 0
+        index=all_nodes_list.index(st.session_state["sel_node_sidebar"]) if st.session_state["sel_node_sidebar"] in all_nodes_list else 0,
+        key="sel_node_sidebar",
     )
-    st.session_state["selected_node"] = sel_node
+    if sel_node != st.session_state["selected_node"]:
+        st.session_state["selected_node"] = sel_node
+        if "spider_web_chart_selection" in st.session_state:
+            del st.session_state["spider_web_chart_selection"]
 
     st.markdown("<hr style='margin: 14px 0; border-color: rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
 
@@ -350,7 +364,7 @@ with st.sidebar:
             st.rerun()
     with col_ref2:
         if st.button("🧹 Reset Filtri", use_container_width=True):
-            st.session_state["selected_node"] = "TUTTI (Visualizzazione Globale)"
+            reset_node_selection()
             st.session_state["filter_quadrant"] = "TUTTI"
             st.session_state["filter_ring"] = 0
             st.session_state["what_if_oil"] = 0.0
@@ -874,7 +888,7 @@ with tabs[0]:
                 active_dragmode = "select"
     with col_ctl3:
         if active_isolated_id and st.button("Mostra Tutta la Tela", use_container_width=True):
-            st.session_state["selected_node"] = "TUTTI (Visualizzazione Globale)"
+            reset_node_selection()
             st.rerun()
 
     # Modal Dialog definition for Spider Web User Manual & Guide
@@ -981,12 +995,19 @@ with tabs[0]:
                     clicked_node = clicked_node[0]
                 if clicked_node in NODES and st.session_state.get("selected_node") != clicked_node:
                     st.session_state["selected_node"] = clicked_node
+                    st.session_state["sel_node_sidebar"] = clicked_node
                     st.rerun()
 
     # External dedicated analytical card (displayed cleanly outside the graph canvas so it never blocks nodes)
     displayed_node_id = active_isolated_id if (active_isolated_id and active_isolated_id in node_states) else None
     
     if displayed_node_id:
+        c_card_top1, c_card_top2 = st.columns([3, 1])
+        with c_card_top2:
+            if st.button("❌ Chiudi Focus / Reset Asset", key="btn_close_card_focus", type="primary", use_container_width=True):
+                reset_node_selection()
+                st.rerun()
+
         ns = node_states[displayed_node_id]
         nd = NODES[displayed_node_id]
         connected_links = [l for l in link_states if l.node_a_id == displayed_node_id or l.node_b_id == displayed_node_id]
