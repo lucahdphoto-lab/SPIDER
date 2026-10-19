@@ -895,88 +895,7 @@ with k6:
         show_network_nodes_modal()
 
 
-# ================= DIALOG: SPIDER CORE FOCUS =================
-@st.dialog("🕷️ SPIDER_CORE: Centro di Controllo Macro-Finanziario & Tensione Sistemica", width="large")
-def show_spider_core_modal():
-    t_val = core_state.systemic_web_tension
-    t_color = "#EF4444" if t_val >= 2.0 else ("#F59E0B" if t_val >= 1.25 else "#10B981")
-    
-    st.markdown(f"""
-    <div style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(168, 85, 247, 0.12)); border: 2px solid #38BDF8; border-radius: 12px; padding: 18px; margin-bottom: 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-            <div>
-                <span style="font-size: 11px; text-transform: uppercase; color: #38BDF8; font-weight: 800; letter-spacing: 0.8px;">SINTESI SISTEMICA CENTRALE (RAGGIO 0)</span>
-                <div style="font-size: 24px; font-weight: 800; color: #F8FAFC; margin-top: 2px;">SPIDER_CORE • Centro di Controllo Istituzionale</div>
-                <div style="font-size: 13px; color: #CBD5E1; margin-top: 4px;">Topologia causale della rete: riceve i vettori di impulso monetario, fondamentale e intermarket sintetizzandoli in un unico tensore di stato.</div>
-            </div>
-            <div style="background: rgba(15, 23, 42, 0.9); border: 1.5px solid {t_color}; border-radius: 10px; padding: 12px 18px; text-align: center; min-width: 170px;">
-                <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Tensione Globale Tela</div>
-                <div style="font-size: 28px; font-weight: 800; color: {t_color}; font-family: monospace;">|Z| = {t_val:.2f}</div>
-                <div style="font-size: 11px; color: {t_color}; font-weight: 700;">{core_state.web_tension_status.split('(')[0].strip()}</div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    c_sc1, c_sc2, c_sc3, c_sc4 = st.columns(4)
-    with c_sc1:
-        st.markdown(f"""
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center;">
-            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Regime Macro Attivo</div>
-            <div style="font-size: 16px; font-weight: 800; color: #38BDF8; margin-top: 4px;">{core_state.macro_regime.split('/')[0].strip()}</div>
-            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Growth: {core_state.growth_score:+.2f} | Inf: {core_state.inflation_score:+.2f}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with c_sc2:
-        ls_s = core_state.landing_scenario
-        st.markdown(f"""
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center;">
-            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Scenario Ciclico Landing</div>
-            <div style="font-size: 16px; font-weight: 800; color: {ls_s.color_hex}; margin-top: 4px;">{ls_s.scenario_badge}</div>
-            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Confidenza: {ls_s.confidence_pct:.1f}%</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with c_sc3:
-        st.markdown(f"""
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center;">
-            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Banche Centrali & Policy</div>
-            <div style="font-size: 16px; font-weight: 800; color: #A78BFA; margin-top: 4px;">{core_state.central_bank_bias.split('(')[0].strip()}</div>
-            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Taylor Gap: {core_state.taylor_rate_gap_bps:+.0f} bps</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with c_sc4:
-        yc_s = yield_curve_engine.get_curve_regime_state()
-        st.markdown(f"""
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center;">
-            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Curva dei Rendimenti</div>
-            <div style="font-size: 16px; font-weight: 800; color: {yc_s.color_hex}; margin-top: 4px;">{yc_s.regime_name}</div>
-            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Rank #{yc_s.rank} Ciclo Economico</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("#### ⚡ Matrice Anomalie Critiche & Fili Maestri in Tensione:")
-    crit_links = [l for l in link_states if l.is_master]
-    df_core_links = pd.DataFrame([
-        {
-            "Filo": l.id,
-            "Relazione": f"{l.node_a_name} ↔ {l.node_b_name}",
-            "Corr. Rolling": f"{l.active_corr:+.2f}",
-            "Corr. Teorica": f"{l.theoretical_corr:+d}",
-            "Tensione (|Z|)": f"{l.z_score_tension:.2f}",
-            "Stato": l.status,
-            "Diagnosi Macro": l.alert_description,
-        }
-        for l in crit_links
-    ])
-    st.dataframe(df_core_links, use_container_width=True, hide_index=True)
-
-
-# ================= BARRA SALVATAGGIO SITUAZIONE GLOBALE & SPIDER CORE =================
-st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-c_glob_box1, c_glob_box2 = st.columns([1.6, 1.4])
-
-# Costruzione del File A: File di Testo (.txt) con tutti i parametri salvati di tutte le sezioni
+# ================= GENERAZIONE SNAPSHOT GLOBALE (FILE A & FILE B) =================
 now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 yc_state_curr = yield_curve_engine.get_curve_regime_state()
 pring_engine_curr = PringCycleEngine(aligned_df)
@@ -1063,8 +982,6 @@ Fine Report Snapshot SPIDER.
 ================================================================================
 """
 
-# Costruzione del File B: Tabella Completa dei Dati Numerici (CSV & Excel)
-# Raccoglie tutti i 30 nodi con valore attuale, prev, delta, z-score, min, max, e tutti i 10 fili con correlazione e tensione
 nodes_num_data = []
 for n_id, ns in node_states.items():
     nd = NODES.get(n_id)
@@ -1109,9 +1026,6 @@ for l in link_states:
     })
 df_file_b_links = pd.DataFrame(links_num_data)
 
-# Unione in unico CSV completo (o Excel a due schede)
-file_b_csv = df_file_b_nodes.to_csv(index=False).encode("utf-8")
-
 excel_b_buffer = io.BytesIO()
 with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
     df_file_b_nodes.to_excel(writer, index=False, sheet_name="Dati_Numerici_30_Nodi")
@@ -1130,6 +1044,121 @@ with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
     }]).to_excel(writer, index=False, sheet_name="Sintesi_SPIDER_CORE")
 file_b_excel_bytes = excel_b_buffer.getvalue()
 
+
+# ================= DIALOG: SPIDER CORE FOCUS =================
+@st.dialog("🕷️ SPIDER_CORE: Centro di Controllo Macro-Finanziario & Tensione Sistemica", width="large")
+def show_spider_core_modal():
+    t_val = core_state.systemic_web_tension
+    t_color = "#EF4444" if t_val >= 2.0 else ("#F59E0B" if t_val >= 1.25 else "#10B981")
+    
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(168, 85, 247, 0.12)); border: 2px solid #38BDF8; border-radius: 12px; padding: 18px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <span style="font-size: 11px; text-transform: uppercase; color: #38BDF8; font-weight: 800; letter-spacing: 0.8px;">SINTESI SISTEMICA CENTRALE (RAGGIO 0)</span>
+                <div style="font-size: 24px; font-weight: 800; color: #F8FAFC; margin-top: 2px;">SPIDER_CORE • Centro di Controllo Istituzionale</div>
+                <div style="font-size: 13px; color: #CBD5E1; margin-top: 4px;">Topologia causale della rete: riceve i vettori di impulso monetario, fondamentale e intermarket sintetizzandoli in un unico tensore di stato.</div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.9); border: 1.5px solid {t_color}; border-radius: 10px; padding: 12px 18px; text-align: center; min-width: 170px;">
+                <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Tensione Globale Tela</div>
+                <div style="font-size: 28px; font-weight: 800; color: {t_color}; font-family: monospace;">|Z| = {t_val:.2f}</div>
+                <div style="font-size: 11px; color: {t_color}; font-weight: 700;">{core_state.web_tension_status.split('(')[0].strip()}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # BARRA SALVATAGGIO SITUAZIONE GLOBALE DENTRO IL MODALE SPIDER CORE
+    st.markdown("""
+    <div style="background: rgba(15, 23, 42, 0.9); border: 1.5px solid #38BDF8; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;">
+        <div style="font-size: 13px; font-weight: 800; color: #38BDF8; margin-bottom: 4px;">
+            💾 SALVATAGGIO SITUAZIONE GLOBALE DA SPIDER_CORE
+        </div>
+        <div style="font-size: 11.5px; color: #94A3B8; margin-bottom: 10px;">
+            Scarica l'intera fotografia operativa di SPIDER sincronizzata con tutti i parametri di calcolo e i dati certificati:
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col_save_core1, col_save_core2 = st.columns(2)
+    with col_save_core1:
+        st.download_button(
+            "📄 Scarica File A (.txt) • Parametri Completi",
+            data=file_a_text,
+            file_name=f"SPIDER_CORE_Snapshot_Parametri_{datetime.date.today()}.txt",
+            mime="text/plain",
+            use_container_width=True,
+            type="primary",
+            key="dl_btn_core_file_a",
+            help="Scarica il file di testo con tutti i parametri salvati di tutte le sezioni."
+        )
+    with col_save_core2:
+        st.download_button(
+            "📊 Scarica File B (.xlsx) • Tabella Dati Numerici",
+            data=file_b_excel_bytes,
+            file_name=f"SPIDER_CORE_Dati_Numerici_{datetime.date.today()}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="dl_btn_core_file_b",
+            help="Scarica la cartella Excel completa di tutti i 30 nodi e 10 fili maestri."
+        )
+
+    st.markdown("<hr style='margin: 16px 0; border-color: rgba(255,255,255,0.08);'>", unsafe_allow_html=True)
+
+    c_sc1, c_sc2, c_sc3, c_sc4 = st.columns(4)
+    with c_sc1:
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Regime Macro Attivo</div>
+            <div style="font-size: 16px; font-weight: 800; color: #38BDF8; margin-top: 4px;">{core_state.macro_regime.split('/')[0].strip()}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Growth: {core_state.growth_score:+.2f} | Inf: {core_state.inflation_score:+.2f}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c_sc2:
+        ls_s = core_state.landing_scenario
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Scenario Ciclico Landing</div>
+            <div style="font-size: 16px; font-weight: 800; color: {ls_s.color_hex}; margin-top: 4px;">{ls_s.scenario_badge}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Confidenza: {ls_s.confidence_pct:.1f}%</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c_sc3:
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Banche Centrali & Policy</div>
+            <div style="font-size: 16px; font-weight: 800; color: #A78BFA; margin-top: 4px;">{core_state.central_bank_bias.split('(')[0].strip()}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Taylor Gap: {core_state.taylor_rate_gap_bps:+.0f} bps</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c_sc4:
+        yc_s = yield_curve_engine.get_curve_regime_state()
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; color: #94A3B8; text-transform: uppercase;">Curva dei Rendimenti</div>
+            <div style="font-size: 16px; font-weight: 800; color: {yc_s.color_hex}; margin-top: 4px;">{yc_s.regime_name}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Rank #{yc_s.rank} Ciclo Economico</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("#### ⚡ Matrice Anomalie Critiche & Fili Maestri in Tensione:")
+    crit_links = [l for l in link_states if l.is_master]
+    df_core_links = pd.DataFrame([
+        {
+            "Filo": l.id,
+            "Relazione": f"{l.node_a_name} ↔ {l.node_b_name}",
+            "Corr. Rolling": f"{l.active_corr:+.2f}",
+            "Corr. Teorica": f"{l.theoretical_corr:+d}",
+            "Tensione (|Z|)": f"{l.z_score_tension:.2f}",
+            "Stato": l.status,
+            "Diagnosi Macro": l.alert_description,
+        }
+        for l in crit_links
+    ])
+    st.dataframe(df_core_links, use_container_width=True, hide_index=True)
+
+c_glob_box1, c_glob_box2 = st.columns([1.8, 1.2])
 with c_glob_box1:
     st.markdown(f"""
     <div style="background: rgba(15, 23, 42, 0.85); border: 1.5px solid #38BDF8; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
