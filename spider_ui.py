@@ -549,3 +549,290 @@ def generate_links_dataframe(link_states: List[LinkState]) -> pd.DataFrame:
         })
     df = pd.DataFrame(rows)
     return df
+
+
+def build_spider_web_3d_figure(
+    node_states: Dict[str, NodeState],
+    link_states: List[LinkState],
+    core_state: CoreSystemicState,
+    selected_node_id: Optional[str] = None,
+    filter_quadrant: str = "TUTTI",
+    filter_ring: int = 0,
+    show_labels: bool = True,
+    dark_mode: bool = True,
+    elevation_boost: float = 1.35,
+) -> go.Figure:
+    """
+    Costruisce la visualizzazione tridimensionale interattiva (WebGL) della tela di ragno SPIDER.
+    I nodi poggiano su una topologia radiale 3D:
+    - Livello Z base determinato dalla tensione / Z-Score fisiologico
+    - Quando un nodo viene selezionato, si solleva (elevazione positiva sull'asse Z)
+      e si ingrandisce con effetto 'floating pedestal', mettendo in risalto le linee di trazione 3D.
+    """
+    fig = go.Figure()
+    bg_color = "rgba(11, 15, 25, 1.0)" if dark_mode else "rgba(248, 250, 252, 1.0)"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+
+    # Calcolo coordinate 3D dei nodi
+    # x, y in base a raggio polare e angolo
+    # z: default calcolato da z_score * 0.15 (curvatura parabolica della tela a imbuto)
+    coords_3d: Dict[str, Tuple[float, float, float]] = {
+        "SPIDER_CORE": (0.0, 0.0, 0.3 if selected_node_id == "SPIDER_CORE" else 0.0)
+    }
+
+    # Focus e nodi connessi
+    active_connected_nodes = set()
+    if selected_node_id and selected_node_id != "SPIDER_CORE":
+        active_connected_nodes.add(selected_node_id)
+        for link in link_states:
+            if link.node_a_id == selected_node_id:
+                active_connected_nodes.add(link.node_b_id)
+            elif link.node_b_id == selected_node_id:
+                active_connected_nodes.add(link.node_a_id)
+
+    # 1. Cerchi concentrici dei 3 anelli nel piano 3D
+    ring_theta = [i * (2 * math.pi / 72) for i in range(73)]
+    for r_num, r_data in RINGS.items():
+        if filter_ring > 0 and r_num != filter_ring:
+            continue
+        rad = r_data["radius"]
+        c_x = [rad * math.cos(t) for t in ring_theta]
+        c_y = [rad * math.sin(t) for t in ring_theta]
+        c_z = [-0.15 * (rad ** 0.8) for _ in ring_theta]  # Leggera curvatura a imbuto della tela
+        fig.add_trace(go.Scatter3d(
+            x=c_x,
+            y=c_y,
+            z=c_z,
+            mode="lines",
+            line=dict(color="rgba(148, 163, 184, 0.22)" if dark_mode else "rgba(100, 116, 139, 0.25)", width=1.5),
+            hoverinfo="none",
+            showlegend=False,
+        ))
+
+    # Calcolo coordinate di ogni nodo
+    for n_id, n_def in NODES.items():
+        rad = RINGS[n_def.ring]["radius"]
+        angle_rad = math.radians(n_def.angle_deg)
+        x = rad * math.cos(angle_rad)
+        y = rad * math.sin(angle_rad)
+        
+        # Livello base Z parabolico
+        base_z = -0.15 * (rad ** 0.8)
+        
+        # Elevazione speciale: se il nodo è selezionato, esce marcatamente in alto!
+        if selected_node_id == n_id:
+            z = base_z + elevation_boost
+        elif n_id in active_connected_nodes:
+            z = base_z + (elevation_boost * 0.35)  # I nodi partner collegati si sollevano lievemente
+        else:
+            n_st = node_states.get(n_id)
+            z_dev = (n_st.z_score * 0.08) if n_st else 0.0
+            z = base_z + z_dev
+
+        coords_3d[n_id] = (x, y, z)
+
+    # 2. Disegno dei collegamenti 3D (Fili della tela)
+    for link in link_states:
+        if link.node_a_id not in coords_3d or link.node_b_id not in coords_3d:
+            continue
+
+        xA, yA, zA = coords_3d[link.node_a_id]
+        xB, yB, zB = coords_3d[link.node_b_id]
+
+        is_focused = True
+        if selected_node_id and selected_node_id != "SPIDER_CORE":
+            if link.node_a_id != selected_node_id and link.node_b_id != selected_node_id:
+                is_focused = False
+
+        if filter_ring > 0:
+            ringA = NODES[link.node_a_id].ring if link.node_a_id in NODES else 0
+            ringB = NODES[link.node_b_id].ring if link.node_b_id in NODES else 0
+            if ringA != filter_ring and ringB != filter_ring:
+                is_focused = False
+
+        if filter_quadrant != "TUTTI":
+            quadA = NODES[link.node_a_id].quadrant if link.node_a_id in NODES else ""
+            quadB = NODES[link.node_b_id].quadrant if link.node_b_id in NODES else ""
+            if quadA != filter_quadrant and quadB != filter_quadrant:
+                is_focused = False
+
+        if selected_node_id and selected_node_id != "SPIDER_CORE":
+            line_color = link.color_hex if is_focused else ("rgba(255,255,255,0.02)" if dark_mode else "rgba(0,0,0,0.02)")
+            line_width = (link.line_width * 2.2) if is_focused else 0.8
+        else:
+            line_color = link.color_hex if is_focused else ("rgba(255,255,255,0.05)" if dark_mode else "rgba(0,0,0,0.05)")
+            line_width = (link.line_width * 1.4) if is_focused else 0.8
+
+        fig.add_trace(go.Scatter3d(
+            x=[xA, xB],
+            y=[yA, yB],
+            z=[zA, zB],
+            mode="lines",
+            line=dict(color=line_color, width=line_width),
+            hoverinfo="none",
+            showlegend=False,
+        ))
+
+    # Se un nodo è selezionato, disegna un pilastro / raggio laser verticale verso il piano base
+    if selected_node_id and selected_node_id in coords_3d and selected_node_id != "SPIDER_CORE":
+        sx, sy, sz = coords_3d[selected_node_id]
+        rad_sel = RINGS[NODES[selected_node_id].ring]["radius"]
+        base_floor_z = -0.15 * (rad_sel ** 0.8)
+        fig.add_trace(go.Scatter3d(
+            x=[sx, sx],
+            y=[sy, sy],
+            z=[base_floor_z, sz],
+            mode="lines",
+            line=dict(color="#38BDF8", width=4.5),
+            hoverinfo="none",
+            showlegend=False,
+        ))
+
+    # 3. Nodi Periferici 3D
+    node_x, node_y, node_z = [], [], []
+    node_colors = []
+    node_sizes = []
+    node_labels = []
+    node_hovertexts = []
+    node_customdata = []
+
+    for n_id, n_def in NODES.items():
+        if n_id not in coords_3d:
+            continue
+        x, y, z = coords_3d[n_id]
+        n_state = node_states.get(n_id)
+
+        if filter_ring > 0 and n_def.ring != filter_ring:
+            continue
+        if filter_quadrant != "TUTTI" and n_def.quadrant != filter_quadrant:
+            continue
+
+        is_dimmed = False
+        if selected_node_id and selected_node_id != "SPIDER_CORE":
+            if n_id not in active_connected_nodes:
+                is_dimmed = True
+
+        quad_info = QUADRANTS.get(n_def.quadrant, {"color": "#38BDF8"})
+        base_color = quad_info["color"]
+
+        if is_dimmed:
+            node_fill = "rgba(51, 65, 85, 0.2)"
+            size = 4
+        elif selected_node_id == n_id:
+            node_fill = "#38BDF8"  # Neon blue spotlight
+            size = 14
+        elif n_state and abs(n_state.z_score) >= Z_SCORE_CRITICAL:
+            node_fill = "#D946EF"
+            size = 10
+        elif n_state and abs(n_state.z_score) >= Z_SCORE_NORMAL:
+            node_fill = "#F59E0B"
+            size = 8
+        else:
+            node_fill = base_color
+            size = 7
+
+        node_x.append(x)
+        node_y.append(y)
+        node_z.append(z)
+        node_colors.append(node_fill)
+        node_sizes.append(size)
+        node_labels.append(n_id if (show_labels and (not is_dimmed or selected_node_id == n_id)) else "")
+        node_customdata.append(n_id)
+
+        val_str = f"{n_state.current_value:,.2f} {n_state.unit}" if n_state else "N/D"
+        delta_str = f"{n_state.delta_period:+,.2f} ({n_state.delta_period_pct:+.2f}%)" if n_state else "N/D"
+        z_str = f"{n_state.z_score:+.2f}" if n_state else "0.00"
+        yoy_str = f"{n_state.delta_yoy:+,.2f}" if n_state else "N/D"
+        status_str = n_state.status if n_state else "Normale"
+
+        hover_card = (
+            f"<b>🏛️ NODO 3D: {n_def.name} [{n_id}]</b><br>"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━<br>"
+            f"• Quota Z (Altezza): <b>{z:+.2f}</b><br>"
+            f"• Categoria: <b>{n_def.category}</b> (Anello {n_def.ring})<br>"
+            f"• Valore Attuale: <b>{val_str}</b><br>"
+            f"• Variazione Periodo: <b>{delta_str}</b><br>"
+            f"• Variazione YoY: <b>{yoy_str}</b><br>"
+            f"• Z-Score Dinamico: <b>{z_str}</b> ({status_str})<br>"
+            f"• Ruolo Macro: {n_def.role}"
+        )
+        node_hovertexts.append(hover_card)
+
+    fig.add_trace(go.Scatter3d(
+        x=node_x,
+        y=node_y,
+        z=node_z,
+        mode="markers+text",
+        marker=dict(
+            size=node_sizes,
+            color=node_colors,
+            opacity=0.95,
+        ),
+        text=node_labels,
+        textposition="top center",
+        textfont=dict(size=9.5, color=text_color, family="Inter, sans-serif"),
+        hovertext=node_hovertexts,
+        customdata=node_customdata,
+        hoverinfo="text",
+        name="Nodes_3D",
+        showlegend=False,
+    ))
+
+    # 4. SPIDER_CORE Central Node 3D
+    core_x, core_y, core_z = coords_3d["SPIDER_CORE"]
+    core_color = "#10B981" if core_state.systemic_web_tension < Z_SCORE_NORMAL else (
+        "#F59E0B" if core_state.systemic_web_tension < Z_SCORE_CRITICAL else "#EF4444"
+    )
+
+    core_hover = (
+        f"<b>🕷️ SPIDER_CORE: CENTRO DI CONTROLLO 3D</b><br>"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br>"
+        f"• Regime Macro: <b>{core_state.macro_regime}</b><br>"
+        f"• Tensione della Tela: <b>{core_state.systemic_web_tension:.2f}</b> ({core_state.web_tension_status})<br>"
+        f"• Bias Banche Centrali: <b>{core_state.central_bank_bias}</b>"
+    )
+
+    fig.add_trace(go.Scatter3d(
+        x=[core_x],
+        y=[core_y],
+        z=[core_z],
+        mode="markers+text",
+        marker=dict(size=16, color=core_color, opacity=0.9),
+        text=["SPIDER_CORE"],
+        textposition="bottom center",
+        textfont=dict(size=11, color="#FFFFFF", family="Inter, sans-serif"),
+        hovertext=[core_hover],
+        hoverinfo="text",
+        name="Spider_Core_3D",
+        showlegend=False,
+    ))
+
+    # Camera 3D angolata per una prospettiva dinamica a volo d'uccello
+    camera = dict(
+        eye=dict(x=1.35, y=-1.65, z=1.2),
+        center=dict(x=0, y=0, z=-0.1),
+        up=dict(x=0, y=0, z=1)
+    )
+
+    fig.update_layout(
+        paper_bgcolor=bg_color,
+        scene=dict(
+            xaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False, title=""),
+            yaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False, title=""),
+            zaxis=dict(showbackground=False, showgrid=True, zeroline=False, showticklabels=False, title="", gridcolor="rgba(255,255,255,0.06)"),
+            camera=camera,
+            bgcolor=bg_color,
+        ),
+        margin=dict(l=0, r=0, t=10, b=10),
+        height=720,
+        hoverlabel=dict(
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            bordercolor="#38BDF8",
+            font_size=12,
+            font_family="Inter, sans-serif",
+            font_color="#F8FAFC",
+        ),
+    )
+
+    return fig
+

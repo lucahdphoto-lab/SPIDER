@@ -44,6 +44,7 @@ from curve_regimes_engine import (
 from spider_ui import (
     build_macro_regime_matrix_figure,
     build_spider_web_figure,
+    build_spider_web_3d_figure,
     generate_links_dataframe,
     generate_nodes_dataframe,
 )
@@ -911,25 +912,35 @@ with tabs[0]:
     st.markdown("#### 🕸️ Visualizzazione Radiale Concentrica a Tela di Ragno")
     st.caption("I cerchi concentrici separano Politica Monetaria (Anello 1), Fondamentali Macro (Anello 2) e Asset Intermarket (Anello 3). Lo spessore e il colore dei fili indicano la forza e la tensione della relazione.")
 
-    col_ctl1, col_ctl2, col_ctl3, col_ctl4 = st.columns([1.6, 1.4, 1.0, 1.0])
+    col_ctl1, col_ctl2, col_ctl3, col_ctl4 = st.columns([1.5, 1.5, 1.0, 1.0])
     with col_ctl1:
+        view_dimension = st.radio(
+            "📐 Prospettiva della Tela:",
+            ["🕸️ Vista 2D Standard", "🌐 Vista 3D Spaziale (Elevazione Dinamica)"],
+            index=0,
+            horizontal=True,
+            key="spider_view_dimension"
+        )
         if active_isolated_id:
-            st.info(f"🔍 **Modalità Focus Attiva:** Isolamento del nodo `{active_isolated_id}` ({node_states[active_isolated_id].name if active_isolated_id in node_states else ''}) e di tutte le sue connessioni dirette.")
+            st.info(f"🔍 **Focus Attivo:** Nodo `{active_isolated_id}` ({node_states[active_isolated_id].name if active_isolated_id in node_states else ''}) elevato in 3D con fasci di connessione isolati.")
         else:
-            st.write("💡 **Zoom dinamico con rotellina mouse attivo**: ruota la rotella per ingrandire i nodi ed esplorare i dettagli.")
+            st.caption("💡 Seleziona un nodo per vederlo **sollevarsi in 3D** sopra la tela radiale.")
     with col_ctl2:
         c_mode1, c_mode2 = st.columns(2)
         with c_mode1:
             toggle_labels = st.checkbox("Mostra Ticker", value=True)
             enable_scroll_zoom = st.checkbox("🔍 Zoom Rotella", value=True, help="Scorri la rotella del mouse per zoomare fluidamente dentro e fuori dalla tela")
         with c_mode2:
-            sel_tool = st.selectbox("Strumento Mouse:", ["Zoom & Pan Libero", "Lazo Libero (Lasso)", "Rettangolo (Box)"], index=0, help="Scegli la funzione del mouse sulla tela")
-            if "Zoom" in sel_tool:
-                active_dragmode = "pan"
-            elif "Lazo" in sel_tool:
-                active_dragmode = "lasso"
+            if "3D" not in view_dimension:
+                sel_tool = st.selectbox("Strumento Mouse:", ["Zoom & Pan Libero", "Lazo Libero (Lasso)", "Rettangolo (Box)"], index=0, help="Scegli la funzione del mouse sulla tela")
+                if "Zoom" in sel_tool:
+                    active_dragmode = "pan"
+                elif "Lazo" in sel_tool:
+                    active_dragmode = "lasso"
+                else:
+                    active_dragmode = "select"
             else:
-                active_dragmode = "select"
+                st.caption("🎮 **Controlli 3D:** Trascina per ruotare, tasto destro/rotella per zoom e pan orbitale.")
     with col_ctl3:
         if active_isolated_id and st.button("Mostra Tutta la Tela", use_container_width=True):
             reset_node_selection()
@@ -1001,30 +1012,45 @@ with tabs[0]:
         if st.button("ℹ️ Information (Manuale)", use_container_width=True, type="secondary"):
             show_spider_info_modal()
 
-    fig_web = build_spider_web_figure(
-        node_states=node_states,
-        link_states=link_states,
-        core_state=core_state,
-        selected_node_id=active_isolated_id,
-        filter_quadrant=st.session_state["filter_quadrant"],
-        filter_ring=st.session_state["filter_ring"],
-        show_labels=toggle_labels,
-        dark_mode=True,
-    )
-    if "active_dragmode" in locals():
-        fig_web.update_layout(dragmode=active_dragmode)
+    is_3d = ("3D" in view_dimension)
+
+    if is_3d:
+        fig_web = build_spider_web_3d_figure(
+            node_states=node_states,
+            link_states=link_states,
+            core_state=core_state,
+            selected_node_id=active_isolated_id,
+            filter_quadrant=st.session_state["filter_quadrant"],
+            filter_ring=st.session_state["filter_ring"],
+            show_labels=toggle_labels,
+            dark_mode=True,
+            elevation_boost=1.4,
+        )
+    else:
+        fig_web = build_spider_web_figure(
+            node_states=node_states,
+            link_states=link_states,
+            core_state=core_state,
+            selected_node_id=active_isolated_id,
+            filter_quadrant=st.session_state["filter_quadrant"],
+            filter_ring=st.session_state["filter_ring"],
+            show_labels=toggle_labels,
+            dark_mode=True,
+        )
+        if "active_dragmode" in locals():
+            fig_web.update_layout(dragmode=active_dragmode)
     
     chart_event = st.plotly_chart(
         fig_web,
         use_container_width=True,
         on_select="rerun",
-        selection_mode=["points", "box", "lasso"],
+        selection_mode=["points", "box", "lasso"] if not is_3d else ["points"],
         config={
             "scrollZoom": enable_scroll_zoom,
             "displaylogo": False,
-            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"],
+            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"] if not is_3d else [],
         },
-        key="spider_web_chart_selection"
+        key=f"spider_web_chart_selection_{'3d' if is_3d else '2d'}"
     )
 
     # If the user selects a node or an area directly on the web, isolate it instantly!
