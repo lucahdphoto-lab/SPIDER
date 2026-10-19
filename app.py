@@ -1921,15 +1921,15 @@ with tabs[7]:
     is_high_tension = (core_state.systemic_web_tension >= 2.0)
     oil_high = (st.session_state.get("what_if_oil", 0.0) >= 15.0)
 
-    # Consistent Asset Colors (matching institutional standards and the reference slide)
-    # Azioni: Giallo/Ambra (#EAB308), Obbligazioni: Grigio Ardesia (#64748B), Oro: Oro Puro Lucido (#F59E0B), Commodity: Rosso Mattone (#DC2626), Liquidità/Cash: Celeste/Azzurro (#38BDF8), Crypto: Arancione Bitcoin (#F7931A)
+    # Consistent Asset Colors
+    # Azioni: Smeraldo/Verde (#10B981), Obbligazioni: Grigio Ardesia (#64748B), Oro: Oro Puro (#F59E0B), Commodity: Rosso Mattone (#DC2626), Liquidità/Cash: Celeste (#38BDF8), Crypto: Rosa (#EC4899)
     ASSET_COLORS = {
-        "Azioni": "#EAB308",
+        "Azioni": "#10B981",
         "Obbligazioni": "#64748B",
         "Oro": "#F59E0B",
         "Commodity": "#DC2626",
         "Cash / Liquidità": "#38BDF8",
-        "Crypto (BTC)": "#F7931A",
+        "Crypto (BTC)": "#EC4899",
     }
 
     # Strategy definitions matching the user's reference infografica + 5° Scenario Nativo SPIDER
@@ -2096,12 +2096,12 @@ INTEGRAZIONE MULTI-FATTORE ATTIVA
     st.markdown("""
     <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 16px; padding: 10px 14px; background: rgba(15,23,42,0.5); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; font-size: 12px;">
         <span style="color: #94A3B8; font-weight: 700; text-transform: uppercase; font-size: 11px;">🎨 Legenda Asset:</span>
-        <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #EAB308; display: inline-block;"></span> Azioni</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #10B981; display: inline-block;"></span> Azioni</span>
         <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #64748B; display: inline-block;"></span> Obbligazioni</span>
         <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #F59E0B; display: inline-block;"></span> Oro</span>
         <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #DC2626; display: inline-block;"></span> Commodity</span>
         <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #38BDF8; display: inline-block;"></span> Cash / Liquidità</span>
-        <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #F7931A; display: inline-block;"></span> Crypto (BTC)</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; color: #F8FAFC;"><span style="width: 12px; height: 12px; border-radius: 3px; background: #EC4899; display: inline-block;"></span> Crypto (BTC)</span>
     </div>
     """, unsafe_allow_html=True)
 
