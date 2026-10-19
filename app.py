@@ -2063,33 +2063,22 @@ with tabs[7]:
         box_shadow = "0 0 25px rgba(56, 189, 248, 0.3)" if is_selected else "none"
 
         with cur_col:
-            # Header card matching the user's uploaded slide exactly
-            badge_html = f"""
-            <div style="background: #38BDF8; color: #0B0F19; font-size: 10px; font-weight: 800; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px;">
-                ⭐ PIÙ ADATTO AL REGIME
-            </div>
-            """ if is_selected else f"""
-            <div style="color: #64748B; font-size: 10.5px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">
-                STRATEGIA #{p_data['num']}
-            </div>
-            """
-
-            st.markdown(f"""
-            <div style="background: rgba(15, 23, 42, 0.9); border: 2px solid {border_color}; border-radius: 12px; padding: 16px; box-shadow: {box_shadow}; min-height: 125px;">
-                {badge_html}
-                <div style="display: flex; align-items: flex-start; gap: 10px;">
-                    <span style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1.5px solid #F59E0B; border-radius: 50%; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0;">
-                        {p_data['num']}
-                    </span>
-                    <div>
-                        <div style="font-size: 18px; font-weight: 800; color: #F8FAFC; line-height: 1.2;">
-                            {p_data['title_line1']}
-                        </div>
-                        {f'<div style="font-size: 15px; font-weight: 700; color: #E2E8F0; line-height: 1.2;">' + p_data["title_line2"] + '</div>' if p_data["title_line2"] else ''}
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            title2_part = f'<div style="font-size: 15px; font-weight: 700; color: #E2E8F0; line-height: 1.2;">{p_data["title_line2"]}</div>' if p_data.get("title_line2") else ""
+            card_header_html = (
+                f'<div style="background: rgba(15, 23, 42, 0.9); border: 2px solid {border_color}; border-radius: 12px; padding: 16px; box-shadow: {box_shadow}; min-height: 120px;">'
+                f'{badge_html}'
+                f'<div style="display: flex; align-items: flex-start; gap: 10px;">'
+                f'<span style="background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1.5px solid #F59E0B; border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0;">'
+                f'{p_data["num"]}'
+                f'</span>'
+                f'<div>'
+                f'<div style="font-size: 18px; font-weight: 800; color: #F8FAFC; line-height: 1.2;">{p_data["title_line1"]}</div>'
+                f'{title2_part}'
+                f'</div>'
+                f'</div>'
+                f'</div>'
+            )
+            st.markdown(card_header_html, unsafe_allow_html=True)
 
             # Donut chart for asset allocation percentages with consistent color mapping
             slice_colors = [ASSET_COLORS.get(label, "#94A3B8") for label in p_data["weights"].keys()]
