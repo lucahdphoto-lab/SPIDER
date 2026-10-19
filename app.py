@@ -901,8 +901,10 @@ tabs = st.tabs([
     "📈 Curva dei Rendimenti & Regimi (Steno Framework)",
     "📋 Supervisione Tabellare & Export",
     "🔬 Focus Nodo & Relazioni",
-    "⚡ Simulatore Stress What-If"
+    "⚡ Simulatore Stress What-If",
+    "💼 Struttura Portafoglio (Asset Allocation)",
 ])
+
 
 # TAB 1
 with tabs[0]:
@@ -1908,9 +1910,9 @@ with tabs[6]:
         key="spider_whatif_web_chart"
     )
 
-    # ================= STRUTTURA PORTAFOGLIO (ASSET ALLOCATION CICLICA) =================
-    st.markdown("---")
-    st.markdown("### 💼 Struttura Portafoglio: Allocazione Strategica & Allineamento al Ciclo")
+# TAB 8: STRUTTURA PORTAFOGLIO (ASSET ALLOCATION CICLICA)
+with tabs[7]:
+    st.markdown("#### 💼 Struttura Portafoglio: Allocazione Strategica & Allineamento al Ciclo")
     st.caption("Confronto strategico dei 4 modelli di portafoglio istituzionali classici con evidenziazione dinamica della strategia più resiliente e coerente rispetto al regime macroeconomico e allo scenario di stress attivo.")
 
     # Determine recommended portfolio based on active regime and tension
