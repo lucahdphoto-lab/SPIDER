@@ -996,6 +996,22 @@ yc_state_curr = yield_curve_engine.get_curve_regime_state()
 pring_engine_curr = PringCycleEngine(aligned_df)
 pring_res_curr = pring_engine_curr.analyze()
 
+# Analisi e Formattazione Z-Score dei 30 Nodi
+sorted_nodes_z = sorted(node_states.values(), key=lambda x: x.z_score)
+n_ext_tot_snap = sum(1 for ns in node_states.values() if abs(ns.z_score) >= 2.0)
+n_att_tot_snap = sum(1 for ns in node_states.values() if 1.25 <= abs(ns.z_score) < 2.0)
+n_norm_tot_snap = sum(1 for ns in node_states.values() if abs(ns.z_score) < 1.25)
+min_node_z = sorted_nodes_z[0] if sorted_nodes_z else None
+max_node_z = sorted_nodes_z[-1] if sorted_nodes_z else None
+
+z_score_rows_text = []
+for rank_i, ns in enumerate(sorted_nodes_z, 1):
+    z_class = "ESTREMO (Blu)" if abs(ns.z_score) >= 2.0 else ("ATTENZIONE (Rosso)" if abs(ns.z_score) >= 1.25 else "NORMALE (Giallo)")
+    z_score_rows_text.append(
+        f"{rank_i:2d}. [{ns.id:13s}] {ns.name:32s} | Z: {ns.z_score:+6.2f} | Val: {ns.current_value:10.2f} {ns.unit:6s} | Classe: {z_class:18s} | Q: {ns.quadrant}"
+    )
+z_score_table_formatted = "\n".join(z_score_rows_text)
+
 file_a_text = f"""================================================================================
 SPIDER • SNAPSHOT DI STATO GLOBALE DEL SISTEMA MACRO-FINANZIARIO
 Data e Ora Salvataggio: {now_iso}
@@ -1072,6 +1088,23 @@ Ambiente: SPIDER Institutional Network Engine (30 Nodi, 10 Fili Maestri)
   * 10% Cash / Liquidità Monetaria (Rendimento privo di rischio al 5%)
   * 5% Crypto (Bitcoin - Debasement hedge asimmetrico e liquidità globale)
 
+7. DISTRIBUZIONE & DIAGNOSI Z-SCORE DEGLI INDICATORI (30 NODI)
+--------------------------------------------------------------------------------
+- Metodologia: Standardizzazione statistica rolling 1Y Z = (X_t - μ) / σ
+- Soglie Quantitative e Codifica Cromatica Grafica:
+  * Regime Estremo (|Z| >= 2.0): Deviazione critica / Shock sistemico [Blu #3B82F6]
+  * In Attenzione (1.25 <= |Z| < 2.0): Tensione ciclica / Surriscaldamento [Rosso #EF4444]
+  * In Equilibrio (|Z| < 1.25): Range statistico fisiologico [Giallo #F59E0B]
+- Sintesi Conteggi Nodi:
+  * Nodi Estremi: {n_ext_tot_snap} / 30 ({n_ext_tot_snap / 30 * 100:.1f}%)
+  * Nodi in Attenzione: {n_att_tot_snap} / 30 ({n_att_tot_snap / 30 * 100:.1f}%)
+  * Nodi Normali: {n_norm_tot_snap} / 30 ({n_norm_tot_snap / 30 * 100:.1f}%)
+- Massimo Z-Score Rilevato: {max_node_z.name if max_node_z else 'N/A'} (Z = {max_node_z.z_score:+.2f} {max_node_z.unit if max_node_z else ''})
+- Minimo Z-Score Rilevato: {min_node_z.name if min_node_z else 'N/A'} (Z = {min_node_z.z_score:+.2f} {min_node_z.unit if min_node_z else ''})
+
+- Classifica Completa Ordinata per Z-Score (Asse Grafico Standardizzato):
+{z_score_table_formatted}
+
 ================================================================================
 Fine Report Snapshot SPIDER.
 ================================================================================
@@ -1121,10 +1154,47 @@ for l in link_states:
     })
 df_file_b_links = pd.DataFrame(links_num_data)
 
+# Tabella dedicata Distribuzione Z-Score 30 Nodi ordinata identica al grafico
+zscore_table_data = []
+for rank_i, ns in enumerate(sorted_nodes_z, 1):
+    abs_z = abs(ns.z_score)
+    if abs_z >= 2.0:
+        cls_name = "Estremo"
+        col_hex = "#3B82F6"
+    elif abs_z >= 1.25:
+        cls_name = "Attenzione"
+        col_hex = "#EF4444"
+    else:
+        cls_name = "Normale"
+        col_hex = "#F59E0B"
+    nd = NODES.get(ns.id)
+    zscore_table_data.append({
+        "Rank_Grafico": rank_i,
+        "ID_Nodo": ns.id,
+        "Nome_Indicatore": ns.name,
+        "Z_Score_Standardizzato": round(ns.z_score, 4),
+        "Classe_ZScore": cls_name,
+        "Colore_Grafico_Hex": col_hex,
+        "Valore_Attuale": ns.current_value,
+        "Valore_Precedente": ns.prev_value,
+        "Unita": ns.unit,
+        "Delta_Periodo": ns.delta_period,
+        "Delta_Periodo_Pct": ns.delta_period_pct,
+        "Delta_YoY_1A": ns.delta_yoy,
+        "Quadrante": ns.quadrant,
+        "Anello": ns.ring,
+        "Categoria": nd.category if nd else "",
+        "Ticker_Ufficiale": ns.official_ticker,
+        "Fonte": ns.source,
+        "Ultimo_Aggiornamento": ns.last_timestamp,
+    })
+df_file_b_zscore = pd.DataFrame(zscore_table_data)
+
 excel_b_buffer = io.BytesIO()
 with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
     df_file_b_nodes.to_excel(writer, index=False, sheet_name="Dati_Numerici_30_Nodi")
     df_file_b_links.to_excel(writer, index=False, sheet_name="Correlazioni_10_Fili")
+    df_file_b_zscore.to_excel(writer, index=False, sheet_name="Distribuzione_ZScore_30_Nodi")
     pd.DataFrame([{
         "Data_Snapshot": now_iso,
         "Macro_Regime": core_state.macro_regime,
@@ -1136,6 +1206,13 @@ with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
         "Taylor_Gap_Bps": core_state.taylor_rate_gap_bps,
         "Fed_Real_Rate": core_state.fed_real_rate,
         "ECB_Real_Rate": core_state.ecb_real_rate,
+        "ZScore_Nodi_Estremi_Count": n_ext_tot_snap,
+        "ZScore_Nodi_Attenzione_Count": n_att_tot_snap,
+        "ZScore_Nodi_Normali_Count": n_norm_tot_snap,
+        "ZScore_Max_Nodo": max_node_z.name if max_node_z else "",
+        "ZScore_Max_Val": round(max_node_z.z_score, 4) if max_node_z else 0.0,
+        "ZScore_Min_Nodo": min_node_z.name if min_node_z else "",
+        "ZScore_Min_Val": round(min_node_z.z_score, 4) if min_node_z else 0.0,
     }]).to_excel(writer, index=False, sheet_name="Sintesi_SPIDER_CORE")
 file_b_excel_bytes = excel_b_buffer.getvalue()
 
