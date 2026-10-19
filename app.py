@@ -853,19 +853,25 @@ with tabs[0]:
     st.markdown("#### 🕸️ Visualizzazione Radiale Concentrica a Tela di Ragno")
     st.caption("I cerchi concentrici separano Politica Monetaria (Anello 1), Fondamentali Macro (Anello 2) e Asset Intermarket (Anello 3). Lo spessore e il colore dei fili indicano la forza e la tensione della relazione.")
 
-    col_ctl1, col_ctl2, col_ctl3, col_ctl4 = st.columns([1.8, 1.2, 1.0, 1.0])
+    col_ctl1, col_ctl2, col_ctl3, col_ctl4 = st.columns([1.6, 1.4, 1.0, 1.0])
     with col_ctl1:
         if active_isolated_id:
             st.info(f"🔍 **Modalità Focus Attiva:** Isolamento del nodo `{active_isolated_id}` ({node_states[active_isolated_id].name if active_isolated_id in node_states else ''}) e di tutte le sue connessioni dirette.")
         else:
-            st.write("💡 Disegna con il mouse un **Lazo a mano libera** o un **Rettangolo** per selezionare porzioni di tela, oppure clicca su un singolo nodo.")
+            st.write("💡 **Zoom dinamico con rotellina mouse attivo**: ruota la rotella per ingrandire i nodi ed esplorare i dettagli.")
     with col_ctl2:
         c_mode1, c_mode2 = st.columns(2)
         with c_mode1:
             toggle_labels = st.checkbox("Mostra Ticker", value=True)
+            enable_scroll_zoom = st.checkbox("🔍 Zoom Rotella", value=True, help="Scorri la rotella del mouse per zoomare fluidamente dentro e fuori dalla tela")
         with c_mode2:
-            sel_tool = st.selectbox("Strumento Selezione:", ["Lazo Libero (Lasso)", "Rettangolo (Box)"], index=0, label_visibility="collapsed")
-            active_dragmode = "lasso" if "Lazo" in sel_tool else "select"
+            sel_tool = st.selectbox("Strumento Mouse:", ["Zoom & Pan Libero", "Lazo Libero (Lasso)", "Rettangolo (Box)"], index=0, help="Scegli la funzione del mouse sulla tela")
+            if "Zoom" in sel_tool:
+                active_dragmode = "pan"
+            elif "Lazo" in sel_tool:
+                active_dragmode = "lasso"
+            else:
+                active_dragmode = "select"
     with col_ctl3:
         if active_isolated_id and st.button("Mostra Tutta la Tela", use_container_width=True):
             st.session_state["selected_node"] = "TUTTI (Visualizzazione Globale)"
@@ -955,6 +961,11 @@ with tabs[0]:
         use_container_width=True,
         on_select="rerun",
         selection_mode=["points", "box", "lasso"],
+        config={
+            "scrollZoom": enable_scroll_zoom,
+            "displaylogo": False,
+            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"],
+        },
         key="spider_web_chart_selection"
     )
 
@@ -1830,5 +1841,7 @@ with tabs[6]:
     st.plotly_chart(
         fig_whatif_web,
         use_container_width=True,
+        config={"scrollZoom": True, "displaylogo": False},
         key="spider_whatif_web_chart"
     )
+

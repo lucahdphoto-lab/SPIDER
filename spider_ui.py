@@ -58,33 +58,34 @@ def build_spider_web_figure(
             name=f"Ring_{ring_num}",
         ))
         fig.add_annotation(
-            x=-r * 0.707,
-            y=-r * 0.707 - 0.10,
-            text=f"<b>{r_info['name']}</b>",
+            x=-r,
+            y=0.10,
+            text=f"<b>{r_info['name'].split(' ')[0]} {r_info['name'].split(' ')[1]}</b>",
             showarrow=False,
-            font=dict(size=9.5, color="#94A3B8" if dark_mode else "#64748B"),
-            bgcolor="rgba(11, 15, 25, 0.75)" if dark_mode else "rgba(248, 250, 252, 0.75)",
-            bordercolor="rgba(255, 255, 255, 0.12)",
+            font=dict(size=9, color="#94A3B8" if dark_mode else "#64748B"),
+            bgcolor="rgba(11, 15, 25, 0.85)" if dark_mode else "rgba(248, 250, 252, 0.85)",
+            bordercolor="rgba(255, 255, 255, 0.15)",
             borderwidth=1,
-            borderpad=3,
+            borderpad=2,
         )
 
-    # 2. Quadrant Axes & Styled Headers
-    max_r = 3.4
+    # 2. Quadrant Axes & Styled Headers in Outer Margin
+    max_r = 3.5
     fig.add_trace(go.Scatter(
         x=[-max_r, max_r, None, 0, 0],
         y=[0, 0, None, -max_r, max_r],
         mode="lines",
-        line=dict(color=axis_color, width=1.2, dash="dash"),
+        line=dict(color=axis_color, width=1.0, dash="dash"),
         hoverinfo="skip",
         showlegend=False,
     ))
 
+    # Place quadrant labels at the absolute outer corners so they never touch nodes or links
     quad_watermarks = [
-        (2.45, 2.45, "INFLAZIONE & COMMODITIES", "#F59E0B"),
-        (-2.45, 2.45, "CRESCITA & PRODUZIONE", "#10B981"),
-        (-2.45, -2.45, "LAVORO & OCCUPAZIONE", "#3B82F6"),
-        (2.45, -2.45, "LIQUIDITÀ & RISCHIO", "#EC4899"),
+        (2.35, 3.35, "🟡 INFLAZIONE & COMMODITIES", "#F59E0B"),
+        (-2.35, 3.35, "🟢 CRESCITA & PRODUZIONE", "#10B981"),
+        (-2.35, -3.35, "🔵 LAVORO & OCCUPAZIONE", "#3B82F6"),
+        (2.35, -3.35, "🟣 LIQUIDITÀ & RISCHIO", "#EC4899"),
     ]
     for qx, qy, qtxt, qcol in quad_watermarks:
         fig.add_annotation(
@@ -92,12 +93,11 @@ def build_spider_web_figure(
             y=qy,
             text=f"<b>{qtxt}</b>",
             showarrow=False,
-            font=dict(size=11, color=qcol),
-            bgcolor="rgba(15, 23, 42, 0.65)" if dark_mode else "rgba(255, 255, 255, 0.65)",
+            font=dict(size=10.5, color=qcol),
+            bgcolor="rgba(15, 23, 42, 0.85)" if dark_mode else "rgba(255, 255, 255, 0.85)",
             bordercolor=qcol,
             borderwidth=1,
             borderpad=4,
-            opacity=0.90,
         )
 
     # Polar to cartesian
