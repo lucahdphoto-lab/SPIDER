@@ -8,6 +8,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
+from node_encyclopedia import NODE_ENCYCLOPEDIA, NodeManualEntry
+
 # Base Directories
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")

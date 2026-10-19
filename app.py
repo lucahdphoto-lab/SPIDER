@@ -25,6 +25,7 @@ from config import (
     TIME_WINDOWS,
     Z_SCORE_CRITICAL,
     Z_SCORE_NORMAL,
+    NODE_ENCYCLOPEDIA,
 )
 from quant_engine import engine
 from pring_engine import (
@@ -1494,6 +1495,67 @@ with tabs[0]:
         * **Scheda Esterna al Grafico:** Sotto la tela compare la scheda istituzionale completa con Valore Attuale, $\Delta$ Periodo, YoY, Z-Score dinamico, Fonte ufficiale, Ruolo macroeconomico e l'elenco delle connessioni dirette, **senza mai coprire il grafico o i nodi**.
         """)
 
+        st.markdown("---")
+        st.markdown("#### 6. 📚 Enciclopedia Analitica dei 30 Nodi Istituzionali SPIDER")
+        st.caption("Scheda tecnica strutturata per ciascuno dei 30 nodi: **Definizione**, **Cosa misura esattamente**, **Interpretazione**, **Perché è rilevante**, **Fonti e ticker**.")
+
+        ring_tabs = st.tabs([
+            "🏛️ Anello 1: Tassi & Rendimenti (8)",
+            "🏭 Anello 2: Macroeconomia Reale (10)",
+            "📊 Anello 3: Asset Intermarket (12)",
+            "🌐 Tutti i 30 Nodi"
+        ])
+
+        with ring_tabs[0]:
+            st.caption("Origine dell'impulso monetario e costo del capitale privo di rischio.")
+            for nid, entry in NODE_ENCYCLOPEDIA.items():
+                if entry.ring == 1:
+                    with st.expander(f"🔹 {entry.name} (`{entry.id}`) • {QUADRANTS[entry.quadrant]['name']}", expanded=False):
+                        st.markdown(
+                            f"- **Definizione:** {entry.definizione}\n\n"
+                            f"- **Cosa misura esattamente:** {entry.cosa_misura}\n\n"
+                            f"- **Interpretazione:** {entry.interpretazione}\n\n"
+                            f"- **Perché è rilevante:** {entry.perche_rilevante}\n\n"
+                            f"- **Fonti e ticker:** `{entry.fonti_ticker}`"
+                        )
+
+        with ring_tabs[1]:
+            st.caption("Risposta differita dei fondamentali macroeconomici (inflazione, lavoro, consumi, PIL).")
+            for nid, entry in NODE_ENCYCLOPEDIA.items():
+                if entry.ring == 2:
+                    with st.expander(f"🔹 {entry.name} (`{entry.id}`) • {QUADRANTS[entry.quadrant]['name']}", expanded=False):
+                        st.markdown(
+                            f"- **Definizione:** {entry.definizione}\n\n"
+                            f"- **Cosa misura esattamente:** {entry.cosa_misura}\n\n"
+                            f"- **Interpretazione:** {entry.interpretazione}\n\n"
+                            f"- **Perché è rilevante:** {entry.perche_rilevante}\n\n"
+                            f"- **Fonti e ticker:** `{entry.fonti_ticker}`"
+                        )
+
+        with ring_tabs[2]:
+            st.caption("Mercati finanziari a pronti, premi al rischio azionari/creditizi e materie prime.")
+            for nid, entry in NODE_ENCYCLOPEDIA.items():
+                if entry.ring == 3:
+                    with st.expander(f"🔹 {entry.name} (`{entry.id}`) • {QUADRANTS[entry.quadrant]['name']}", expanded=False):
+                        st.markdown(
+                            f"- **Definizione:** {entry.definizione}\n\n"
+                            f"- **Cosa misura esattamente:** {entry.cosa_misura}\n\n"
+                            f"- **Interpretazione:** {entry.interpretazione}\n\n"
+                            f"- **Perché è rilevante:** {entry.perche_rilevante}\n\n"
+                            f"- **Fonti e ticker:** `{entry.fonti_ticker}`"
+                        )
+
+        with ring_tabs[3]:
+            for nid, entry in NODE_ENCYCLOPEDIA.items():
+                with st.expander(f"🔹 [{entry.id}] {entry.name} • {RINGS[entry.ring]['name']} • {QUADRANTS[entry.quadrant]['name']}", expanded=False):
+                    st.markdown(
+                        f"- **Definizione:** {entry.definizione}\n\n"
+                        f"- **Cosa misura esattamente:** {entry.cosa_misura}\n\n"
+                        f"- **Interpretazione:** {entry.interpretazione}\n\n"
+                        f"- **Perché è rilevante:** {entry.perche_rilevante}\n\n"
+                        f"- **Fonti e ticker:** `{entry.fonti_ticker}`"
+                    )
+
     with col_ctl4:
         if st.button("ℹ️ Information (Manuale)", use_container_width=True, type="secondary"):
             show_spider_info_modal()
@@ -1666,6 +1728,19 @@ with tabs[0]:
         - **Hover:** Passando con il mouse su un nodo o su un badge numerico del filo compaiono i valori istantanei.
         - **Click sul Nodo:** Cliccando su un nodo nella tela, tutti i nodi non collegati vengono attenuati (sfocati) e appare la **Scheda Esterna Dettagliata** sotto al grafico con tutte le informazioni quantitative e la fonte certificata.
         """)
+
+        st.markdown("---")
+        st.markdown("#### 5. 📚 Enciclopedia Analitica dei 30 Nodi Istituzionali SPIDER")
+        st.caption("Scheda tecnica strutturata per ciascuno dei 30 nodi: **Definizione**, **Cosa misura esattamente**, **Interpretazione**, **Perché è rilevante**, **Fonti e ticker**.")
+        for nid, entry in NODE_ENCYCLOPEDIA.items():
+            with st.expander(f"🔹 [{entry.id}] {entry.name} • {RINGS[entry.ring]['name']} • {QUADRANTS[entry.quadrant]['name']}", expanded=False):
+                st.markdown(
+                    f"- **Definizione:** {entry.definizione}\n\n"
+                    f"- **Cosa misura esattamente:** {entry.cosa_misura}\n\n"
+                    f"- **Interpretazione:** {entry.interpretazione}\n\n"
+                    f"- **Perché è rilevante:** {entry.perche_rilevante}\n\n"
+                    f"- **Fonti e ticker:** `{entry.fonti_ticker}`"
+                )
 
 # TAB 2
 with tabs[1]:
