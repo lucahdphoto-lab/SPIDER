@@ -1025,29 +1025,24 @@ def generate_zscore_mini_svg(node_states: Dict[str, NodeState]) -> str:
 
         svg_bars.append(f'<rect x="{bx:.1f}" y="{y:.1f}" width="{bar_w:.1f}" height="{bar_height:.1f}" rx="0.5" fill="{color}" opacity="0.9"/>')
 
-    bars_html = "\n".join(svg_bars)
+    bars_html = "".join(svg_bars)
 
-    svg = f"""
-    <div style="width: 100%; display: flex; justify-content: center; margin: 2px 0;">
-        <svg viewBox="0 0 220 86" style="width: 100%; max-height: 78px; overflow: visible;">
-            <!-- Linee di griglia di fondo -->
-            <line x1="20" y1="3" x2="20" y2="78" stroke="rgba(255,255,255,0.08)" stroke-width="0.7" stroke-dasharray="2,2"/>
-            <line x1="50" y1="3" x2="50" y2="78" stroke="rgba(59,130,246,0.25)" stroke-width="0.8" stroke-dasharray="2,2"/>
-            <line x1="170" y1="3" x2="170" y2="78" stroke="rgba(59,130,246,0.25)" stroke-width="0.8" stroke-dasharray="2,2"/>
-            <line x1="200" y1="3" x2="200" y2="78" stroke="rgba(255,255,255,0.08)" stroke-width="0.7" stroke-dasharray="2,2"/>
-            <!-- Linea dello zero centrale -->
-            <line x1="{center_x:.1f}" y1="1" x2="{center_x:.1f}" y2="79" stroke="#94A3B8" stroke-width="1.2"/>
-            <!-- Barre orizzontali dei 30 nodi -->
-            {bars_html}
-            <!-- Asse X Z-Score -->
-            <text x="20" y="85" fill="#64748B" font-size="7" font-family="monospace" text-anchor="middle">-3</text>
-            <text x="50" y="85" fill="#3B82F6" font-size="7" font-family="monospace" text-anchor="middle">-2</text>
-            <text x="{center_x:.1f}" y="85" fill="#94A3B8" font-size="7" font-family="monospace" text-anchor="middle">0</text>
-            <text x="170" y="85" fill="#3B82F6" font-size="7" font-family="monospace" text-anchor="middle">+2</text>
-            <text x="200" y="85" fill="#64748B" font-size="7" font-family="monospace" text-anchor="middle">+3</text>
-        </svg>
-    </div>
-    """
+    svg = (
+        f'<div style="width: 100%; display: flex; justify-content: center; margin: 2px 0;">'
+        f'<svg viewBox="0 0 220 86" style="width: 100%; max-height: 78px; overflow: visible;">'
+        f'<line x1="20" y1="3" x2="20" y2="78" stroke="rgba(255,255,255,0.08)" stroke-width="0.7" stroke-dasharray="2,2"/>'
+        f'<line x1="50" y1="3" x2="50" y2="78" stroke="rgba(59,130,246,0.25)" stroke-width="0.8" stroke-dasharray="2,2"/>'
+        f'<line x1="170" y1="3" x2="170" y2="78" stroke="rgba(59,130,246,0.25)" stroke-width="0.8" stroke-dasharray="2,2"/>'
+        f'<line x1="200" y1="3" x2="200" y2="78" stroke="rgba(255,255,255,0.08)" stroke-width="0.7" stroke-dasharray="2,2"/>'
+        f'<line x1="{center_x:.1f}" y1="1" x2="{center_x:.1f}" y2="79" stroke="#94A3B8" stroke-width="1.2"/>'
+        f'{bars_html}'
+        f'<text x="20" y="85" fill="#64748B" font-size="7" font-family="monospace" text-anchor="middle">-3</text>'
+        f'<text x="50" y="85" fill="#3B82F6" font-size="7" font-family="monospace" text-anchor="middle">-2</text>'
+        f'<text x="{center_x:.1f}" y="85" fill="#94A3B8" font-size="7" font-family="monospace" text-anchor="middle">0</text>'
+        f'<text x="170" y="85" fill="#3B82F6" font-size="7" font-family="monospace" text-anchor="middle">+2</text>'
+        f'<text x="200" y="85" fill="#64748B" font-size="7" font-family="monospace" text-anchor="middle">+3</text>'
+        f'</svg></div>'
+    )
     return svg
 
 
