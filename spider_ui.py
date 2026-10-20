@@ -2024,6 +2024,213 @@ def build_si_subsector_bar_figure(si_state: Any, dark_mode: bool = True) -> go.F
     return fig
 
 
+def build_si_capex_vs_revenue_figure(si_state: Any, dark_mode: bool = True) -> go.Figure:
+    """
+    Costruisce il grafico a dispersione istituzionale (Bubble Plot):
+    Rapporto tra Investimenti Capex AI ($B) e Crescita dei Ricavi YoY (%).
+    Dimensione bolle proporzionale alla capitalizzazione di mercato.
+    Evidenzia la dicotomia tra chi finanzia l'AI (Hyperscaler) e chi la monetizza (Chip & Fonderie).
+    """
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "#0F172A" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+    grid_color = "rgba(255, 255, 255, 0.08)" if dark_mode else "rgba(15, 23, 42, 0.08)"
+
+    fig = go.Figure()
+
+    stocks = sorted(si_state.stocks, key=lambda s: s.market_cap_b, reverse=True)
+
+    # 1. Zone di sfondo per la dicotomia
+    # Zona A: Monetizzatori diretti hardware (Basso/Medio Capex, Alta/Esplosiva Crescita Ricavi)
+    fig.add_shape(
+        type="rect",
+        x0=-2, x1=25, y0=0, y1=140,
+        fillcolor="rgba(16, 185, 129, 0.06)",
+        line=dict(width=1, dash="dot", color="rgba(16, 185, 129, 0.3)"),
+        layer="below",
+    )
+    # Zona B: Finanziatori dell'infrastruttura (Hyperscaler ad altissimo Capex)
+    fig.add_shape(
+        type="rect",
+        x0=25, x1=75, y0=0, y1=140,
+        fillcolor="rgba(56, 189, 248, 0.06)",
+        line=dict(width=1, dash="dot", color="rgba(56, 189, 248, 0.3)"),
+        layer="below",
+    )
+
+    # Etichette delle aree di mercato
+    fig.add_annotation(
+        x=11, y=130,
+        text="<b>💎 MONETIZZATORI DIRETTI</b><br><span style='font-size:10px; color:#10B981;'>Ricevono i capex e registrano fatturato esplosivo</span>",
+        showarrow=False,
+        font=dict(color="#10B981", size=11),
+        align="center",
+    )
+    fig.add_annotation(
+        x=52, y=130,
+        text="<b>🏗️ FINANZIATORI DELL'INFRASTRUTTURA</b><br><span style='font-size:10px; color:#38BDF8;'>Emettono i capex datacenter / cloud</span>",
+        showarrow=False,
+        font=dict(color="#38BDF8", size=11),
+        align="center",
+    )
+
+    # 2. Bubble Scatter per ciascun titolo
+    x_vals = [s.capex_impulse_b for s in stocks]
+    y_vals = [s.rev_growth_yoy for s in stocks]
+    sizes = [int(np.clip(np.sqrt(s.market_cap_b) * 0.72, 18, 48)) for s in stocks]
+    colors = [s.color_hex for s in stocks]
+    tickers = [s.ticker for s in stocks]
+    custom_data = [
+        [s.name, s.subsector, s.gross_margin_pct, s.market_cap_b, s.supply_chain_role, s.fwd_pe, s.peg_ratio]
+        for s in stocks
+    ]
+
+    fig.add_trace(go.Scatter(
+        x=x_vals,
+        y=y_vals,
+        mode="markers+text",
+        marker=dict(
+            size=sizes,
+            color=colors,
+            opacity=0.92,
+            line=dict(width=2, color="#F8FAFC"),
+        ),
+        text=[f"<b>{t}</b>" for t in tickers],
+        textposition="top center",
+        textfont=dict(color="#FFFFFF", size=11, family="JetBrains Mono"),
+        customdata=custom_data,
+        hovertemplate=(
+            "<b>%{customdata[0]} (%{text})</b><br>"
+            "<b>Sotto-Settore:</b> %{customdata[1]}<br>"
+            "<b>Investimenti Capex AI:</b> $%{x:.1f} Miliardi<br>"
+            "<b>Crescita Ricavi YoY:</b> +%{y:.1f}%<br>"
+            "<b>Margine Lordo / Op.:</b> %{customdata[2]:.1f}% | <b>Market Cap:</b> $%{customdata[3]:,.0f}B<br>"
+            "<b>Forward P/E:</b> %{customdata[5]:.1f}x | <b>PEG Ratio:</b> %{customdata[6]:.2f}<br>"
+            "<b>Ruolo Catena:</b> %{customdata[4]}<extra></extra>"
+        ),
+        name="Titoli AI",
+        showlegend=False,
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text="<b>Rapporto tra Investimenti Capex AI e Crescita dei Ricavi YoY</b>",
+            font=dict(size=14, color=text_color),
+            x=0.03,
+            y=0.97,
+        ),
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=450,
+        margin=dict(l=55, r=35, t=55, b=45),
+        xaxis=dict(
+            title="Investimenti Capex AI Annui ($ Miliardi)",
+            gridcolor=grid_color,
+            tickfont=dict(color="#CBD5E1"),
+            range=[-2, 76],
+        ),
+        yaxis=dict(
+            title="Crescita Ricavi YoY (%)",
+            gridcolor=grid_color,
+            tickfont=dict(color="#CBD5E1"),
+            range=[-5, 142],
+        ),
+        font=dict(family="Inter, sans-serif"),
+    )
+    return fig
+
+
+def build_si_peg_valuation_figure(si_state: Any, dark_mode: bool = True) -> go.Figure:
+    """
+    Costruisce il grafico a barre orizzontali ordinato per efficienza valutativa:
+    Efficienza Valutativa: PEG Ratio per Ticker (Forward P/E vs. Tasso di Crescita).
+    Include la linea aurea di PEG = 1.0 (Fair Value / High Growth Efficiency).
+    """
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "#0F172A" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+    grid_color = "rgba(255, 255, 255, 0.08)" if dark_mode else "rgba(15, 23, 42, 0.08)"
+
+    # Ordinamento dal PEG più efficiente (minore) al più costoso
+    sorted_stocks = sorted(si_state.stocks, key=lambda s: s.peg_ratio)
+
+    tickers = [s.ticker for s in sorted_stocks]
+    peg_vals = [s.peg_ratio for s in sorted_stocks]
+    pe_vals = [s.fwd_pe for s in sorted_stocks]
+    rev_vals = [s.rev_growth_yoy for s in sorted_stocks]
+    names = [s.name for s in sorted_stocks]
+
+    # Codifica colore in base all'efficienza del PEG
+    bar_colors = []
+    for p in peg_vals:
+        if p <= 1.25:
+            bar_colors.append("#10B981")  # Verde Smeraldo (Crescita a forte sconto)
+        elif p <= 1.80:
+            bar_colors.append("#F59E0B")  # Giallo Ambra (Fair / Fisiologico)
+        else:
+            bar_colors.append("#EF4444")  # Rosso (Premio di Multiplo Elevato)
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        y=tickers,
+        x=peg_vals,
+        orientation="h",
+        marker_color=bar_colors,
+        text=[f"PEG {p:.2f} (P/E {pe:.1f}x | +{rev:.1f}% YoY)" for p, pe, rev in zip(peg_vals, pe_vals, rev_vals)],
+        textposition="inside",
+        insidetextanchor="end",
+        textfont=dict(color="#FFFFFF", size=11, family="JetBrains Mono"),
+        customdata=[[n, pe, rev, p] for n, pe, rev, p in zip(names, pe_vals, rev_vals, peg_vals)],
+        hovertemplate=(
+            "<b>%{customdata[0]} (%{y})</b><br>"
+            "<b>PEG Ratio:</b> %{x:.2f}<br>"
+            "<b>Forward P/E:</b> %{customdata[1]:.1f}x<br>"
+            "<b>Crescita Ricavi YoY:</b> +%{customdata[2]:.1f}%<extra></extra>"
+        ),
+        name="PEG Ratio",
+    ))
+
+    # Linea Aurea di Benchmark: PEG = 1.0 (Peter Lynch Fair Growth Boundary)
+    fig.add_vline(
+        x=1.0,
+        line_width=2,
+        line_dash="dash",
+        line_color="#38BDF8",
+        annotation_text="Soglia Aurea PEG = 1.0 (Crescita Equa / Peter Lynch)",
+        annotation_position="top right",
+        annotation_font=dict(color="#38BDF8", size=10),
+    )
+
+    fig.update_layout(
+        title=dict(
+            text="<b>Efficienza Valutativa: PEG Ratio per Ticker (Ordinamento Rendimento Valutativo)</b>",
+            font=dict(size=14, color=text_color),
+            x=0.03,
+            y=0.97,
+        ),
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=450,
+        margin=dict(l=60, r=35, t=55, b=40),
+        xaxis=dict(
+            title="PEG Ratio (Forward P/E / Tasso Crescita EPS-Ricavi)",
+            gridcolor=grid_color,
+            tickfont=dict(color="#CBD5E1"),
+            range=[0, 2.6],
+        ),
+        yaxis=dict(
+            gridcolor=grid_color,
+            tickfont=dict(color="#CBD5E1", size=11),
+            autorange="reversed",  # Migliori in alto
+        ),
+        font=dict(family="Inter, sans-serif"),
+        showlegend=False,
+    )
+    return fig
+
+
+
 
 
 

@@ -86,6 +86,8 @@ from spider_ui import (
     build_spider_si_network_3d_figure,
     build_si_correlation_heatmap,
     build_si_subsector_bar_figure,
+    build_si_capex_vs_revenue_figure,
+    build_si_peg_valuation_figure,
     generate_zscore_mini_svg,
     generate_links_dataframe,
     generate_nodes_dataframe,
@@ -1367,10 +1369,11 @@ def show_super_intelligence_modal():
     st.markdown("<br>", unsafe_allow_html=True)
     
     # Dual tabs inside modal: Tela Radiale & Tabella Fondamentali
-    m_tab1, m_tab2, m_tab3 = st.tabs([
+    m_tab1, m_tab2, m_tab3, m_tab4 = st.tabs([
         "🕸️ Tela Radiale SPIDER SI",
         "📋 Cockpit Fondamentale dei 10 Giganti",
-        "🔗 Matrice Correlazioni & Supply Chain",
+        "🔗 Matrice Correlazioni & Sotto-Settori",
+        "💡 Analisi Capex, Margini & Valutazioni PEG",
     ])
     with m_tab1:
         c_m_dim1, c_m_dim2 = st.columns([1.5, 2.5])
@@ -1424,10 +1427,57 @@ def show_super_intelligence_modal():
         col_c1, col_c2 = st.columns([1.2, 1])
         with col_c1:
             fig_si_corr = build_si_correlation_heatmap(si_state, dark_mode=True)
-            st.plotly_chart(fig_si_corr, use_container_width=True)
+            st.plotly_chart(fig_si_corr, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
         with col_c2:
             fig_si_sub = build_si_subsector_bar_figure(si_state, dark_mode=True)
-            st.plotly_chart(fig_si_sub, use_container_width=True)
+            st.plotly_chart(fig_si_sub, use_container_width=True, config={"scrollZoom": True, "displaylogo": False})
+    with m_tab4:
+        st.markdown("##### 📊 Analisi Economico-Finanziaria & Valutazioni dell'Ecosistema AI:")
+        
+        # Two Charts: Capex vs Revenue & PEG Valuation
+        col_m_ch1, col_m_ch2 = st.columns(2)
+        with col_m_ch1:
+            fig_m_capex = build_si_capex_vs_revenue_figure(si_state, dark_mode=True)
+            st.plotly_chart(fig_m_capex, use_container_width=True, config={"scrollZoom": True, "displaylogo": False}, key="modal_fig_capex_rev")
+        with col_m_ch2:
+            fig_m_peg = build_si_peg_valuation_figure(si_state, dark_mode=True)
+            st.plotly_chart(fig_m_peg, use_container_width=True, config={"scrollZoom": True, "displaylogo": False}, key="modal_fig_peg")
+
+        # 3 Structured Analysis Cards
+        st.markdown("""
+        <div style="background: rgba(15, 23, 42, 0.85); border-left: 4px solid #10B981; border-radius: 8px; padding: 14px 18px; margin-bottom: 12px;">
+            <div style="font-size: 13.5px; font-weight: 700; color: #10B981; text-transform: uppercase;">
+                1. Dicotomia tra chi finanzia la rivoluzione AI e chi la monetizza oggi
+            </div>
+            <div style="font-size: 13px; color: #E2E8F0; margin-top: 6px; line-height: 1.6;">
+                <b>I Finanziatori dell'Infrastruttura (Hyperscalers):</b> Microsoft ($55B), Amazon ($70B), Alphabet ($52B), Meta ($40B) e Oracle ($10B) investono oltre <b>$227 Miliardi di Capex annuo</b> per costruire la capacità computazionale dei data center del futuro. Si tratta di un impegno di capitale massiccio (Capex-heavy) il cui ritorno sul capitale investito (ROIC) richiede anni per maturare.<br>
+                <b>I Monetizzatori Immediati (Semiconduttori & Fonderie):</b> All'estremo opposto, NVIDIA (+122% YoY con soli $4.5B di capex proprio), TSMC (+36% YoY) e Broadcom (+47% YoY) assorbono direttamente questi flussi di spesa, convertendoli istantaneamente in fatturato record e Free Cash Flow immediato.
+            </div>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.85); border-left: 4px solid #38BDF8; border-radius: 8px; padding: 14px 18px; margin-bottom: 12px;">
+            <div style="font-size: 13.5px; font-weight: 700; color: #38BDF8; text-transform: uppercase;">
+                2. Margini operativi d'eccellenza e potere di prezzo (Pricing Power)
+            </div>
+            <div style="font-size: 13px; color: #E2E8F0; margin-top: 6px; line-height: 1.6;">
+                La redditività dell'ecosistema SI evidenzia barriere all'entrata e potere di prezzo quasi anelastico:<br>
+                • <b>NVIDIA (75.1% Margine Lordo):</b> L'architettura CUDA crea un lock-in software invalicabile, consentendo prezzi unitari di $30,000–$40,000 per chip Hopper/Blackwell con margini industriali unici.<br>
+                • <b>Meta Platforms (81.5% Margine Operativo/Lordo Software):</b> Straordinaria leva operativa pubblicitaria che finanzia integralmente lo sviluppo di Llama open-source e l'acquisto di centinaia di migliaia di cluster GPU.<br>
+                • <b>TSMC (54.5% Margine) & Broadcom (62.0%):</b> Il monopolio globale sui wafer a 3nm e il packaging avanzato CoWoS proteggono TSMC da qualsiasi compressione dei margini anche durante i cicli macro avversi.
+            </div>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.85); border-left: 4px solid #F59E0B; border-radius: 8px; padding: 14px 18px; margin-bottom: 8px;">
+            <div style="font-size: 13.5px; font-weight: 700; color: #F59E0B; text-transform: uppercase;">
+                3. Valutazioni di mercato ed efficienza sul tasso di crescita (Forward P/E vs. PEG Ratio)
+            </div>
+            <div style="font-size: 13px; color: #E2E8F0; margin-top: 6px; line-height: 1.6;">
+                L'analisi del semplice Forward P/E (es. NVDA a 34.5x, MSFT a 31.2x) offre una visione distorta se non normalizzata per il tasso di crescita (PEG Ratio = P/E / Crescita):<br>
+                • <b>Massima Efficienza Valutativa (PEG &le; 1.25):</b> <b>META (PEG 1.10)</b> e <b>NVDA (PEG 1.15)</b> si posizionano vicini alla <i>soglia aurea di Peter Lynch (PEG = 1.0)</i>. Una crescita dei ricavi superiore al 100% rende il multiplo di NVIDIA estremamente attraente su base adjusted.<br>
+                • <b>Valutazioni a Premio (PEG &gt; 1.80):</b> Società con crescite solide ma moderate (es. MSFT a 2.10x PEG, ORCL a 1.95x) scambiano a multipli che incorporano già anni di espansione futura, richiedendo una perfetta esecuzione operativa nei trimestri a venire.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # Helper per rendering stelle importanza ciclo economico (1 a 5 stelle)
@@ -4032,15 +4082,28 @@ with tabs[8]:
 
     with col_chart_right:
         st.markdown("##### 📊 Dinamiche Inter-Company & Sotto-Settoriali")
-        si_viz_tabs = st.tabs(["🔥 Matrice Correlazioni (10x10)", "📈 Breakdown Sotto-Settori"])
+        si_viz_tabs = st.tabs([
+            "🔥 Matrice Correlazioni (10x10)",
+            "📈 Breakdown Sotto-Settori",
+            "🚀 Capex vs Crescita Ricavi",
+            "⚖️ Efficienza Valutativa (PEG)",
+        ])
         with si_viz_tabs[0]:
             fig_si_corr = build_si_correlation_heatmap(si_curr, dark_mode=True)
-            st.plotly_chart(fig_si_corr, use_container_width=True, key="tab_si_fig_heatmap")
+            st.plotly_chart(fig_si_corr, use_container_width=True, config={"scrollZoom": True, "displaylogo": False}, key="tab_si_fig_heatmap")
             st.caption("Matrice di correlazione a 90 giorni tra i 10 titoli AI. Correlazioni elevate (>0.70) indicano rischio di crowding e spillover reciproco nei sell-off.")
         with si_viz_tabs[1]:
             fig_si_sub = build_si_subsector_bar_figure(si_curr, dark_mode=True)
-            st.plotly_chart(fig_si_sub, use_container_width=True, key="tab_si_fig_bars")
+            st.plotly_chart(fig_si_sub, use_container_width=True, config={"scrollZoom": True, "displaylogo": False}, key="tab_si_fig_bars")
             st.caption("Distribuzione della capitalizzazione e performance ponderata per i 4 comparti verticali dell'AI.")
+        with si_viz_tabs[2]:
+            fig_sub_capex = build_si_capex_vs_revenue_figure(si_curr, dark_mode=True)
+            st.plotly_chart(fig_sub_capex, use_container_width=True, config={"scrollZoom": True, "displaylogo": False}, key="tab_si_fig_sub_capex")
+            st.caption("Relazione tra ammontare del Capex AI ($B) e accelerazione del fatturato YoY (%).")
+        with si_viz_tabs[3]:
+            fig_sub_peg = build_si_peg_valuation_figure(si_curr, dark_mode=True)
+            st.plotly_chart(fig_sub_peg, use_container_width=True, config={"scrollZoom": True, "displaylogo": False}, key="tab_si_fig_sub_peg")
+            st.caption("Ordinamento dei titoli per efficienza valutativa (PEG Ratio).")
 
     # Granular Fundamental Matrix Table
     st.markdown("##### 📋 Matrice Fondamentale Analitica dei 10 Giganti dell'Intelligenza Artificiale:")
@@ -4065,6 +4128,55 @@ with tabs[8]:
         for s in sorted(si_curr.stocks, key=lambda x: x.market_cap_b, reverse=True)
     ])
     st.dataframe(df_si_table, use_container_width=True, hide_index=True)
+
+    # Dedicated Deep-Dive Section: The 3 Fundamental Drivers
+    st.markdown("#### 🏛️ Approfondimento Economico-Finanziario SPIDER SI: I 3 Driver Fondamentali")
+    st.caption("Analisi quantitativa e strutturale dei dati di bilancio dei 10 titoli: dicotomia dei flussi finanziari, dinamica dei margini e rendimento valutativo PEG.")
+
+    # Dual Charts side-by-side
+    col_an_ch1, col_an_ch2 = st.columns(2)
+    with col_an_ch1:
+        fig_an_capex = build_si_capex_vs_revenue_figure(si_curr, dark_mode=True)
+        st.plotly_chart(fig_an_capex, use_container_width=True, config={"scrollZoom": True, "displaylogo": False}, key="tab_fig_capex_rev_wide")
+    with col_an_ch2:
+        fig_an_peg = build_si_peg_valuation_figure(si_curr, dark_mode=True)
+        st.plotly_chart(fig_an_peg, use_container_width=True, config={"scrollZoom": True, "displaylogo": False}, key="tab_fig_peg_wide")
+
+    # 3 Structured Institutional Analysis Cards
+    st.markdown("""
+    <div style="background: rgba(15, 23, 42, 0.85); border-left: 4px solid #10B981; border-radius: 8px; padding: 15px 20px; margin-bottom: 14px;">
+        <div style="font-size: 14.5px; font-weight: 700; color: #10B981; text-transform: uppercase;">
+            1. Dicotomia tra chi finanzia la rivoluzione AI e chi la monetizza oggi
+        </div>
+        <div style="font-size: 13.5px; color: #E2E8F0; margin-top: 8px; line-height: 1.6;">
+            <b>• I Finanziatori dell'Infrastruttura (Hyperscalers):</b> Microsoft ($55B), Amazon ($70B), Alphabet ($52B), Meta ($40B) e Oracle ($10B) stanno investendo congiuntamente oltre <b>$227 Miliardi di Capex annuo</b> per costruire la capacità computazionale dei data center del futuro. Si tratta di un impegno di capitale massiccio (Capex-heavy) il cui ritorno sul capitale investito (ROIC) richiede anni per monetizzare completamente tramite software e servizi cloud.<br>
+            <b>• I Monetizzatori Immediati (Semiconduttori & Fonderie):</b> All'estremo opposto, NVIDIA (+122% YoY con soli $4.5B di capex proprio), TSMC (+36% YoY) e Broadcom (+47% YoY) assorbono direttamente questi flussi di cassa, convertendoli istantaneamente in fatturato record e Free Cash Flow immediato.
+        </div>
+    </div>
+
+    <div style="background: rgba(15, 23, 42, 0.85); border-left: 4px solid #38BDF8; border-radius: 8px; padding: 15px 20px; margin-bottom: 14px;">
+        <div style="font-size: 14.5px; font-weight: 700; color: #38BDF8; text-transform: uppercase;">
+            2. Margini operativi d'eccellenza e potere di prezzo (Pricing Power)
+        </div>
+        <div style="font-size: 13.5px; color: #E2E8F0; margin-top: 8px; line-height: 1.6;">
+            La redditività dell'ecosistema SI evidenzia barriere all'entrata e potere di prezzo quasi anelastico:<br>
+            • <b>NVIDIA (75.1% Margine Lordo):</b> L'architettura CUDA crea un lock-in software invalicabile, consentendo prezzi unitari di $30,000–$40,000 per chip Hopper/Blackwell con margini industriali unici al mondo.<br>
+            • <b>Meta Platforms (81.5% Margine Operativo/Lordo Software):</b> Straordinaria leva operativa pubblicitaria che finanzia integralmente lo sviluppo di Llama open-source e l'acquisto di centinaia di migliaia di cluster GPU.<br>
+            • <b>TSMC (54.5% Margine) & Broadcom (62.0%):</b> Il monopolio globale sui wafer a 3nm e il packaging avanzato CoWoS proteggono TSMC da qualsiasi compressione dei margini anche durante i cicli macro avversi.
+        </div>
+    </div>
+
+    <div style="background: rgba(15, 23, 42, 0.85); border-left: 4px solid #F59E0B; border-radius: 8px; padding: 15px 20px; margin-bottom: 16px;">
+        <div style="font-size: 14.5px; font-weight: 700; color: #F59E0B; text-transform: uppercase;">
+            3. Valutazioni di mercato ed efficienza sul tasso di crescita (Forward P/E vs. PEG Ratio)
+        </div>
+        <div style="font-size: 13.5px; color: #E2E8F0; margin-top: 8px; line-height: 1.6;">
+            L'analisi del semplice Forward P/E (es. NVDA a 34.5x, MSFT a 31.2x) offre una visione parziale se non normalizzata per il tasso di crescita (PEG Ratio = P/E / Crescita):<br>
+            • <b>Massima Efficienza Valutativa (PEG &le; 1.25):</b> <b>META (PEG 1.10)</b> e <b>NVDA (PEG 1.15)</b> si posizionano vicini alla <i>soglia aurea di Peter Lynch (PEG = 1.0)</i>. Una crescita dei ricavi superiore al 100% rende il multiplo di NVIDIA estremamente attraente su base adjusted rispetto a qualunque metrica storica.<br>
+            • <b>Valutazioni a Premio (PEG &gt; 1.80):</b> Società con crescite solide ma moderate (es. MSFT a 2.10x PEG, ORCL a 1.95x) scambiano a multipli che incorporano già anni di espansione futura, richiedendo una perfetta esecuzione operativa nei trimestri a venire.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     # Detailed Institutional Explanatory Box
     st.markdown("""

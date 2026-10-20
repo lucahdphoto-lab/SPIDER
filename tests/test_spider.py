@@ -14,7 +14,9 @@ from data_fetcher import db, fetcher
 from quant_engine import engine
 from spider_ui import (
     build_macro_regime_matrix_figure,
+    build_si_capex_vs_revenue_figure,
     build_si_correlation_heatmap,
+    build_si_peg_valuation_figure,
     build_si_subsector_bar_figure,
     build_spider_si_network_figure,
     build_spider_si_network_3d_figure,
@@ -256,6 +258,14 @@ class TestSpiderArchitecture(unittest.TestCase):
         fig_bars = build_si_subsector_bar_figure(si_state, dark_mode=True)
         self.assertIsNotNone(fig_bars)
         self.assertGreater(len(fig_bars.data), 0)
+
+        fig_capex_rev = build_si_capex_vs_revenue_figure(si_state, dark_mode=True)
+        self.assertIsNotNone(fig_capex_rev)
+        self.assertGreater(len(fig_capex_rev.data), 0)
+
+        fig_peg = build_si_peg_valuation_figure(si_state, dark_mode=True)
+        self.assertIsNotNone(fig_peg)
+        self.assertGreater(len(fig_peg.data), 0)
 
 
 if __name__ == "__main__":
