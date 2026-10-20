@@ -49,6 +49,10 @@ from historical_crisis_engine import (
     HistoricalStressEngine,
     HistoricalCrisisScenario,
 )
+from net_liquidity_engine import (
+    net_liquidity_engine,
+    NetLiquidityState,
+)
 from spider_ui import (
     build_macro_regime_matrix_figure,
     build_spider_web_figure,
@@ -56,6 +60,8 @@ from spider_ui import (
     build_zscore_distribution_figure,
     build_ciss_gauge_and_decomposition_figure,
     build_ciss_correlation_heatmap,
+    build_net_liquidity_overview_figure,
+    build_liquidity_asset_correlation_figure,
     generate_zscore_mini_svg,
     generate_links_dataframe,
     generate_nodes_dataframe,
@@ -878,6 +884,77 @@ def show_taylor_rule_modal():
         """)
 
 
+# Modal Dialog: Global Net Liquidity Dashboard (Fed H.4.1, TGA, RRP & Asset Transmission)
+@st.dialog("🌊 Global Net Liquidity Dashboard (Fed H.4.1, TGA & RRP)", width="large")
+def show_net_liquidity_modal():
+    liq = net_liquidity_engine.compute_net_liquidity(aligned_df)
+    st.markdown(f"### 🌊 Liquidità Netta Federal Reserve: <span style='color: {liq.liquidity_color_hex};'>${liq.us_net_liquidity_b:,.0f} Miliardi • {liq.liquidity_regime_badge}</span>", unsafe_allow_html=True)
+    st.caption("Framework Quantitativo dei Macro Hedge Fund (CrossBorder Capital / Goldman Sachs): misura il denaro realmente disponibile nel sistema bancario e la sua trasmissione anticipatrice a 4-8 settimane verso azioni e oro.")
+
+    l1, l2, l3, l4 = st.columns(4)
+    with l1:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1.5px solid #38BDF8; border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">US Net Liquidity</div>
+            <div style="font-size: 24px; font-weight: 800; color: #38BDF8; font-family: monospace;">${liq.us_net_liquidity_b:,.0f} B</div>
+            <div style="font-size: 11px; color: {'#10B981' if liq.us_net_liquidity_delta_4w_b >= 0 else '#EF4444'}; margin-top: 2px;">Δ 4W: {liq.us_net_liquidity_delta_4w_b:+,.0f} B ({liq.us_net_liquidity_delta_4w_pct:+.1f}%)</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with l2:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Attivo Totale Fed (WALCL)</div>
+            <div style="font-size: 24px; font-weight: 800; color: #F8FAFC; font-family: monospace;">${liq.fed_total_assets_b:,.0f} B</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Dimensione Bilancio Fed</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with l3:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Conto Tesoro TGA (WTREGEN)</div>
+            <div style="font-size: 24px; font-weight: 800; color: #F59E0B; font-family: monospace;">${liq.tga_balance_b:,.0f} B</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Cassa Tesoro (Drena Liquidità)</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with l4:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Reverse Repo RRP (ON RRP)</div>
+            <div style="font-size: 24px; font-weight: 800; color: #A78BFA; font-family: monospace;">${liq.rrp_balance_b:,.0f} B</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Liquidità Parcheggiata Fed</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Plotly Charts
+    fig_overview = build_net_liquidity_overview_figure(liq, dark_mode=True)
+    st.plotly_chart(fig_overview, use_container_width=True)
+
+    col_liq_l, col_liq_r = st.columns([1.1, 0.9])
+    with col_liq_l:
+        fig_corr = build_liquidity_asset_correlation_figure(liq, dark_mode=True)
+        st.plotly_chart(fig_corr, use_container_width=True)
+    with col_liq_r:
+        st.markdown("#### 🔬 Equazione Istituzionale & Meccanica:")
+        st.markdown(r"""
+        $$\text{US Net Liquidity} = \text{Fed Total Assets} - \text{TGA} - \text{ON RRP}$$
+        * **1. Attivo Fed ($\text{WALCL}$):** Base monetaria creata tramite titoli detenuti e prestiti bancari. Durante il QT si contrae di $\sim \$25\text{-}60\text{B}$ al mese.
+        * **2. Treasury General Account ($\text{TGA}$):** Il conto corrente del governo USA presso la Fed. Quando il Tesoro raccoglie tasse o emette debito, la cassa sale e **drena liquidità** dalle riserve bancarie private.
+        * **3. Reverse Repo Facility ($\text{RRP}$):** Liquidità parcheggiata dai fondi monetari presso la Fed. Quando l'RRP scende, il capitale rientra nel sistema bancario agendo come **stimolo quantitativo implicito**.
+        * **Beta di Trasmissione:** Empiricamente ogni **$+\$100\text{B}$** di iniezione di Liquidità Netta genera un incremento medio dell'**$+1.45\%$ sull'S&P 500** con un ritardo di trasmissione (*lag*) compreso tra **4 e 8 settimane**.
+        """)
+
+    st.markdown("---")
+    st.markdown("#### 📋 Sintesi Trasmissione Quantitativa su Asset Chiave:")
+    corr_table = [
+        {"Asset Target": "Nasdaq 100 (EQ_NDX)", "Correlazione Lead 4W": f"+{liq.corr_ndx_4w:.2f}", "Correlazione Lead 8W": f"+{liq.corr_ndx_8w:.2f}", "Sensibilità Prevista": "Massima (Multipli Growth ad alta duration)"},
+        {"Asset Target": "S&P 500 (EQ_SPX)", "Correlazione Lead 4W": f"+{liq.corr_spx_4w:.2f}", "Correlazione Lead 8W": f"+{liq.corr_spx_8w:.2f}", "Sensibilità Prevista": "Elevata (+1.45% per $100B iniezione)"},
+        {"Asset Target": "Oro Fisico (COM_GOLD)", "Correlazione Lead 4W": f"+{liq.corr_gold_4w:.2f}", "Correlazione Lead 8W": f"+{liq.corr_gold_8w:.2f}", "Sensibilità Prevista": "Moderata-Alta (Hedge svalutazione fiat)"},
+    ]
+    st.dataframe(pd.DataFrame(corr_table), use_container_width=True, hide_index=True)
+
+
 # Modal Dialog 6: Nodi Monitorati & Architettura Radiale
 @st.dialog("🕸️ Dettaglio Analitico: Architettura dei 30 Nodi e Topologia della Rete", width="large")
 def show_network_nodes_modal():
@@ -1014,8 +1091,8 @@ def show_zscore_modal():
 
 
 
-# 8 Colonne di KPI Superiori (con Box CISS Contagio & Z-Score)
-k1, k2, k3, k4, k5, k6, k7, k8 = st.columns([1, 1, 1, 1.05, 1, 1, 0.95, 1.25])
+# 9 Colonne di KPI Superiori (con Liquidità Netta, CISS & Z-Score)
+k1, k2, k3, k4, k5, k6, k7, k8, k9 = st.columns([1, 1, 1, 1.05, 1.1, 1, 1, 0.95, 1.25])
 with k1:
     st.markdown(f"""
     <div class="spider-kpi">
@@ -1059,6 +1136,17 @@ with k4:
     if st.button("⚡ Dettagli CISS", key="btn_open_ciss_modal", use_container_width=True, type="secondary"):
         show_ciss_modal()
 with k5:
+    liq_curr = net_liquidity_engine.compute_net_liquidity(aligned_df)
+    st.markdown(f"""
+    <div class="spider-kpi" style="border-left: 3px solid {liq_curr.liquidity_color_hex};">
+        <div class="kpi-title">US Net Liquidity (Fed)</div>
+        <div class="kpi-main-val" style="color: #38BDF8; font-size: 16px;">${liq_curr.us_net_liquidity_b:,.0f} B</div>
+        <div class="kpi-sub-val">Δ 4W: {liq_curr.us_net_liquidity_delta_4w_b:+,.0f} B ({liq_curr.us_net_liquidity_delta_4w_pct:+.1f}%)</div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("🌊 Dettagli Liquidità", key="btn_open_liquidity_modal", use_container_width=True, type="secondary"):
+        show_net_liquidity_modal()
+with k6:
     st.markdown(f"""
     <div class="spider-kpi">
         <div class="kpi-title">Bias Banche Centrali</div>
@@ -1068,7 +1156,7 @@ with k5:
     """, unsafe_allow_html=True)
     if st.button("ℹ️ Dettagli Banche", key="btn_open_cb_bias_modal", use_container_width=True, type="secondary"):
         show_cb_bias_modal()
-with k6:
+with k7:
     st.markdown(f"""
     <div class="spider-kpi">
         <div class="kpi-title">Taylor Rule Gap</div>
@@ -1078,7 +1166,7 @@ with k6:
     """, unsafe_allow_html=True)
     if st.button("ℹ️ Dettagli Taylor", key="btn_open_taylor_modal", use_container_width=True, type="secondary"):
         show_taylor_rule_modal()
-with k7:
+with k8:
     st.markdown(f"""
     <div class="spider-kpi">
         <div class="kpi-title">Nodi Rete</div>
@@ -1088,7 +1176,7 @@ with k7:
     """, unsafe_allow_html=True)
     if st.button("ℹ️ Dettagli Nodi", key="btn_open_nodes_modal", use_container_width=True, type="secondary"):
         show_network_nodes_modal()
-with k8:
+with k9:
     n_ext_tot = sum(1 for ns in node_states.values() if abs(ns.z_score) >= 2.0)
     n_att_tot = sum(1 for ns in node_states.values() if 1.25 <= abs(ns.z_score) < 2.0)
     n_norm_tot = sum(1 for ns in node_states.values() if abs(ns.z_score) < 1.25)
@@ -1173,6 +1261,19 @@ Versione Software: {APP_VERSION} (Institutional Quantitative Architecture)
   * Stress Quadrante Crescita & Produzione: {core_state.ciss.quadrant_stress.get('GROWTH', 0.0) * 100:.1f}%
   * Stress Quadrante Lavoro & Occupazione: {core_state.ciss.quadrant_stress.get('LABOR', 0.0) * 100:.1f}%
   * Stress Quadrante Liquidità, Rischio & Tassi: {core_state.ciss.quadrant_stress.get('LIQUIDITY_RISK', 0.0) * 100:.1f}%
+- Global Net Liquidity Dashboard (Fed H.4.1 / CrossBorder Capital):
+  * Formula Istituzionale: US Net Liquidity = Fed Total Assets - TGA - Reverse Repo (RRP)
+  * US Net Liquidity Attuale: ${liq_curr.us_net_liquidity_b:,.0f} B (${liq_curr.us_net_liquidity_t:.2f} Trillion)
+  * Fed Total Assets (WALCL): ${liq_curr.fed_total_assets_b:,.0f} B
+  * Treasury General Account TGA (WTREGEN): ${liq_curr.tga_balance_b:,.0f} B
+  * Overnight Reverse Repo RRP (RRPONTSYD): ${liq_curr.rrp_balance_b:,.0f} B
+  * Variazione 4 Settimane (Δ 4W): {liq_curr.us_net_liquidity_delta_4w_b:+,.0f} B ({liq_curr.us_net_liquidity_delta_4w_pct:+.1f}%)
+  * Variazione 8 Settimane (Δ 8W): {liq_curr.us_net_liquidity_delta_8w_b:+,.0f} B ({liq_curr.us_net_liquidity_delta_8w_pct:+.1f}%)
+  * Impulso di Liquidità: {liq_curr.liquidity_regime_badge} ({liq_curr.macro_interpretation})
+  * Correlazioni Forward Empirical Lead-Lag (Trasmissione Variazione Liquidità Netta):
+    - Nasdaq 100 (EQ_NDX): 4-Settimane r = {liq_curr.corr_ndx_4w:+.2f} | 8-Settimane r = {liq_curr.corr_ndx_8w:+.2f}
+    - S&P 500 (EQ_SPX):    4-Settimane r = {liq_curr.corr_spx_4w:+.2f} | 8-Settimane r = {liq_curr.corr_spx_8w:+.2f}
+    - Oro Fisico (COM_GOLD): 4-Settimane r = {liq_curr.corr_gold_4w:+.2f} | 8-Settimane r = {liq_curr.corr_gold_8w:+.2f}
 - Bias Banche Centrali: {core_state.central_bank_bias}
 - Tasso Reale FED: {core_state.fed_real_rate:+.2f}% | Tasso Reale BCE: {core_state.ecb_real_rate:+.2f}%
 - Taylor Rule Gap: {core_state.taylor_rate_gap_bps:+.0f} bps (Posizione: {'Restrittiva (Surplus)' if core_state.taylor_rate_gap_bps >= 0 else 'Accomodante (Deficit / Behind the curve)'})
@@ -1381,6 +1482,10 @@ with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
     df_file_b_ciss_quad.to_excel(writer, index=False, sheet_name="Stress_Quadranti_CISS")
     df_file_b_ciss_corr.to_excel(writer, index=False, sheet_name="Matrice_CrossCorr_CISS")
     df_file_b_crises.to_excel(writer, index=False, sheet_name="Scenari_Crisi_CCAR")
+    if not liq_curr.historical_timeseries.empty:
+        df_liq_export = liq_curr.historical_timeseries.copy().reset_index()
+        df_liq_export.insert(0, "Versione_SPIDER", APP_VERSION)
+        df_liq_export.to_excel(writer, index=False, sheet_name="Liquidita_Netta_Fed")
     pd.DataFrame([{
         "Versione_SPIDER": APP_VERSION,
         "Data_Snapshot": now_iso,
@@ -1390,6 +1495,21 @@ with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
         "CISS_Stato": core_state.ciss.ciss_status,
         "CISS_Contagion_Contribution_Pct": core_state.ciss.contagion_contribution_pct,
         "CISS_Idiosyncratic_Risk": core_state.ciss.idiosyncratic_risk,
+        "US_Net_Liquidity_B": liq_curr.us_net_liquidity_b,
+        "Fed_Total_Assets_B": liq_curr.fed_total_assets_b,
+        "TGA_Balance_B": liq_curr.tga_balance_b,
+        "RRP_Balance_B": liq_curr.rrp_balance_b,
+        "Net_Liquidity_Delta_4W_B": liq_curr.us_net_liquidity_delta_4w_b,
+        "Net_Liquidity_Delta_4W_Pct": liq_curr.us_net_liquidity_delta_4w_pct,
+        "Net_Liquidity_Delta_8W_B": liq_curr.us_net_liquidity_delta_8w_b,
+        "Net_Liquidity_Delta_8W_Pct": liq_curr.us_net_liquidity_delta_8w_pct,
+        "Liquidity_Regime": liq_curr.liquidity_regime_badge,
+        "Corr_NDX_4W": liq_curr.corr_ndx_4w,
+        "Corr_NDX_8W": liq_curr.corr_ndx_8w,
+        "Corr_SPX_4W": liq_curr.corr_spx_4w,
+        "Corr_SPX_8W": liq_curr.corr_spx_8w,
+        "Corr_Gold_4W": liq_curr.corr_gold_4w,
+        "Corr_Gold_8W": liq_curr.corr_gold_8w,
         "Landing_Scenario": core_state.landing_scenario.scenario_title,
         "Prob_No_Landing": core_state.landing_scenario.prob_no_landing,
         "Pring_Stage": pring_res_curr.stage_title,

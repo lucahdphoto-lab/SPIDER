@@ -1180,4 +1180,163 @@ def build_ciss_correlation_heatmap(ciss: Any, dark_mode: bool = True) -> go.Figu
     return fig
 
 
+def build_net_liquidity_overview_figure(liq_state: Any, dark_mode: bool = True) -> go.Figure:
+    """
+    Constructs a dual-axis Plotly chart:
+    - Primary Y: US Net Liquidity ($B) and Federal Reserve Total Assets ($B)
+    - Secondary Y: S&P 500 (EQ_SPX) or Nasdaq (EQ_NDX) demonstrating quantitative co-movement
+    """
+    from plotly.subplots import make_subplots
+
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "rgba(15, 23, 42, 0.7)" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+    grid_color = "rgba(255, 255, 255, 0.08)" if dark_mode else "rgba(15, 23, 42, 0.08)"
+
+    df = liq_state.historical_timeseries
+
+    fig = make_subplots(
+        rows=1, cols=1,
+        specs=[[{"secondary_y": True}]],
+    )
+
+    # 1. Fed Assets (area/dashed)
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df["Fed_Total_Assets_B"],
+            name="Fed Total Assets ($B)",
+            line=dict(color="#64748B", width=1.5, dash="dash"),
+            opacity=0.6,
+        ),
+        secondary_y=False
+    )
+
+    # 2. US Net Liquidity (Solid Neon Cyan Line)
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df["US_Net_Liquidity_B"],
+            name="US Net Liquidity (Assets - TGA - RRP)",
+            line=dict(color="#38BDF8", width=3),
+            fill="tozeroy",
+            fillcolor="rgba(56, 189, 248, 0.08)",
+        ),
+        secondary_y=False
+    )
+
+    # 3. S&P 500 or Nasdaq (Secondary Axis - Amber Line)
+    target_col = "EQ_SPX" if "EQ_SPX" in df.columns else ("EQ_NDX" if "EQ_NDX" in df.columns else None)
+    if target_col:
+        target_name = "S&P 500 (EQ_SPX)" if target_col == "EQ_SPX" else "Nasdaq 100 (EQ_NDX)"
+        fig.add_trace(
+            go.Scatter(
+                x=df.index,
+                y=df[target_col],
+                name=f"{target_name} [Asse Dx]",
+                line=dict(color="#F59E0B", width=2.2),
+            ),
+            secondary_y=True
+        )
+
+    fig.update_layout(
+        title=dict(
+            text="<b>Evoluzione Storica US Net Liquidity ($B) vs Indici Azionari (Co-Movimento Quantitativo)</b>",
+            font=dict(size=15, color=text_color),
+            x=0.03,
+            y=0.97,
+        ),
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=380,
+        margin=dict(l=55, r=55, t=50, b=30),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1.0,
+            font=dict(size=11, color="#CBD5E1"),
+        ),
+        hovermode="x unified",
+        font=dict(family="Inter, sans-serif"),
+    )
+
+    fig.update_xaxes(gridcolor=grid_color, tickfont=dict(color="#94A3B8"))
+    fig.update_yaxes(
+        title=dict(text="Liquidità Netta ($ Miliardi)", font=dict(color="#38BDF8", size=11)),
+        gridcolor=grid_color,
+        tickfont=dict(color="#38BDF8"),
+        secondary_y=False,
+    )
+    if target_col:
+        fig.update_yaxes(
+            title=dict(text="Prezzo Indice", font=dict(color="#F59E0B", size=11)),
+            gridcolor="rgba(0,0,0,0)",
+            tickfont=dict(color="#F59E0B"),
+            secondary_y=True,
+        )
+
+    return fig
+
+
+def build_liquidity_asset_correlation_figure(liq_state: Any, dark_mode: bool = True) -> go.Figure:
+    """Constructs a grouped bar chart of 4-Week and 8-Week forward lead-lag correlations."""
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "rgba(15, 23, 42, 0.7)" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+    grid_color = "rgba(255, 255, 255, 0.08)" if dark_mode else "rgba(15, 23, 42, 0.08)"
+
+    categories = ["S&P 500 (EQ_SPX)", "Nasdaq 100 (EQ_NDX)", "Oro Fisico (COM_GOLD)"]
+    lag_4w = [liq_state.corr_spx_4w, liq_state.corr_ndx_4w, liq_state.corr_gold_4w]
+    lag_8w = [liq_state.corr_spx_8w, liq_state.corr_ndx_8w, liq_state.corr_gold_8w]
+
+    fig = go.Figure(data=[
+        go.Bar(
+            name="Lead 4 Settimane (t - 4W)",
+            x=categories,
+            y=lag_4w,
+            marker_color="#38BDF8",
+            text=[f"+{v:.2f}" if v >= 0 else f"{v:.2f}" for v in lag_4w],
+            textposition="outside",
+        ),
+        go.Bar(
+            name="Lead 8 Settimane (t - 8W)",
+            x=categories,
+            y=lag_8w,
+            marker_color="#A78BFA",
+            text=[f"+{v:.2f}" if v >= 0 else f"{v:.2f}" for v in lag_8w],
+            textposition="outside",
+        ),
+    ])
+
+    fig.update_layout(
+        title=dict(
+            text="<b>Correlazione Anticipatrice della Liquidità (Lead-Lag Transmission a 4 e 8 Settimane)</b>",
+            font=dict(size=14, color=text_color),
+            x=0.03,
+            y=0.96,
+        ),
+        barmode="group",
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=320,
+        margin=dict(l=35, r=35, t=50, b=25),
+        yaxis=dict(range=[-0.2, 1.15], gridcolor=grid_color, tickfont=dict(color="#CBD5E1")),
+        xaxis=dict(gridcolor=grid_color, tickfont=dict(color="#CBD5E1")),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1.0,
+            font=dict(size=11, color="#CBD5E1"),
+        ),
+        font=dict(family="Inter, sans-serif"),
+    )
+
+    return fig
+
+
+
 

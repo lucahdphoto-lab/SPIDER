@@ -120,7 +120,29 @@ class TestSpiderArchitecture(unittest.TestCase):
         self.assertEqual(res["scenario"].id, "CRISIS_2008_GFC")
         self.assertLess(res["scenario"].historical_max_drawdown_60_40, -20.0)
 
+    def test_06_net_liquidity_engine(self):
+        """Verify Global Net Liquidity calculation, Fed H.4.1 formula and 4-8W asset correlations."""
+        from net_liquidity_engine import net_liquidity_engine, NetLiquidityState
+
+        aligned_df = engine.load_and_align_data(force_refresh=False)
+        liq = net_liquidity_engine.compute_net_liquidity(aligned_df)
+
+        self.assertIsInstance(liq, NetLiquidityState)
+        self.assertGreater(liq.us_net_liquidity_b, 5000.0)  # > $5,000B
+        self.assertGreater(liq.fed_total_assets_b, 6000.0)
+        self.assertGreater(liq.tga_balance_b, 0.0)
+        self.assertGreater(liq.rrp_balance_b, 0.0)
+        # Check formula: Net Liquidity = Fed Total Assets - TGA - RRP
+        computed_liq = liq.fed_total_assets_b - liq.tga_balance_b - liq.rrp_balance_b
+        self.assertAlmostEqual(liq.us_net_liquidity_b, computed_liq, delta=1.0)
+        # Check forward correlations with risk assets
+        self.assertGreater(liq.corr_ndx_4w, 0.4)
+        self.assertGreater(liq.corr_spx_4w, 0.4)
+        self.assertFalse(liq.historical_timeseries.empty)
+        self.assertIn("US_Net_Liquidity_B", liq.historical_timeseries.columns)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
