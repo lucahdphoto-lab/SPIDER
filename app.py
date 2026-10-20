@@ -63,6 +63,12 @@ from diebold_yilmaz_engine import (
     DieboldYilmazState,
     SPILLOVER_NODES,
 )
+from super_intelligence_engine import (
+    si_engine,
+    SuperIntelligenceState,
+    SuperIntelligenceStock,
+    AI_UNIVERSE_CONFIG,
+)
 from spider_ui import (
     build_macro_regime_matrix_figure,
     build_spider_web_figure,
@@ -76,6 +82,9 @@ from spider_ui import (
     build_efficient_frontier_figure,
     build_diebold_yilmaz_heatmap,
     build_spillover_net_transmission_figure,
+    build_spider_si_network_figure,
+    build_si_correlation_heatmap,
+    build_si_subsector_bar_figure,
     generate_zscore_mini_svg,
     generate_links_dataframe,
     generate_nodes_dataframe,
@@ -1298,6 +1307,103 @@ def show_zscore_modal():
 
 
 
+# Modal Dialog 8: SPIDER SI (Super Intelligence - 10 Giganti dell'Intelligenza Artificiale)
+@st.dialog("🤖 SPIDER SI (Super Intelligence): I 10 Giganti dell'Intelligenza Artificiale", width="large")
+def show_super_intelligence_modal():
+    si_state = si_engine.compute_si_state()
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(56, 189, 248, 0.15)); border: 2px solid #8B5CF6; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <span style="font-size: 11px; text-transform: uppercase; color: #8B5CF6; font-weight: 800; letter-spacing: 0.8px;">SPIDER SI • SUPER INTELLIGENCE 10 ECOSYSTEM</span>
+                <div style="font-size: 22px; font-weight: 800; color: #F8FAFC; margin-top: 2px;">Monitoraggio Istituzionale dell'Ecosistema AI Globale</div>
+                <div style="font-size: 12.5px; color: #CBD5E1; margin-top: 4px;">Monitoraggio congiunto della catena del valore dell'AI: Fonderie, Chip & GPU, Memorie HBM, Datacenter Hyperscalers e Piattaforme Software.</div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.9); border: 1.5px solid {si_state.ai_cycle_color}; border-radius: 10px; padding: 10px 16px; text-align: center; min-width: 160px;">
+                <div style="font-size: 10.5px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">AI Momentum Score</div>
+                <div style="font-size: 26px; font-weight: 800; color: {si_state.ai_cycle_color}; font-family: monospace;">{si_state.ai_momentum_score:.1f} / 100</div>
+                <div style="font-size: 11px; color: {si_state.ai_cycle_color}; font-weight: 700;">{si_state.ai_cycle_regime.split('(')[0].strip()}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 4 KPI Cards
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px 12px; text-align: center;">
+            <div style="font-size: 10px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Market Cap AI Aggregato</div>
+            <div style="font-size: 19px; font-weight: 800; color: #38BDF8; font-family: monospace;">${si_state.total_market_cap_t:.2f} Trilioni</div>
+            <div style="font-size: 10.5px; color: #64748B;">10 Giganti Globali</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c2:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px 12px; text-align: center;">
+            <div style="font-size: 10px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Performance Media YTD</div>
+            <div style="font-size: 19px; font-weight: 800; color: {'#10B981' if si_state.composite_ytd_pct >= 0 else '#EF4444'}; font-family: monospace;">{si_state.composite_ytd_pct:+.1f}%</div>
+            <div style="font-size: 10.5px; color: #64748B;">1 Mese: {si_state.composite_1m_pct:+.1f}%</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c3:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px 12px; text-align: center;">
+            <div style="font-size: 10px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Capex AI Globale Stimato</div>
+            <div style="font-size: 19px; font-weight: 800; color: #F59E0B; font-family: monospace;">${si_state.total_annual_capex_b:,.0f} Miliardi</div>
+            <div style="font-size: 10.5px; color: #64748B;">Spesa Infrastrutture Datacenter</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c4:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px 12px; text-align: center;">
+            <div style="font-size: 10px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Top Performer YTD</div>
+            <div style="font-size: 19px; font-weight: 800; color: #10B981; font-family: monospace;">{si_state.top_performer.ticker}</div>
+            <div style="font-size: 10.5px; color: #10B981;">{si_state.top_performer.change_ytd_pct:+.1f}% YTD</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Dual tabs inside modal: Tela Radiale & Tabella Fondamentali
+    m_tab1, m_tab2, m_tab3 = st.tabs([
+        "🕸️ Tela Radiale SPIDER SI",
+        "📋 Cockpit Fondamentale dei 10 Giganti",
+        "🔗 Matrice Correlazioni & Supply Chain",
+    ])
+    with m_tab1:
+        fig_si_net = build_spider_si_network_figure(si_state, dark_mode=True)
+        st.plotly_chart(fig_si_net, use_container_width=True)
+        st.caption("ℹ️ **Legenda Tela SI:** Al centro SI_CORE. Anello 1 = Silicio & Fonderia; Anello 2 = Memorie HBM & Cloud Specializzato; Anello 3 = Hyperscalers & Software. I fili viola evidenziano i flussi di fornitura e ordini Capex tra le aziende.")
+    with m_tab2:
+        df_si_table = []
+        for s in sorted(si_state.stocks, key=lambda x: x.market_cap_b, reverse=True):
+            df_si_table.append({
+                "Ticker": s.ticker,
+                "Società": s.name,
+                "Sotto-settore": s.subsector,
+                "Prezzo ($)": f"${s.current_price:,.2f}",
+                "1D %": f"{s.change_1d_pct:+.2f}%",
+                "1M %": f"{s.change_1m_pct:+.1f}%",
+                "YTD %": f"{s.change_ytd_pct:+.1f}%",
+                "Market Cap ($B)": f"${s.market_cap_b:,.0f} B",
+                "Forward P/E": f"{s.fwd_pe:.1f}x",
+                "PEG Ratio": f"{s.peg_ratio:.2f}",
+                "Crescita Ricavi YoY": f"+{s.rev_growth_yoy:.1f}%",
+                "Margine Lordo": f"{s.gross_margin_pct:.1f}%",
+                "Ruolo Catena Valore": s.supply_chain_role,
+            })
+        st.dataframe(pd.DataFrame(df_si_table), use_container_width=True, hide_index=True)
+    with m_tab3:
+        col_c1, col_c2 = st.columns([1.2, 1])
+        with col_c1:
+            fig_si_corr = build_si_correlation_heatmap(si_state, dark_mode=True)
+            st.plotly_chart(fig_si_corr, use_container_width=True)
+        with col_c2:
+            fig_si_sub = build_si_subsector_bar_figure(si_state, dark_mode=True)
+            st.plotly_chart(fig_si_sub, use_container_width=True)
+
+
 # Helper per rendering stelle importanza ciclo economico (1 a 5 stelle)
 def render_cycle_stars_badge(stars: int, max_stars: int = 5) -> str:
     gold = "★" * stars
@@ -1309,8 +1415,8 @@ def render_cycle_stars_badge(stars: int, max_stars: int = 5) -> str:
     )
 
 
-# 10 Colonne di KPI Superiori (Layout uniformato con stelle di influenza ciclo economico)
-k1, k2, k3, k4, k5, k_dy, k6, k7, k8, k9 = st.columns([1.0, 1.0, 1.0, 1.05, 1.08, 1.08, 1.0, 1.0, 0.95, 1.25])
+# 11 Colonne di KPI Superiori (con SI - Super Intelligence, Liquidità Netta, CISS, Diebold-Yilmaz Spillover & Z-Score)
+k1, k2, k3, k4, k5, k_dy, k_si, k6, k7, k8, k9 = st.columns([1.0, 1.0, 1.0, 1.02, 1.05, 1.05, 1.08, 1.0, 1.0, 0.95, 1.25])
 
 with k1:
     st.markdown(f"""
@@ -1444,6 +1550,28 @@ with k_dy:
     """, unsafe_allow_html=True)
     if st.button("🕸️ Chi Contagia", key="btn_open_diebold_modal", use_container_width=True, type="secondary"):
         show_diebold_spillover_modal()
+
+with k_si:
+    si_curr = si_engine.compute_si_state()
+    st.markdown(f"""
+    <div class="spider-top-kpi" style="border-left: 3px solid #8B5CF6;">
+        <div class="kpi-top-row">
+            <span class="kpi-title" title="Super Intelligence (SI): I 10 Giganti dell'Intelligenza Artificiale Mondiale">SI - SUPER INT.</span>
+            {render_cycle_stars_badge(5)}
+        </div>
+        <div class="kpi-body">
+            <div class="kpi-main-val" style="color: #8B5CF6; font-size: 16px;">{si_curr.composite_ytd_pct:+.1f}% YTD</div>
+            <div class="kpi-sub-val">Cap: <b>${si_curr.total_market_cap_t:.1f}T</b> • Top: <b>{si_curr.top_performer.ticker}</b></div>
+        </div>
+        <div class="kpi-footer-row">
+            <span class="kpi-influence-pill" title="Influenza Massima (5/5): Il super-ciclo AI e i Capex dei semiconduttori guidano la produttività mondiale">
+                <span>★ 5/5</span> <span style="color: #94A3B8; font-weight: 500;">Megatrend AI</span>
+            </span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("🤖 Dettagli SI", key="btn_open_si_modal", use_container_width=True, type="secondary"):
+        show_super_intelligence_modal()
 
 with k6:
     st.markdown(f"""
@@ -1688,7 +1816,18 @@ Versione Software: {APP_VERSION} (Institutional Quantitative Architecture)
 - Ruoli Sistemici dei Nodi (Trasmettitori Netti vs Ricevitori):
 {chr(10).join(f"  * [{p.symbol:8s}] {p.name:32s}: Net Spillover {p.net_spillover_pct:+5.1f}% (TO: {p.to_others_pct:4.1f}% | FROM: {p.from_others_pct:4.1f}%) -> {p.role_badge}" for p in dy_curr.nodes_profile)}
 
-9. DISTRIBUZIONE & DIAGNOSI Z-SCORE DEGLI INDICATORI (30 NODI)
+9. SPIDER SI: SUPER INTELLIGENCE (I 10 GIGANTI DELL'INTELLIGENZA ARTIFICIALE)
+--------------------------------------------------------------------------------
+- Indice Composito SI (Base 1000): {si_curr.composite_index:.1f} (YTD: {si_curr.composite_ytd_pct:+.1f}% | 1 Mese: {si_curr.composite_1m_pct:+.1f}%)
+- Capitalizzazione Totale 10 Giganti AI: ${si_curr.total_market_cap_t:.2f} Trilioni
+- Spesa in Conto Capitale Totale (Annual AI Capex): ${si_curr.total_annual_capex_b:.1f} Miliardi
+- AI Momentum Score Sistemico: {si_curr.ai_momentum_score:.1f} / 100
+- Regime Ciclo AI: {si_curr.ai_cycle_regime}
+- Top Performer: {si_curr.top_performer.name} ({si_curr.top_performer.ticker}) con {si_curr.top_performer.change_ytd_pct:+.1f}% YTD
+- Azioni Monitorate nel Cockpit Fondamentale (10 Titoli):
+{chr(10).join(f"  * [{s.ticker:5s}] {s.name:22s}: Cap ${s.market_cap_b:5.0f}B | P/E {s.pe_ratio:4.1f} | Rev YoY {s.rev_growth_yoy_pct:+5.1f}% | Capex ${s.annual_capex_b:4.1f}B | YTD {s.change_ytd_pct:+5.1f}% [{s.subsector}]" for s in sorted(si_curr.stocks, key=lambda x: x.market_cap_b, reverse=True))}
+
+10. DISTRIBUZIONE & DIAGNOSI Z-SCORE DEGLI INDICATORI (30 NODI)
 --------------------------------------------------------------------------------
 - Metodologia: Standardizzazione statistica rolling 1Y Z = (X_t - μ) / σ
 - Soglie Quantitative e Codifica Cromatica Grafica:
@@ -1885,11 +2024,44 @@ with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
         df_dy_mat = dy_curr.spillover_matrix.copy().reset_index()
         df_dy_mat.rename(columns={"index": "Source_Node (FROM)"}, inplace=True)
         df_dy_mat.to_excel(writer, index=False, sheet_name="Matrice_Spillover_Diebold")
+    # Tabella SPIDER SI: 10 Giganti dell'Intelligenza Artificiale
+    si_export_data = []
+    for s in si_curr.stocks:
+        si_export_data.append({
+            "Versione_SPIDER": APP_VERSION,
+            "Ticker": s.ticker,
+            "Nome_Azienda": s.name,
+            "Sotto_Settore": s.subsector,
+            "Ruolo_Supply_Chain": s.supply_chain_role,
+            "Market_Cap_USD_B": s.market_cap_b,
+            "Prezzo_Attuale": s.price,
+            "Performance_YTD_Pct": s.change_ytd_pct,
+            "Performance_1M_Pct": s.change_1m_pct,
+            "Forward_PE": s.pe_ratio,
+            "PEG_Ratio": s.peg_ratio,
+            "Fatturato_Growth_YoY_Pct": s.rev_growth_yoy_pct,
+            "Margine_Operativo_Pct": s.operating_margin_pct,
+            "Annual_Capex_USD_B": s.annual_capex_b,
+            "Volatilita_Annua_Pct": s.volatility_annual_pct,
+            "ZScore_Fondamentale": s.z_score,
+            "Descrizione_Business": s.description,
+        })
+    pd.DataFrame(si_export_data).to_excel(writer, index=False, sheet_name="SPIDER_SI_10_Azioni_AI")
+
     pd.DataFrame([{
         "Versione_SPIDER": APP_VERSION,
         "Data_Snapshot": now_iso,
         "Macro_Regime": core_state.macro_regime,
         "Tensione_Sistemica_Z": core_state.systemic_web_tension,
+        "SI_Composite_Index": si_curr.composite_index,
+        "SI_Composite_YTD_Pct": si_curr.composite_ytd_pct,
+        "SI_Composite_1M_Pct": si_curr.composite_1m_pct,
+        "SI_Total_Market_Cap_T": si_curr.total_market_cap_t,
+        "SI_Total_Annual_Capex_B": si_curr.total_annual_capex_b,
+        "SI_AI_Momentum_Score": si_curr.ai_momentum_score,
+        "SI_Cycle_Regime": si_curr.ai_cycle_regime,
+        "SI_Top_Performer_Ticker": si_curr.top_performer.ticker,
+        "SI_Top_Performer_YTD": si_curr.top_performer.change_ytd_pct,
         "Risk_Parity_Regime": rp_state_curr.tension_badge,
         "Risk_Parity_Vol_Target_Pct": rp_state_curr.portfolio_volatility_pct,
         "Risk_Parity_Vol_Scale_Factor": rp_state_curr.vol_scale_factor,
@@ -2112,6 +2284,7 @@ tabs = st.tabs([
     "🔬 Focus Nodo & Relazioni",
     "⚡ Simulatore Stress What-If",
     "💼 Struttura Portafoglio (Asset Allocation)",
+    "🤖 SPIDER SI (Super Intelligence 10)",
 ])
 
 
@@ -3726,10 +3899,130 @@ INTEGRAZIONE MULTI-FATTORE ATTIVA
 
     st.markdown("""
     > **Nota Tecnica Istituzionale (AQR / Bridgewater):**  
-    > * In un portafoglio azionario-obbligazionario tradizionale (60/40), **oltre l'85% del rischio complessivo proviene dalle sole azioni** a causa della loro maggiore volatilità ($\sim 16\%$ vs $\sim 8\%$).  
-    > * Il framework **Equal Risk Contribution (Risk Parity)** dimensiona i pesi nominali in ragione inversa alla volatilità ($w_i \propto 1/\sigma_i$), garantendo che ciascuna classe contribuisca per il 20% esatto alla varianza di portafoglio.  
-    > * Quando la **Tensione Sistemica SPIDER** supera la soglia critica ($|Z| \ge 2.0$), scatta il modulo di **Volatility Targeting (Man AHL)**: la leva aggregata viene ridotta e il capitale liberato viene dirottato su **T-Bills a 1-3 mesi al 5% privi di rischio** e **Oro fisico**, neutralizzando i rischi di rovina finanziaria durante crisi note o shock imprevisti.
+    > * In un portafoglio azionario-obbligazionario tradizionale (60/40), **oltre l'85% del rischio complessivo proviene dalle sole azioni** a causa della loro maggiore volatilità (~16% vs ~8%).  
+    > * Il framework **Equal Risk Contribution (Risk Parity)** dimensiona i pesi nominali in ragione inversa alla volatilità (w_i ~ 1/sigma_i), garantendo che ciascuna classe contribuisca per il 20% esatto alla varianza di portafoglio.  
+    > * Quando la **Tensione Sistemica SPIDER** supera la soglia critica (|Z| >= 2.0), scatta il modulo di **Volatility Targeting (Man AHL)**: la leva aggregata viene ridotta e il capitale liberato viene dirottato su **T-Bills a 1-3 mesi al 5% privi di rischio** e **Oro fisico**, neutralizzando i rischi di rovina finanziaria durante crisi note o shock imprevisti.
     """)
+
+
+# ==============================================================================
+# TAB 9: SPIDER SI (SUPER INTELLIGENCE - I 10 GIGANTI DELL'AI)
+# ==============================================================================
+with tabs[8]:
+    st.markdown("#### 🤖 SPIDER SI: Cockpit Fondamentale & Rete Radiale dei 10 Giganti dell'Intelligenza Artificiale")
+    st.caption("Monitoraggio sistemico e fondamentale delle 10 aziende a maggiore capitalizzazione abilitatrici dell'ecosistema AI mondiale: chip & acceleratori, fonderie al silicio avanzate, memorie HBM, infrastruttura datacenter cloud e piattaforme software.")
+
+    # Executive AI Cycle Regime Banner
+    st.markdown(f"""
+    <div style="background: rgba(15, 23, 42, 0.9); border: 1.5px solid {si_curr.ai_cycle_color}; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <span style="font-size: 11.5px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">Regime Super-Ciclo AI Mondiale (SI):</span>
+                <div style="font-size: 24px; font-weight: 800; color: {si_curr.ai_cycle_color}; font-family: monospace; margin-top: 2px;">
+                    {si_curr.ai_cycle_regime}
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 12px; color: {si_curr.ai_cycle_color}; font-weight: 700;">Momentum Score: {si_curr.ai_momentum_score:.0f}/100</div>
+                <div style="font-size: 11px; color: #94A3B8;">Indice Composito SI: <b style="color: #F8FAFC;">{si_curr.composite_index:.1f}</b> (Base 1000)</div>
+            </div>
+        </div>
+        <div style="font-size: 13px; color: #CBD5E1; margin-top: 10px; line-height: 1.5;">
+            {si_curr.executive_summary}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 4 Top KPI Cards
+    col_k1, col_k2, col_k3, col_k4 = st.columns(4)
+    with col_k1:
+        st.markdown(f"""
+        <div class="spider-kpi">
+            <div class="kpi-title">Capitalizzazione Totale (10 Giganti)</div>
+            <div class="kpi-main-val" style="color: #38BDF8; font-size: 22px;">${si_curr.total_market_cap_t:.2f}T</div>
+            <div class="kpi-sub-val">~35% del peso aggregato S&P 500</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_k2:
+        st.markdown(f"""
+        <div class="spider-kpi">
+            <div class="kpi-title">Performance Indice SI Composito</div>
+            <div class="kpi-main-val" style="color: {'#10B981' if si_curr.composite_ytd_pct >= 0 else '#EF4444'}; font-size: 22px;">{si_curr.composite_ytd_pct:+.1f}% YTD</div>
+            <div class="kpi-sub-val">1 Mese: <b>{si_curr.composite_1m_pct:+.1f}%</b> • Base 1000</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_k3:
+        st.markdown(f"""
+        <div class="spider-kpi">
+            <div class="kpi-title">Capex Annuo AI Aggregato</div>
+            <div class="kpi-main-val" style="color: #F59E0B; font-size: 22px;">${si_curr.total_annual_capex_b:.1f}B</div>
+            <div class="kpi-sub-val">Hyperscalers & Fonderie mondiali</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_k4:
+        st.markdown(f"""
+        <div class="spider-kpi">
+            <div class="kpi-title">Top Performer Anno in Corso</div>
+            <div class="kpi-main-val" style="color: #10B981; font-size: 22px;">{si_curr.top_performer.ticker}</div>
+            <div class="kpi-sub-val">{si_curr.top_performer.change_ytd_pct:+.1f}% YTD • {si_curr.top_performer.name}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-bottom: 16px;'></div>", unsafe_allow_html=True)
+
+    # Two Main Visual Columns: SPIDER SI Network (Left) & Diagnostics / Correlazioni (Right)
+    col_chart_left, col_chart_right = st.columns([1.1, 0.9])
+    with col_chart_left:
+        st.markdown("##### 🕸️ SPIDER SI: Rete Radiale Concentrica & Supply-Chain")
+        fig_si_net = build_spider_si_network_figure(si_curr, dark_mode=True)
+        st.plotly_chart(fig_si_net, use_container_width=True, key="tab_si_fig_network")
+        st.caption("I 3 anelli concentrici rappresentano i livelli gerarchici dell'infrastruttura AI: Anello 1 (Silicio & Fonderie TSM/NVDA/AVGO/AMD), Anello 2 (Memorie HBM MU & Cloud Specializzato ORCL), Anello 3 (Hyperscalers MSFT/GOOGL/AMZN/META). Le linee mostrano i flussi di fornitura di silicio e capex di acquisto GPU.")
+
+    with col_chart_right:
+        st.markdown("##### 📊 Dinamiche Inter-Company & Sotto-Settoriali")
+        si_viz_tabs = st.tabs(["🔥 Matrice Correlazioni (10x10)", "📈 Breakdown Sotto-Settori"])
+        with si_viz_tabs[0]:
+            fig_si_corr = build_si_correlation_heatmap(si_curr, dark_mode=True)
+            st.plotly_chart(fig_si_corr, use_container_width=True, key="tab_si_fig_heatmap")
+            st.caption("Matrice di correlazione a 90 giorni tra i 10 titoli AI. Correlazioni elevate (>0.70) indicano rischio di crowding e spillover reciproco nei sell-off.")
+        with si_viz_tabs[1]:
+            fig_si_sub = build_si_subsector_bar_figure(si_curr, dark_mode=True)
+            st.plotly_chart(fig_si_sub, use_container_width=True, key="tab_si_fig_bars")
+            st.caption("Distribuzione della capitalizzazione e performance ponderata per i 4 comparti verticali dell'AI.")
+
+    # Granular Fundamental Matrix Table
+    st.markdown("##### 📋 Matrice Fondamentale Analitica dei 10 Giganti dell'Intelligenza Artificiale:")
+    df_si_table = pd.DataFrame([
+        {
+            "Ticker": s.ticker,
+            "Azienda": s.name,
+            "Sotto-Settore": s.subsector,
+            "Ruolo Supply Chain": s.supply_chain_role,
+            "Market Cap ($B)": f"${s.market_cap_b:,.0f}B",
+            "Prezzo": f"${s.price:.2f}",
+            "YTD %": f"{s.change_ytd_pct:+.1f}%",
+            "1 Mese %": f"{s.change_1m_pct:+.1f}%",
+            "Forward P/E": f"{s.pe_ratio:.1f}x",
+            "PEG Ratio": f"{s.peg_ratio:.2f}",
+            "Ricavi YoY %": f"{s.rev_growth_yoy_pct:+.1f}%",
+            "Margine Op. %": f"{s.operating_margin_pct:.1f}%",
+            "Capex AI ($B)": f"${s.annual_capex_b:.1f}B",
+            "Volatilità Annua": f"{s.volatility_annual_pct:.1f}%",
+            "Z-Score": f"{s.z_score:+.2f}",
+        }
+        for s in sorted(si_curr.stocks, key=lambda x: x.market_cap_b, reverse=True)
+    ])
+    st.dataframe(df_si_table, use_container_width=True, hide_index=True)
+
+    # Detailed Institutional Explanatory Box
+    st.markdown("""
+    > **Nota Tecnica Istituzionale (Morgan Stanley Research / Goldman Sachs TMT):**  
+    > * **Il Triangolo del Silicio Avanzato (TSM ➔ NVDA / AVGO / AMD):** TSMC detiene un monopolio de facto (>90%) sulla produzione di wafer a 3nm/4nm con packaging CoWoS (Chip-on-Wafer-on-Substrate). Senza TSMC, nessun acceleratore Blackwell/Hopper o chip custom (ASIC Broadcom) può essere assemblato.  
+    > * **Il Collo di Bottiglia delle Memorie ad Alta Velocità (MU ➔ NVDA):** Gli acceleratori di calcolo tensoriale sono vincolati dalla memoria ad altissima banda (HBM3e). Micron Technology rifornisce direttamente le architetture di NVIDIA con chip di memoria stackati verticalmente.  
+    > * **Il Ciclo di Capex degli Hyperscaler (MSFT, AMZN, GOOGL, META, ORCL):** I 5 colossi cloud stanno investendo oltre **$315 Miliardi all'anno** in data center e GPU. Fintanto che i bilanci dei giganti del software reinvestono il proprio Free Cash Flow in infrastrutture di calcolo, la domanda per silicio resta in espansione secolare.  
+    > * **Rischio di Concentrazione Macro:** Questi 10 titoli rappresentano oltre il 35% dell'S&P 500 e il 55% del Nasdaq 100. Lo **SPIDER SI** funge da sistema di allerta precoce: un'inversione di tendenza o un calo dei margini operativi nei semiconduttori anticipa shock macroeconomici sistemici sull'azionario globale.
+    """)
+
 
 
 

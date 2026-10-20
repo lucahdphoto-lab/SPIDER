@@ -14,10 +14,15 @@ from data_fetcher import db, fetcher
 from quant_engine import engine
 from spider_ui import (
     build_macro_regime_matrix_figure,
+    build_si_correlation_heatmap,
+    build_si_subsector_bar_figure,
+    build_spider_si_network_figure,
     build_spider_web_figure,
     generate_links_dataframe,
     generate_nodes_dataframe,
 )
+from super_intelligence_engine import SuperIntelligenceState, si_engine
+
 
 
 class TestSpiderArchitecture(unittest.TestCase):
@@ -208,6 +213,44 @@ class TestSpiderArchitecture(unittest.TestCase):
         self.assertGreater(len(dy.pairwise_links), 5)
         for lnk in dy.pairwise_links:
             self.assertGreater(lnk.gross_spillover, 0.0)
+
+    def test_09_super_intelligence_engine(self):
+        """Verify the SPIDER SI (Super Intelligence) engine, fundamental cockpit, and network topology."""
+        si_state = si_engine.compute_si_state()
+        self.assertIsInstance(si_state, SuperIntelligenceState)
+
+        # 10 Top Capitalized AI Stocks
+        self.assertEqual(len(si_state.stocks), 10, "Expected exactly 10 AI megacap stocks")
+        tickers = {s.ticker for s in si_state.stocks}
+        expected_tickers = {"NVDA", "TSM", "AVGO", "AMD", "MU", "MSFT", "GOOGL", "AMZN", "ORCL", "META"}
+        self.assertEqual(tickers, expected_tickers)
+
+        # Check Aggregates
+        self.assertGreater(si_state.total_market_cap_t, 10.0, "Total AI Market Cap should exceed $10T")
+        self.assertGreater(si_state.total_annual_capex_b, 200.0, "Total AI Capex should exceed $200B")
+        self.assertGreater(si_state.composite_index, 0.0, "Composite SI index must be positive")
+        self.assertGreaterEqual(si_state.ai_momentum_score, 0.0)
+        self.assertLessEqual(si_state.ai_momentum_score, 100.0)
+        self.assertIsNotNone(si_state.top_performer)
+
+        # Correlation Matrix Dimensions (10x10)
+        self.assertEqual(si_state.correlation_matrix.shape, (10, 10))
+
+        # Check Supply-Chain & Radial Spider Links
+        self.assertGreaterEqual(len(si_state.spider_links), 15, "Expected at least 15 supply chain / radial links")
+
+        # Test Plotly Visual Builders
+        fig_net = build_spider_si_network_figure(si_state, dark_mode=True)
+        self.assertIsNotNone(fig_net)
+        self.assertGreater(len(fig_net.data), 5)
+
+        fig_corr = build_si_correlation_heatmap(si_state, dark_mode=True)
+        self.assertIsNotNone(fig_corr)
+        self.assertGreater(len(fig_corr.data), 0)
+
+        fig_bars = build_si_subsector_bar_figure(si_state, dark_mode=True)
+        self.assertIsNotNone(fig_bars)
+        self.assertGreater(len(fig_bars.data), 0)
 
 
 if __name__ == "__main__":

@@ -1591,6 +1591,266 @@ def build_spillover_net_transmission_figure(dy_state: Any, dark_mode: bool = Tru
     return fig
 
 
+# ==============================================================================
+# SPIDER SUPER INTELLIGENCE (SI) FIGURES & CHARTS
+# ==============================================================================
+
+def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True) -> go.Figure:
+    """
+    Costruisce la tela radiale interattiva 2D dedicata esclusivamente a SPIDER SI (Super Intelligence):
+    - Centro: SI_CORE (Indice & Tensione del Super-Ciclo AI)
+    - Anello 1 (Silicio & Fonderia Sub-3nm): TSM, NVDA, AVGO, AMD
+    - Anello 2 (Memoria HBM & Cloud Specializzato): MU, ORCL
+    - Anello 3 (Hyperscalers & Piattaforme Software): MSFT, GOOGL, AMZN, META
+    - Fili di filiera e fornitura (Supply Chain AI) e fili radiali ponderati
+    """
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "#0F172A" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+
+    fig = go.Figure()
+
+    # 1. Concentric Radial Circles
+    rings_config = [
+        {"r": 1.05, "label": "Anello 1: Silicio & Fonderie", "color": "rgba(56, 189, 248, 0.25)"},
+        {"r": 1.95, "label": "Anello 2: Memoria HBM & Cloud Specializzato", "color": "rgba(245, 158, 11, 0.22)"},
+        {"r": 2.85, "label": "Anello 3: Hyperscalers & Piattaforme Software", "color": "rgba(168, 85, 247, 0.25)"},
+    ]
+
+    theta_circle = np.linspace(0, 2 * np.pi, 120)
+    for rc in rings_config:
+        xc = rc["r"] * np.cos(theta_circle)
+        yc = rc["r"] * np.sin(theta_circle)
+        fig.add_trace(go.Scatter(
+            x=xc, y=yc,
+            mode="lines",
+            line=dict(color=rc["color"], width=1.2, dash="dash"),
+            hoverinfo="skip",
+            showlegend=False,
+        ))
+
+    # Node coordinates map
+    node_coords = {"SI_CORE": (0.0, 0.0)}
+    radius_map = {1: 1.05, 2: 1.95, 3: 2.85}
+
+    for stk in si_state.stocks:
+        r = radius_map.get(stk.ring, 2.0)
+        rad = np.radians(stk.angle_deg)
+        node_coords[stk.ticker] = (float(r * np.cos(rad)), float(r * np.sin(rad)))
+
+    # 2. Draw Supply Chain & Radial Links
+    for lnk in si_state.spider_links:
+        src = lnk["source"]
+        tgt = lnk["target"]
+        if src in node_coords and tgt in node_coords:
+            x0, y0 = node_coords[src]
+            x1, y1 = node_coords[tgt]
+            is_hub = (src == "SI_CORE")
+            
+            line_color = "rgba(56, 189, 248, 0.22)" if is_hub else "rgba(168, 85, 247, 0.45)"
+            line_dash = "solid" if not is_hub else "dot"
+            line_width = 1.0 if is_hub else 2.0
+
+            fig.add_trace(go.Scatter(
+                x=[x0, x1], y=[y0, y1],
+                mode="lines",
+                line=dict(color=line_color, width=line_width, dash=line_dash),
+                hoverinfo="text",
+                hovertext=f"<b>Catena AI:</b> {lnk['label']}<br>Correlazione Prezzo: {lnk.get('correlation', 0.7):+.2f}",
+                showlegend=False,
+            ))
+
+    # 3. Central Node: SI_CORE
+    fig.add_trace(go.Scatter(
+        x=[0.0], y=[0.0],
+        mode="markers+text",
+        marker=dict(
+            size=36,
+            symbol="hexagon",
+            color="#8B5CF6",
+            line=dict(color="#38BDF8", width=3),
+            opacity=0.95,
+        ),
+        text=["<b>SI_CORE</b>"],
+        textposition="top center",
+        textfont=dict(color="#F8FAFC", size=12, family="JetBrains Mono"),
+        hoverinfo="text",
+        hovertext=(
+            f"<b>🧠 SPIDER SI_CORE (Super Intelligence)</b><br>"
+            f"Valore Indice Composito: {si_state.composite_index_value:,.1f}<br>"
+            f"Capitalizzazione Totale: ${si_state.total_market_cap_t:.2f} Trillion<br>"
+            f"AI Momentum Score: {si_state.ai_momentum_score:.1f}/100<br>"
+            f"Regime: {si_state.ai_cycle_regime}<br>"
+            f"Capex Annuale Aggregato: ${si_state.total_annual_capex_b:,.0f} Miliardi"
+        ),
+        name="SI_CORE",
+    ))
+
+    # 4. Draw the 10 AI Stock Nodes
+    x_nodes = []
+    y_nodes = []
+    text_labels = []
+    hover_texts = []
+    marker_colors = []
+    marker_sizes = []
+    marker_borders = []
+
+    for stk in si_state.stocks:
+        x, y = node_coords[stk.ticker]
+        x_nodes.append(x)
+        y_nodes.append(y)
+        text_labels.append(f"<b>{stk.ticker}</b>")
+        marker_colors.append(stk.color_hex)
+        
+        # Scale marker size proportionally to sqrt(market_cap)
+        sz = int(np.clip(np.sqrt(stk.market_cap_b) * 0.48, 18, 34))
+        marker_sizes.append(sz)
+
+        # Border color reflecting Z-Score performance
+        b_col = "#10B981" if stk.z_score_price >= 1.0 else ("#EF4444" if stk.z_score_price <= -1.0 else "#94A3B8")
+        marker_borders.append(b_col)
+
+        htext = (
+            f"<b>{stk.name} ({stk.ticker})</b><br>"
+            f"<b>Settore:</b> {stk.subsector} | <b>Ruolo:</b> {stk.role_badge}<br>"
+            f"<b>Prezzo:</b> ${stk.current_price:,.2f} ({stk.change_1d_pct:+.2f}% 1D | {stk.change_ytd_pct:+.1f}% YTD)<br>"
+            f"<b>Market Cap:</b> ${stk.market_cap_b:,.0f} B | <b>P/E Forward:</b> {stk.fwd_pe:.1f}x (PEG: {stk.peg_ratio:.2f})<br>"
+            f"<b>Crescita Ricavi YoY:</b> +{stk.rev_growth_yoy:.1f}% | <b>Margine Lordo:</b> {stk.gross_margin_pct:.1f}%<br>"
+            f"<b>Capex AI Annuale:</b> ${stk.capex_impulse_b:.1f} B | <b>Volatilità:</b> {stk.volatility_annual_pct:.1f}%<br>"
+            f"<b>Focus Tecnologico:</b> {stk.ai_focus}<br>"
+            f"<b>Catena del Valore:</b> {stk.supply_chain_role}"
+        )
+        hover_texts.append(htext)
+
+    fig.add_trace(go.Scatter(
+        x=x_nodes, y=y_nodes,
+        mode="markers+text",
+        marker=dict(
+            size=marker_sizes,
+            color=marker_colors,
+            line=dict(color="#F8FAFC", width=2),
+            opacity=0.95,
+        ),
+        text=text_labels,
+        textposition="bottom center",
+        textfont=dict(color="#F8FAFC", size=11, family="JetBrains Mono"),
+        hoverinfo="text",
+        hovertext=hover_texts,
+        name="10 Giganti AI",
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text="<b>SPIDER SI (Super Intelligence): Rete Radiale dei 10 Giganti dell'Intelligenza Artificiale</b>",
+            font=dict(size=14, color=text_color),
+            x=0.03,
+            y=0.97,
+        ),
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=580,
+        margin=dict(l=30, r=30, t=50, b=30),
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-3.4, 3.4]),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-3.4, 3.4], scaleanchor="x", scaleratio=1),
+        font=dict(family="Inter, sans-serif"),
+        showlegend=False,
+    )
+
+    return fig
+
+
+def build_si_correlation_heatmap(si_state: Any, dark_mode: bool = True) -> go.Figure:
+    """Costruisce la heatmap di correlazione inter-company 10x10 tra i giganti AI."""
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "#0F172A" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+
+    corr_df = si_state.correlation_matrix
+    tickers = list(corr_df.columns)
+    z_vals = corr_df.values
+
+    fig = go.Figure(data=go.Heatmap(
+        z=z_vals,
+        x=tickers,
+        y=tickers,
+        colorscale=[
+            [0.0, "#1E3A8A"],   # Deep Blue (low corr)
+            [0.35, "#38BDF8"],  # Light Blue
+            [0.65, "#F59E0B"],  # Amber
+            [0.85, "#F97316"],  # Orange
+            [1.0, "#EF4444"],   # Red (high corr)
+        ],
+        zmin=0.0,
+        zmax=1.0,
+        text=[[f"{v:.2f}" for v in row] for row in z_vals],
+        texttemplate="%{text}",
+        textfont=dict(size=10, family="JetBrains Mono"),
+        hovertemplate="<b>Coppia:</b> %{y} ⟷ %{x}<br><b>Correlazione (90G):</b> %{z:.3f}<extra></extra>",
+        colorbar=dict(title="Correlazione", tickfont=dict(color="#CBD5E1")),
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text="<b>Matrice di Correlazione AI (Inter-Company 90 Giorni)</b>",
+            font=dict(size=14, color=text_color),
+            x=0.03,
+            y=0.97,
+        ),
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=420,
+        margin=dict(l=60, r=30, t=50, b=40),
+        xaxis=dict(tickfont=dict(color="#CBD5E1", size=11)),
+        yaxis=dict(tickfont=dict(color="#CBD5E1", size=11), autorange="reversed"),
+        font=dict(family="Inter, sans-serif"),
+    )
+    return fig
+
+
+def build_si_subsector_bar_figure(si_state: Any, dark_mode: bool = True) -> go.Figure:
+    """Costruisce il grafico a barre per i 5 sotto-settori dell'AI (Market Cap & YTD)."""
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "#0F172A" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+    grid_color = "rgba(255, 255, 255, 0.08)" if dark_mode else "rgba(15, 23, 42, 0.08)"
+
+    sub_data = si_state.subsector_metrics
+    names = [v["label"] for v in sub_data.values()]
+    caps = [v["market_cap_b"] / 1000.0 for v in sub_data.values()]
+    ytds = [v["change_ytd_pct"] for v in sub_data.values()]
+    colors = [v["color"] for v in sub_data.values()]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=names,
+        y=caps,
+        name="Market Cap ($ Trilioni)",
+        marker_color=colors,
+        text=[f"${c:.2f}T" for c in caps],
+        textposition="outside",
+        hovertemplate="<b>Sotto-settore:</b> %{x}<br><b>Cap Totale:</b> $%{y:.2f}T<extra></extra>",
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text="<b>Capitalizzazione per Sotto-settore AI ($ Trilioni)</b>",
+            font=dict(size=14, color=text_color),
+            x=0.03,
+            y=0.96,
+        ),
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=320,
+        margin=dict(l=50, r=30, t=50, b=35),
+        xaxis=dict(gridcolor=grid_color, tickfont=dict(color="#CBD5E1", size=10)),
+        yaxis=dict(title="Market Cap ($T)", gridcolor=grid_color, tickfont=dict(color="#CBD5E1")),
+        font=dict(family="Inter, sans-serif"),
+        showlegend=False,
+    )
+    return fig
+
+
+
 
 
 
