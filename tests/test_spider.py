@@ -96,6 +96,31 @@ class TestSpiderArchitecture(unittest.TestCase):
         self.assertIn("ID Filo", df_links.columns)
         self.assertIn("Tensione (|Z-Score|)", df_links.columns)
 
+    def test_05_historical_crisis_engine(self):
+        """Verify the 6 CCAR/Aladdin historical crisis scenarios and shock tensor calculations."""
+        from historical_crisis_engine import HISTORICAL_CRISIS_LIBRARY, HistoricalStressEngine
+
+        self.assertEqual(len(HISTORICAL_CRISIS_LIBRARY), 6)
+        expected_crises = [
+            "CRISIS_2008_GFC",
+            "CRISIS_2013_TAPER",
+            "CRISIS_2020_COVID",
+            "CRISIS_2022_RATES",
+            "CRISIS_2023_SVB",
+            "CRISIS_2025_TARIFFS",
+        ]
+        for cid in expected_crises:
+            self.assertIn(cid, HISTORICAL_CRISIS_LIBRARY)
+
+        # Test applying 2008 GFC shock
+        node_states = engine.compute_node_states(window_key="90D")
+        res = HistoricalStressEngine.apply_crisis_scenario("CRISIS_2008_GFC", node_states, engine)
+        self.assertGreater(res["ruptured_count"], 0)
+        self.assertGreater(res["stressed_core"].systemic_web_tension, 1.5)
+        self.assertEqual(res["scenario"].id, "CRISIS_2008_GFC")
+        self.assertLess(res["scenario"].historical_max_drawdown_60_40, -20.0)
+
 
 if __name__ == "__main__":
     unittest.main()
+

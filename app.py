@@ -44,6 +44,11 @@ from curve_regimes_engine import (
     build_regimes_matrix_preview_figure,
     build_quadrants_comparison_grid_figure,
 )
+from historical_crisis_engine import (
+    HISTORICAL_CRISIS_LIBRARY,
+    HistoricalStressEngine,
+    HistoricalCrisisScenario,
+)
 from spider_ui import (
     build_macro_regime_matrix_figure,
     build_spider_web_figure,
@@ -243,6 +248,8 @@ if "what_if_real_yield" not in st.session_state:
     st.session_state["what_if_real_yield"] = 0.0
 if "what_if_hy" not in st.session_state:
     st.session_state["what_if_hy"] = 0.0
+if "active_crisis_scenario" not in st.session_state:
+    st.session_state["active_crisis_scenario"] = None
 
 
 def reset_node_selection():
@@ -269,9 +276,25 @@ with st.spinner("Allineamento serie storiche e calcolo correlazioni in corso..."
         refresh_count
     )
 
-if (st.session_state["what_if_oil"] != 0.0 or 
-    st.session_state["what_if_real_yield"] != 0.0 or 
-    st.session_state["what_if_hy"] != 0.0):
+# 1. Historical Crisis Replay Shock Tensor (CCAR / Aladdin Engine)
+active_crisis_id = st.session_state.get("active_crisis_scenario")
+crisis_sim_data = None
+
+if active_crisis_id and active_crisis_id in HISTORICAL_CRISIS_LIBRARY:
+    crisis_sim_data = HistoricalStressEngine.apply_crisis_scenario(
+        scenario_id=active_crisis_id,
+        current_node_states=node_states,
+        engine_instance=engine,
+        window_key=st.session_state["time_window"],
+    )
+    node_states = crisis_sim_data["stressed_nodes"]
+    link_states = crisis_sim_data["stressed_links"]
+    core_state = crisis_sim_data["stressed_core"]
+
+# 2. Manual What-If Sliders Stress (if active)
+elif (st.session_state["what_if_oil"] != 0.0 or 
+      st.session_state["what_if_real_yield"] != 0.0 or 
+      st.session_state["what_if_hy"] != 0.0):
     
     if "COM_OIL" in node_states and st.session_state["what_if_oil"] != 0:
         ns = node_states["COM_OIL"]
@@ -288,7 +311,8 @@ if (st.session_state["what_if_oil"] != 0.0 or
 
     # Recalculate link states and spider core to reflect the stress scenario across the entire web
     link_states = engine.compute_link_states(node_states, window_key=st.session_state["time_window"], use_spearman=st.session_state["use_spearman"])
-    core_state = engine.compute_spider_core(node_states, link_states)
+    core_state = engine.compute_spider_core(node_states, link_states, window_key=st.session_state["time_window"])
+
 
 
 # ================= SIDEBAR =================
@@ -1124,7 +1148,13 @@ Versione Software: {APP_VERSION} (Institutional Quantitative Architecture)
 - Filtro Quadrante Macro Attivo: {st.session_state.get('filter_quadrant', 'TUTTI')}
 - Filtro Anello Concentrico Attivo: {st.session_state.get('filter_ring', 0)} ({'Tutti gli Anelli' if st.session_state.get('filter_ring', 0) == 0 else f'Anello {st.session_state.get("filter_ring")}'})
 - Focus Nodo Selezionato: {st.session_state.get('selected_node', 'TUTTI (Visualizzazione Globale)')}
-- Parametri What-If Stress Attivi:
+- Replay Storico Crisi Attivo (CCAR/Aladdin): {HISTORICAL_CRISIS_LIBRARY[active_crisis_id].name if active_crisis_id and active_crisis_id in HISTORICAL_CRISIS_LIBRARY else 'Nessuno (Dati Correnti o What-If Manuale)'}
+{f'''  * Periodo Storico: {HISTORICAL_CRISIS_LIBRARY[active_crisis_id].period}
+  * Catalizzatore: {HISTORICAL_CRISIS_LIBRARY[active_crisis_id].catalyst}
+  * Max Drawdown Stimato 60/40: {HISTORICAL_CRISIS_LIBRARY[active_crisis_id].historical_max_drawdown_60_40:.1f}%
+  * Max Drawdown Stimato All Weather: {HISTORICAL_CRISIS_LIBRARY[active_crisis_id].historical_max_drawdown_all_weather:.1f}%
+  * Max Drawdown Stimato SPIDER Dynamic: {HISTORICAL_CRISIS_LIBRARY[active_crisis_id].historical_max_drawdown_spider:.1f}%''' if active_crisis_id and active_crisis_id in HISTORICAL_CRISIS_LIBRARY else ''}
+- Parametri What-If Stress Manuali:
   * Shock Petrolio (WTI Delta %): {st.session_state.get('what_if_oil', 0.0):+.1f}%
   * Tassi Reali TIPS 10Y (Delta bps): {st.session_state.get('what_if_real_yield', 0.0):+.0f} bps
   * Spread High Yield (Delta bps): {st.session_state.get('what_if_hy', 0.0):+.0f} bps
@@ -1324,6 +1354,25 @@ for q1, row_corr in core_state.ciss.corr_matrix.items():
     ciss_corr_data.append(row_dict)
 df_file_b_ciss_corr = pd.DataFrame(ciss_corr_data)
 
+# Tabella Scenari Storici CCAR / Aladdin
+crisis_summary_data = []
+for cid, c_obj in HISTORICAL_CRISIS_LIBRARY.items():
+    crisis_summary_data.append({
+        "Versione_SPIDER": APP_VERSION,
+        "ID_Scenario": cid,
+        "Nome_Crisi": c_obj.name,
+        "Periodo_Storico": c_obj.period,
+        "Durata_Giorni": c_obj.duration_days,
+        "Catalizzatore": c_obj.catalyst,
+        "Max_Drawdown_60_40": c_obj.historical_max_drawdown_60_40,
+        "Max_Drawdown_All_Weather": c_obj.historical_max_drawdown_all_weather,
+        "Max_Drawdown_SPIDER": c_obj.historical_max_drawdown_spider,
+        "Picco_VIX": c_obj.vix_peak,
+        "Picco_Spread_HY": c_obj.hy_spread_peak,
+        "Fili_Chiave_Rotti": ", ".join(c_obj.key_ruptured_links),
+    })
+df_file_b_crises = pd.DataFrame(crisis_summary_data)
+
 excel_b_buffer = io.BytesIO()
 with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
     df_file_b_nodes.to_excel(writer, index=False, sheet_name="Dati_Numerici_30_Nodi")
@@ -1331,6 +1380,7 @@ with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
     df_file_b_zscore.to_excel(writer, index=False, sheet_name="Distribuzione_ZScore_30_Nodi")
     df_file_b_ciss_quad.to_excel(writer, index=False, sheet_name="Stress_Quadranti_CISS")
     df_file_b_ciss_corr.to_excel(writer, index=False, sheet_name="Matrice_CrossCorr_CISS")
+    df_file_b_crises.to_excel(writer, index=False, sheet_name="Scenari_Crisi_CCAR")
     pd.DataFrame([{
         "Versione_SPIDER": APP_VERSION,
         "Data_Snapshot": now_iso,
@@ -2522,10 +2572,96 @@ with tabs[5]:
         else:
             st.info("Nessuna connessione diretta attiva per questo nodo.")
 
-# TAB 7: SIMULATORE WHAT-IF
+# TAB 7: SIMULATORE WHAT-IF & BACKTESTING STORICO SCENARI DI CRISI (CCAR / ALADDIN)
 with tabs[6]:
-    st.markdown("#### ⚡ Simulatore What-If: Test di Stress e Rottura Relazioni")
-    st.caption("Applica shock esogeni alle variabili chiave per testare istantaneamente la reazione della tensione della tela e degli Z-score (senza alterare i dati ufficiali salvati nel database).")
+    st.markdown("#### ⚡ Simulatore di Stress: Replay Storico Scenari di Crisi (CCAR / Aladdin) & What-If")
+    st.caption("Framework di Stress Testing Istituzionale (Standard Federal Reserve CCAR, Basilea III e BlackRock Aladdin): applica istantaneamente il tensore di shock registrato durante le grandi crisi storiche oppure simula shock esogeni personalizzati.")
+
+    st.markdown("##### 🏛️ One-Click Historical Crisis Replay (Scenari di Stress Predefiniti):")
+    st.caption("Clicca su uno scenario per applicare all'intera rete di 30 nodi la configurazione macro-finanziaria osservata durante i 30-60 giorni più acuti della crisi:")
+
+    c_scen1, c_scen2, c_scen3 = st.columns(3)
+    with c_scen1:
+        if st.button("🏚️ Lehman Brothers (2008 GFC)", use_container_width=True, type="primary" if st.session_state.get("active_crisis_scenario") == "CRISIS_2008_GFC" else "secondary"):
+            st.session_state["active_crisis_scenario"] = "CRISIS_2008_GFC"
+            st.session_state["what_if_oil"] = 0.0
+            st.session_state["what_if_real_yield"] = 0.0
+            st.session_state["what_if_hy"] = 0.0
+            st.rerun()
+        if st.button("⚡ Taper Tantrum (2013)", use_container_width=True, type="primary" if st.session_state.get("active_crisis_scenario") == "CRISIS_2013_TAPER" else "secondary"):
+            st.session_state["active_crisis_scenario"] = "CRISIS_2013_TAPER"
+            st.session_state["what_if_oil"] = 0.0
+            st.session_state["what_if_real_yield"] = 0.0
+            st.session_state["what_if_hy"] = 0.0
+            st.rerun()
+
+    with c_scen2:
+        if st.button("🦠 Pandemia & Liquidity Freeze (Marzo 2020)", use_container_width=True, type="primary" if st.session_state.get("active_crisis_scenario") == "CRISIS_2020_COVID" else "secondary"):
+            st.session_state["active_crisis_scenario"] = "CRISIS_2020_COVID"
+            st.session_state["what_if_oil"] = 0.0
+            st.session_state["what_if_real_yield"] = 0.0
+            st.session_state["what_if_hy"] = 0.0
+            st.rerun()
+        if st.button("📉 Shock Inflazione & Rialzo Tassi (2022)", use_container_width=True, type="primary" if st.session_state.get("active_crisis_scenario") == "CRISIS_2022_RATES" else "secondary"):
+            st.session_state["active_crisis_scenario"] = "CRISIS_2022_RATES"
+            st.session_state["what_if_oil"] = 0.0
+            st.session_state["what_if_real_yield"] = 0.0
+            st.session_state["what_if_hy"] = 0.0
+            st.rerun()
+
+    with c_scen3:
+        if st.button("🏦 Crac SVB & Bank Run (Marzo 2023)", use_container_width=True, type="primary" if st.session_state.get("active_crisis_scenario") == "CRISIS_2023_SVB" else "secondary"):
+            st.session_state["active_crisis_scenario"] = "CRISIS_2023_SVB"
+            st.session_state["what_if_oil"] = 0.0
+            st.session_state["what_if_real_yield"] = 0.0
+            st.session_state["what_if_hy"] = 0.0
+            st.rerun()
+        if st.button("🚢 Tariffe Trump & Shock Dazi (Marzo 2025)", use_container_width=True, type="primary" if st.session_state.get("active_crisis_scenario") == "CRISIS_2025_TARIFFS" else "secondary"):
+            st.session_state["active_crisis_scenario"] = "CRISIS_2025_TARIFFS"
+            st.session_state["what_if_oil"] = 0.0
+            st.session_state["what_if_real_yield"] = 0.0
+            st.session_state["what_if_hy"] = 0.0
+            st.rerun()
+
+    # Active Crisis Replay Diagnostic Banner & Drawdown Card
+    if crisis_sim_data:
+        c_scen_obj = crisis_sim_data["scenario"]
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(15, 23, 42, 0.95)); border: 2px solid {c_scen_obj.color_hex}; border-radius: 12px; padding: 18px; margin: 16px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div>
+                    <span style="font-size: 11px; text-transform: uppercase; color: {c_scen_obj.color_hex}; font-weight: 800; letter-spacing: 0.8px;">REPLAY STORICO ATTIVO • {c_scen_obj.badge}</span>
+                    <div style="font-size: 20px; font-weight: 800; color: #F8FAFC; margin-top: 2px;">{c_scen_obj.icon} {c_scen_obj.name} ({c_scen_obj.period})</div>
+                    <div style="font-size: 13px; color: #CBD5E1; margin-top: 4px;"><b>Catalizzatore Primario:</b> {c_scen_obj.catalyst}</div>
+                </div>
+                <div style="text-align: right;">
+                    <span style="background: {c_scen_obj.color_hex}22; border: 1.5px solid {c_scen_obj.color_hex}; color: {c_scen_obj.color_hex}; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 800;">
+                        {crisis_sim_data['ruptured_count']} Fili Spezzati (|Z| &ge; 2.0)
+                    </span>
+                </div>
+            </div>
+            <p style="font-size: 12.5px; color: #94A3B8; margin-top: 10px; line-height: 1.5;">{c_scen_obj.macro_narrative}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("##### 📊 Impatto Stimato sui Portafogli Istituzionali (Stress Test Max Drawdown):")
+        dd_col1, dd_col2, dd_col3, dd_col4, dd_col5 = st.columns(5)
+        with dd_col1:
+            st.metric("Max Drawdown 60/40 Classico", f"{c_scen_obj.historical_max_drawdown_60_40:.1f}%", delta="Equity+Bond Crash", delta_color="inverse")
+        with dd_col2:
+            st.metric("Max Drawdown All Weather (Dalio)", f"{c_scen_obj.historical_max_drawdown_all_weather:.1f}%", delta="Risk Parity", delta_color="inverse")
+        with dd_col3:
+            st.metric("Max Drawdown SPIDER Dynamic", f"{c_scen_obj.historical_max_drawdown_spider:.1f}%", delta="Resilienza Macro", delta_color="normal")
+        with dd_col4:
+            st.metric("Picco Volatilità VIX", f"{c_scen_obj.vix_peak:.1f}", delta="Panic Spikes")
+        with dd_col5:
+            st.metric("Picco Spread High Yield", f"{c_scen_obj.hy_spread_peak:.2f}%", delta="Credit Freeze")
+
+        with st.expander("🔬 **Tensore degli Shock Applicati sui 30 Nodi SPIDER (Tabella CCAR/Aladdin)**", expanded=False):
+            st.dataframe(pd.DataFrame(crisis_sim_data["impacted_nodes_detail"]), use_container_width=True, hide_index=True)
+
+    st.markdown("<hr style='margin: 16px 0; border-color: rgba(255,255,255,0.08);'>", unsafe_allow_html=True)
+    st.markdown("##### 🎛️ Oppure Simula Shock Manuali What-If (Slider Personalizzati):")
 
     sc1, sc2, sc3 = st.columns(3)
     with sc1:
@@ -2543,21 +2679,23 @@ with tabs[6]:
 
     col_btn1, col_btn2 = st.columns([1, 1])
     with col_btn1:
-        if st.button("🔥 Applica Shock e Ricalcola Tensione Tela", type="primary", use_container_width=True):
+        if st.button("🔥 Applica Shock Manuale e Ricalcola Rete", type="primary", use_container_width=True):
+            st.session_state["active_crisis_scenario"] = None  # switch to manual mode
             st.rerun()
     with col_btn2:
-        if st.button("🧹 Ripristina Dati Senza Shock (Reset Stress)", use_container_width=True):
+        if st.button("🧹 Ripristina Situazione Reale (Reset Completo Stress & Crisi)", use_container_width=True):
+            st.session_state["active_crisis_scenario"] = None
             st.session_state["what_if_oil"] = 0.0
             st.session_state["what_if_real_yield"] = 0.0
             st.session_state["what_if_hy"] = 0.0
             st.rerun()
 
     is_shock_active = (shock_oil != 0 or shock_tips != 0 or shock_hy != 0)
-    if is_shock_active:
+    if is_shock_active and not crisis_sim_data:
         st.markdown(f"""
         <div class="simulator-active-flash">
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="simulator-flash-title">⚠️ SIMULATORE ATTIVO: SHOCK IN CORSO</span>
+                <span class="simulator-flash-title">⚠️ SIMULATORE ATTIVO: SHOCK MANUALE IN CORSO</span>
             </div>
             <div style="color: #F8FAFC; font-size: 13.5px; margin-top: 6px; font-weight: 500;">
                 Shock applicati: <b style="color: #FCD34D;">[Petrolio: {shock_oil:+.1f}$, TIPS Reale: {shock_tips:+.2f}%, Spread HY: {shock_hy:+.2f}%]</b>.
@@ -2566,8 +2704,8 @@ with tabs[6]:
             </div>
         </div>
         """, unsafe_allow_html=True)
-    else:
-        st.info("💡 **Nessuno shock applicato:** I nodi e i fili della tela sottostante mostrano i dati certificati correnti. Muovi gli slider in alto per simulare uno scenario di stress estremo.")
+    elif not crisis_sim_data:
+        st.info("💡 **Nessuno shock applicato:** I nodi e i fili della tela mostrano i dati certificati correnti. Scegli uno scenario storico in alto o muovi gli slider per testare la resilienza della rete.")
 
     # Shock Impact Diagnostics Bar
     st.markdown("---")
