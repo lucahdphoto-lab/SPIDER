@@ -1402,7 +1402,7 @@ def show_super_intelligence_modal():
         "💡 Analisi Capex, Margini & Valutazioni PEG",
     ])
     with m_tab1:
-        c_m_dim1, c_m_dim2 = st.columns([1.5, 2.5])
+        c_m_dim1, c_m_dim2 = st.columns([1.8, 2.2])
         with c_m_dim1:
             modal_si_dim = st.radio(
                 "Prospettiva Tela SI:",
@@ -1411,13 +1411,31 @@ def show_super_intelligence_modal():
                 key="radio_si_modal_dim"
             )
         with c_m_dim2:
-            st.caption("🔍 **Zoom con il mouse:** Usa la rotella per zoomare. In 3D: trascina per ruotare a 360°, tasto destro per pan orbitale.")
+            modal_si_ring_sel = st.selectbox(
+                "Filtro Anello Gerarchico:",
+                [
+                    "TUTTI I LIVELLI (Vista Completa 13 Titoli)",
+                    "Anello 1: Silicio, Fonderie & EUV (NVDA, TSM, ASML, AVGO, AMD)",
+                    "Anello 2: Memorie HBM & Storage Flash (MU, WDC, STX, ORCL)",
+                    "Anello 3: Hyperscalers & Software (MSFT, GOOGL, AMZN, META)",
+                ],
+                index=0,
+                key="select_si_modal_ring"
+            )
+
+        modal_ring_filter = 0
+        if "Anello 1" in modal_si_ring_sel:
+            modal_ring_filter = 1
+        elif "Anello 2" in modal_si_ring_sel:
+            modal_ring_filter = 2
+        elif "Anello 3" in modal_si_ring_sel:
+            modal_ring_filter = 3
 
         is_modal_3d = ("3D" in modal_si_dim)
         if is_modal_3d:
-            fig_si_net = build_spider_si_network_3d_figure(si_state, dark_mode=True)
+            fig_si_net = build_spider_si_network_3d_figure(si_state, dark_mode=True, filter_ring=modal_ring_filter)
         else:
-            fig_si_net = build_spider_si_network_figure(si_state, dark_mode=True)
+            fig_si_net = build_spider_si_network_figure(si_state, dark_mode=True, filter_ring=modal_ring_filter)
 
         st.plotly_chart(
             fig_si_net,
@@ -4126,7 +4144,7 @@ with tabs[8]:
     with col_chart_left:
         st.markdown("##### 🕸️ SPIDER SI: Rete Radiale Concentrica & Supply-Chain")
         
-        c_si_dim1, c_si_dim2 = st.columns([1.5, 2.5])
+        c_si_dim1, c_si_dim2 = st.columns([1.6, 2.4])
         with c_si_dim1:
             tab_si_dim = st.radio(
                 "Prospettiva Rete SI:",
@@ -4135,13 +4153,31 @@ with tabs[8]:
                 key="radio_si_tab_dim"
             )
         with c_si_dim2:
-            st.caption("🔍 **Zoom con il mouse attivo:** Ruota la rotella per zoomare. In 3D: trascina per ruotare nello spazio 3D, tasto destro per pan.")
+            tab_si_ring_sel = st.selectbox(
+                "Filtro Anello Gerarchico:",
+                [
+                    "TUTTI I LIVELLI (Vista Completa 13 Titoli)",
+                    "Anello 1: Silicio, Fonderie & EUV (NVDA, TSM, ASML, AVGO, AMD)",
+                    "Anello 2: Memorie HBM & Storage Flash (MU, WDC, STX, ORCL)",
+                    "Anello 3: Hyperscalers & Software (MSFT, GOOGL, AMZN, META)",
+                ],
+                index=0,
+                key="select_si_tab_ring"
+            )
+
+        tab_ring_filter = 0
+        if "Anello 1" in tab_si_ring_sel:
+            tab_ring_filter = 1
+        elif "Anello 2" in tab_si_ring_sel:
+            tab_ring_filter = 2
+        elif "Anello 3" in tab_si_ring_sel:
+            tab_ring_filter = 3
 
         is_tab_3d = ("3D" in tab_si_dim)
         if is_tab_3d:
-            fig_si_net = build_spider_si_network_3d_figure(si_curr, dark_mode=True)
+            fig_si_net = build_spider_si_network_3d_figure(si_curr, dark_mode=True, filter_ring=tab_ring_filter)
         else:
-            fig_si_net = build_spider_si_network_figure(si_curr, dark_mode=True)
+            fig_si_net = build_spider_si_network_figure(si_curr, dark_mode=True, filter_ring=tab_ring_filter)
 
         st.plotly_chart(
             fig_si_net,

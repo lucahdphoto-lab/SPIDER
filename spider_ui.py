@@ -1595,14 +1595,14 @@ def build_spillover_net_transmission_figure(dy_state: Any, dark_mode: bool = Tru
 # SPIDER SUPER INTELLIGENCE (SI) FIGURES & CHARTS
 # ==============================================================================
 
-def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True) -> go.Figure:
+def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True, filter_ring: int = 0) -> go.Figure:
     """
     Costruisce la tela radiale interattiva 2D dedicata esclusivamente a SPIDER SI (Super Intelligence):
     - Centro: SI_CORE (Indice & Tensione del Super-Ciclo AI)
-    - Anello 1 (Silicio & Fonderia Sub-3nm): TSM, NVDA, AVGO, AMD
-    - Anello 2 (Memoria HBM & Cloud Specializzato): MU, ORCL
+    - Anello 1 (Silicio & Fonderia Sub-3nm): TSM, ASML, NVDA, AVGO, AMD
+    - Anello 2 (Memoria HBM & Storage Flash): MU, WDC, STX, ORCL
     - Anello 3 (Hyperscalers & Piattaforme Software): MSFT, GOOGL, AMZN, META
-    - Fili di filiera e fornitura (Supply Chain AI) e fili radiali ponderati
+    - Parametro filter_ring: 0 = TUTTI gli anelli; 1, 2 o 3 = visualizzazione isolata del singolo anello.
     """
     bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
     card_bg = "#0F172A" if dark_mode else "#FFFFFF"
@@ -1612,28 +1612,32 @@ def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True) -> go.
 
     # 1. Concentric Radial Circles
     rings_config = [
-        {"r": 1.05, "label": "Anello 1: Silicio, Fonderie & Litografia EUV", "color": "rgba(56, 189, 248, 0.25)"},
-        {"r": 1.95, "label": "Anello 2: Memorie HBM & Storage Flash SanDisk", "color": "rgba(245, 158, 11, 0.22)"},
-        {"r": 2.85, "label": "Anello 3: Hyperscalers & Piattaforme Software", "color": "rgba(168, 85, 247, 0.25)"},
+        {"ring_id": 1, "r": 1.05, "label": "Anello 1: Silicio, Fonderie & Litografia EUV", "color": "rgba(56, 189, 248, 0.40)"},
+        {"ring_id": 2, "r": 1.95, "label": "Anello 2: Memorie HBM & Storage Flash SanDisk", "color": "rgba(245, 158, 11, 0.38)"},
+        {"ring_id": 3, "r": 2.85, "label": "Anello 3: Hyperscalers & Piattaforme Software", "color": "rgba(168, 85, 247, 0.40)"},
     ]
 
     theta_circle = np.linspace(0, 2 * np.pi, 120)
     for rc in rings_config:
+        if filter_ring > 0 and rc["ring_id"] != filter_ring:
+            continue
         xc = rc["r"] * np.cos(theta_circle)
         yc = rc["r"] * np.sin(theta_circle)
         fig.add_trace(go.Scatter(
             x=xc, y=yc,
             mode="lines",
-            line=dict(color=rc["color"], width=1.2, dash="dash"),
+            line=dict(color=rc["color"], width=1.4 if filter_ring == rc["ring_id"] else 1.2, dash="dash"),
             hoverinfo="skip",
             showlegend=False,
         ))
 
-    # Node coordinates map
+    # Node coordinates map & ring lookup
     node_coords = {"SI_CORE": (0.0, 0.0)}
+    node_rings = {"SI_CORE": 0}
     radius_map = {1: 1.05, 2: 1.95, 3: 2.85}
 
     for stk in si_state.stocks:
+        node_rings[stk.ticker] = stk.ring
         r = radius_map.get(stk.ring, 2.0)
         rad = np.radians(stk.angle_deg)
         node_coords[stk.ticker] = (float(r * np.cos(rad)), float(r * np.sin(rad)))
@@ -1643,6 +1647,13 @@ def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True) -> go.
         src = lnk["source"]
         tgt = lnk["target"]
         if src in node_coords and tgt in node_coords:
+            ring_src = node_rings.get(src, 0)
+            ring_tgt = node_rings.get(tgt, 0)
+            # Filtro anello: se filter_ring > 0, mostra solo se almeno uno dei nodi appartiene all'anello
+            if filter_ring > 0:
+                if ring_src != filter_ring and ring_tgt != filter_ring:
+                    continue
+
             x0, y0 = node_coords[src]
             x1, y1 = node_coords[tgt]
             is_hub = (src == "SI_CORE")
@@ -1759,6 +1770,8 @@ def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True) -> go.
     marker_borders = []
 
     for stk in si_state.stocks:
+        if filter_ring > 0 and stk.ring != filter_ring:
+            continue
         x, y = node_coords[stk.ticker]
         x_nodes.append(x)
         y_nodes.append(y)
@@ -1834,26 +1847,29 @@ def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True) -> go.
     return fig
 
 
-def build_spider_si_network_3d_figure(si_state: Any, dark_mode: bool = True) -> go.Figure:
+def build_spider_si_network_3d_figure(si_state: Any, dark_mode: bool = True, filter_ring: int = 0) -> go.Figure:
     """
     Costruisce la visualizzazione tridimensionale spaziale (WebGL 3D) di SPIDER SI (Super Intelligence):
     - Centro elevato in 3D: SI_CORE
     - 3 Cerchi concentrici nello spazio 3D (Silicio/Fonderie, Memorie/Cloud, Hyperscalers/Piattaforme)
     - Nodi posizionati a quote Z dinamiche proporzionali allo Z-Score / Performance
     - Fasci tridimensionali luminosi per la supply-chain e i flussi di capex GPU
+    - Parametro filter_ring: 0 = TUTTI gli anelli; 1, 2 o 3 = visualizzazione isolata del singolo anello.
     """
     bg_color = "rgba(11, 15, 25, 1.0)" if dark_mode else "rgba(248, 250, 252, 1.0)"
     text_color = "#F8FAFC" if dark_mode else "#0F172A"
 
     fig = go.Figure()
 
-    # 1. Coordinate 3D dei nodi
+    # 1. Coordinate 3D dei nodi & ring lookup
     radius_map = {1: 1.15, 2: 2.05, 3: 2.95}
     coords_3d: Dict[str, Tuple[float, float, float]] = {
         "SI_CORE": (0.0, 0.0, 0.45)
     }
+    node_rings_3d: Dict[str, int] = {"SI_CORE": 0}
 
     for stk in si_state.stocks:
+        node_rings_3d[stk.ticker] = stk.ring
         r = radius_map.get(stk.ring, 2.0)
         rad = np.radians(stk.angle_deg)
         x = float(r * np.cos(rad))
@@ -1866,11 +1882,13 @@ def build_spider_si_network_3d_figure(si_state: Any, dark_mode: bool = True) -> 
     # 2. Anelli concentrici 3D nello spazio
     ring_theta = np.linspace(0, 2 * np.pi, 80)
     rings_3d_meta = [
-        {"r": 1.15, "color": "rgba(56, 189, 248, 0.35)", "name": "Anello 1: Silicio, Fonderie & Litografia EUV"},
-        {"r": 2.05, "color": "rgba(245, 158, 11, 0.30)", "name": "Anello 2: Memorie HBM & Storage Flash SanDisk"},
-        {"r": 2.95, "color": "rgba(168, 85, 247, 0.35)", "name": "Anello 3: Hyperscalers & Software"},
+        {"ring_id": 1, "r": 1.15, "color": "rgba(56, 189, 248, 0.40)", "name": "Anello 1: Silicio, Fonderie & Litografia EUV"},
+        {"ring_id": 2, "r": 2.05, "color": "rgba(245, 158, 11, 0.38)", "name": "Anello 2: Memorie HBM & Storage Flash SanDisk"},
+        {"ring_id": 3, "r": 2.95, "color": "rgba(168, 85, 247, 0.40)", "name": "Anello 3: Hyperscalers & Software"},
     ]
     for r_info in rings_3d_meta:
+        if filter_ring > 0 and r_info["ring_id"] != filter_ring:
+            continue
         rad = r_info["r"]
         cx = [float(rad * np.cos(t)) for t in ring_theta]
         cy = [float(rad * np.sin(t)) for t in ring_theta]
@@ -1878,7 +1896,7 @@ def build_spider_si_network_3d_figure(si_state: Any, dark_mode: bool = True) -> 
         fig.add_trace(go.Scatter3d(
             x=cx, y=cy, z=cz,
             mode="lines",
-            line=dict(color=r_info["color"], width=2.0),
+            line=dict(color=r_info["color"], width=2.4 if filter_ring == r_info["ring_id"] else 2.0),
             hoverinfo="name",
             name=r_info["name"],
             showlegend=False,
@@ -1889,6 +1907,12 @@ def build_spider_si_network_3d_figure(si_state: Any, dark_mode: bool = True) -> 
         src = lnk["source"]
         tgt = lnk["target"]
         if src in coords_3d and tgt in coords_3d:
+            ring_src = node_rings_3d.get(src, 0)
+            ring_tgt = node_rings_3d.get(tgt, 0)
+            if filter_ring > 0:
+                if ring_src != filter_ring and ring_tgt != filter_ring:
+                    continue
+
             x0, y0, z0 = coords_3d[src]
             x1, y1, z1 = coords_3d[tgt]
             is_hub = (src == "SI_CORE")
@@ -1974,12 +1998,14 @@ def build_spider_si_network_3d_figure(si_state: Any, dark_mode: bool = True) -> 
         showlegend=False,
     ))
 
-    # 5. I 10 Titoli AI in 3D
+    # 5. I 13 Titoli AI in 3D
     x_nodes, y_nodes, z_nodes = [], [], []
     text_labels, hover_texts = [], []
     marker_colors, marker_sizes = [], []
 
     for stk in si_state.stocks:
+        if filter_ring > 0 and stk.ring != filter_ring:
+            continue
         x, y, z = coords_3d[stk.ticker]
         x_nodes.append(x)
         y_nodes.append(y)
