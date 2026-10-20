@@ -433,6 +433,7 @@ def build_spider_web_figure(
         paper_bgcolor=bg_color,
         plot_bgcolor=bg_color,
         dragmode="lasso",  # Default freeform lasso selection enabled
+        uirevision="spider_web_2d",  # Preserves user zoom, pan, and manual camera view across updates
         margin=dict(l=10, r=10, t=20, b=20),
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-3.6, 3.6]),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-3.6, 3.6], scaleanchor="x", scaleratio=1),
@@ -816,12 +817,14 @@ def build_spider_web_3d_figure(
 
     fig.update_layout(
         paper_bgcolor=bg_color,
+        uirevision="spider_web_3d",  # Preserves user 3D orbital camera angles, rotation and zoom
         scene=dict(
             xaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False, title=""),
             yaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False, title=""),
             zaxis=dict(showbackground=False, showgrid=True, zeroline=False, showticklabels=False, title="", gridcolor="rgba(255,255,255,0.06)"),
             camera=camera,
             bgcolor=bg_color,
+            uirevision="spider_web_3d_scene",  # Keeps client scene orientation when user moves camera
         ),
         margin=dict(l=0, r=0, t=10, b=10),
         height=720,
@@ -1830,6 +1833,7 @@ def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True, filter
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-3.4, 3.4], scaleanchor="x", scaleratio=1),
         font=dict(family="Inter, sans-serif"),
         showlegend=True,
+        uirevision=f"si_network_2d_{filter_ring}",  # Preserves pan and zoom position unless filter_ring changes
         legend=dict(
             orientation="h",
             yanchor="bottom",
@@ -2053,12 +2057,14 @@ def build_spider_si_network_3d_figure(si_state: Any, dark_mode: bool = True, fil
 
     fig.update_layout(
         paper_bgcolor=bg_color,
+        uirevision=f"si_network_3d_{filter_ring}",  # Preserves user 3D camera angles and position
         scene=dict(
             xaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False, title=""),
             yaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False, title=""),
             zaxis=dict(showbackground=False, showgrid=True, zeroline=False, showticklabels=False, title="", gridcolor="rgba(255,255,255,0.06)"),
             camera=camera,
             bgcolor=bg_color,
+            uirevision=f"si_scene_3d_{filter_ring}",  # Preserves active rotated/zoomed user camera
         ),
         margin=dict(l=0, r=0, t=10, b=10),
         height=620,

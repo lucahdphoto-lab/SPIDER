@@ -1444,6 +1444,11 @@ def show_super_intelligence_modal():
                 "scrollZoom": True,
                 "displaylogo": False,
                 "modeBarButtonsToAdd": ["zoomIn2d", "zoomOut2d", "resetScale2d"] if not is_modal_3d else [],
+                "toImageButtonOptions": {
+                    "format": "png",
+                    "filename": f"SPIDER_SI_{'3D' if is_modal_3d else '2D'}_Ring{modal_ring_filter if modal_ring_filter > 0 else 'All'}_Snapshot",
+                    "scale": 2.5,
+                },
             },
             key=f"plotly_modal_si_chart_{'3d' if is_modal_3d else '2d'}"
         )
@@ -2637,6 +2642,11 @@ with tabs[0]:
             "scrollZoom": enable_scroll_zoom,
             "displaylogo": False,
             "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"] if not is_3d else [],
+            "toImageButtonOptions": {
+                "format": "png",
+                "filename": f"SPIDER_Web_{'3D' if is_3d else '2D'}_Snapshot",
+                "scale": 2.5,
+            },
         },
         key=f"spider_web_chart_selection_{'3d' if is_3d else '2d'}"
     )
@@ -4186,6 +4196,11 @@ with tabs[8]:
                 "scrollZoom": True,
                 "displaylogo": False,
                 "modeBarButtonsToAdd": ["zoomIn2d", "zoomOut2d", "resetScale2d"] if not is_tab_3d else [],
+                "toImageButtonOptions": {
+                    "format": "png",
+                    "filename": f"SPIDER_SI_{'3D' if is_tab_3d else '2D'}_Ring{tab_ring_filter if tab_ring_filter > 0 else 'All'}_Snapshot",
+                    "scale": 2.5,
+                },
             },
             key=f"tab_si_fig_network_{'3d' if is_tab_3d else '2d'}"
         )
