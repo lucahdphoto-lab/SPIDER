@@ -1612,8 +1612,8 @@ def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True) -> go.
 
     # 1. Concentric Radial Circles
     rings_config = [
-        {"r": 1.05, "label": "Anello 1: Silicio & Fonderie", "color": "rgba(56, 189, 248, 0.25)"},
-        {"r": 1.95, "label": "Anello 2: Memoria HBM & Cloud Specializzato", "color": "rgba(245, 158, 11, 0.22)"},
+        {"r": 1.05, "label": "Anello 1: Silicio, Fonderie & Litografia EUV", "color": "rgba(56, 189, 248, 0.25)"},
+        {"r": 1.95, "label": "Anello 2: Memorie HBM & Storage Flash SanDisk", "color": "rgba(245, 158, 11, 0.22)"},
         {"r": 2.85, "label": "Anello 3: Hyperscalers & Piattaforme Software", "color": "rgba(168, 85, 247, 0.25)"},
     ]
 
@@ -1792,8 +1792,8 @@ def build_spider_si_network_3d_figure(si_state: Any, dark_mode: bool = True) -> 
     # 2. Anelli concentrici 3D nello spazio
     ring_theta = np.linspace(0, 2 * np.pi, 80)
     rings_3d_meta = [
-        {"r": 1.15, "color": "rgba(56, 189, 248, 0.35)", "name": "Anello 1: Silicio & Fonderie"},
-        {"r": 2.05, "color": "rgba(245, 158, 11, 0.30)", "name": "Anello 2: Memorie HBM & Cloud"},
+        {"r": 1.15, "color": "rgba(56, 189, 248, 0.35)", "name": "Anello 1: Silicio, Fonderie & Litografia EUV"},
+        {"r": 2.05, "color": "rgba(245, 158, 11, 0.30)", "name": "Anello 2: Memorie HBM & Storage Flash SanDisk"},
         {"r": 2.95, "color": "rgba(168, 85, 247, 0.35)", "name": "Anello 3: Hyperscalers & Software"},
     ]
     for r_info in rings_3d_meta:

@@ -65,13 +65,32 @@ AI_UNIVERSE_CONFIG: Dict[str, Dict[str, Any]] = {
         "supply_chain_role": "Fondazione fisica monopolistica della manifattura chip avanzati",
         "downstream_targets": ["NVDA", "AVGO", "AMD"],
     },
+    "ASML": {
+        "name": "ASML Holding N.V.",
+        "ticker": "ASML",
+        "subsector": "Fonderie & Litografia EUV",
+        "subsector_code": "FOUNDRY",
+        "ring": 1,
+        "angle_deg": 180,
+        "role_badge": "🔬 Monopolio Macchine EUV",
+        "color_hex": "#06B6D4",  # Cyan
+        "ai_focus": "Macchinari litografici Extreme Ultraviolet (EUV) indispensabili per chip sub-3nm",
+        "market_cap_b": 365.0,
+        "fwd_pe": 31.5,
+        "peg_ratio": 1.55,
+        "rev_growth_yoy": 18.5,
+        "gross_margin_pct": 51.5,
+        "capex_impulse_b": 2.8,
+        "supply_chain_role": "Monopolista mondiale dei macchinari litografici EUV forniti a TSMC, Samsung e Micron",
+        "downstream_targets": ["TSM", "MU"],
+    },
     "AVGO": {
         "name": "Broadcom Inc.",
         "ticker": "AVGO",
         "subsector": "Networking & Custom ASIC",
         "subsector_code": "CHIPS",
         "ring": 1,
-        "angle_deg": 225,
+        "angle_deg": 250,
         "role_badge": "🌐 Networking & Custom ASIC",
         "color_hex": "#3B82F6",  # Blue
         "ai_focus": "Switch Ethernet Tomahawk/Jericho, ASIC proprietari per Google e Meta",
@@ -90,7 +109,7 @@ AI_UNIVERSE_CONFIG: Dict[str, Dict[str, Any]] = {
         "subsector": "Chips & Acceleratori",
         "subsector_code": "CHIPS",
         "ring": 1,
-        "angle_deg": 315,
+        "angle_deg": 320,
         "role_badge": "⚡ AI GPU Challenger",
         "color_hex": "#EC4899",  # Pink
         "ai_focus": "Acceleratori Instinct MI300X/MI325X e CPU EPYC per datacenter",
@@ -106,10 +125,10 @@ AI_UNIVERSE_CONFIG: Dict[str, Dict[str, Any]] = {
     "MU": {
         "name": "Micron Technology",
         "ticker": "MU",
-        "subsector": "Memorie HBM & Storage",
+        "subsector": "Memorie HBM & Storage Flash",
         "subsector_code": "MEMORY",
         "ring": 2,
-        "angle_deg": 90,
+        "angle_deg": 40,
         "role_badge": "💾 Memoria Ultra-Fast HBM3E",
         "color_hex": "#F59E0B",  # Amber
         "ai_focus": "High Bandwidth Memory (HBM3E / HBM4) ad altissima capacità",
@@ -122,13 +141,51 @@ AI_UNIVERSE_CONFIG: Dict[str, Dict[str, Any]] = {
         "supply_chain_role": "Fornisce la memoria ultra-rapida per superare il memory-wall nei modelli LLM",
         "downstream_targets": ["NVDA"],
     },
+    "WDC": {
+        "name": "Western Digital (SanDisk)",
+        "ticker": "WDC",
+        "subsector": "Memorie HBM & Storage Flash",
+        "subsector_code": "MEMORY",
+        "ring": 2,
+        "angle_deg": 130,
+        "role_badge": "💾 SanDisk 3D NAND & SSD",
+        "color_hex": "#F59E0B",  # Amber
+        "ai_focus": "Memorie 3D NAND Flash BiCS e SSD Enterprise PCIe Gen5 SanDisk ad alta velocità per server AI",
+        "market_cap_b": 78.0,
+        "fwd_pe": 12.5,
+        "peg_ratio": 0.85,
+        "rev_growth_yoy": 28.0,
+        "gross_margin_pct": 38.0,
+        "capex_impulse_b": 3.2,
+        "supply_chain_role": "Fornitore leader di moduli SSD e memorie flash SanDisk per il data caching dei cluster GPU",
+        "downstream_targets": ["NVDA", "MSFT", "AMZN"],
+    },
+    "STX": {
+        "name": "Seagate Technology",
+        "ticker": "STX",
+        "subsector": "Memorie HBM & Storage Flash",
+        "subsector_code": "MEMORY",
+        "ring": 2,
+        "angle_deg": 200,
+        "role_badge": "💽 Mass Storage AI Data Lakes",
+        "color_hex": "#EAB308",  # Yellow Gold
+        "ai_focus": "Storage ad altissima densità (HAMR 30TB+) per l'archiviazione massiva dei dataset di training AI",
+        "market_cap_b": 28.0,
+        "fwd_pe": 15.2,
+        "peg_ratio": 1.05,
+        "rev_growth_yoy": 22.0,
+        "gross_margin_pct": 33.5,
+        "capex_impulse_b": 1.2,
+        "supply_chain_role": "Fornitore di storage di massa per i data lake di addestramento dei modelli LLM multimodali",
+        "downstream_targets": ["MSFT", "AMZN", "GOOGL"],
+    },
     "ORCL": {
         "name": "Oracle Corporation",
         "ticker": "ORCL",
         "subsector": "Datacenter & Cloud Infra",
         "subsector_code": "DATACENTER",
         "ring": 2,
-        "angle_deg": 270,
+        "angle_deg": 290,
         "role_badge": "🏢 OCI AI Supercluster",
         "color_hex": "#DC2626",  # Red
         "ai_focus": "Infrastruttura OCI per cluster supercomputer GPU dedicati",
@@ -339,13 +396,21 @@ class SuperIntelligenceEngine:
                 df_prices = raw["Close"].copy()
             else:
                 df_prices = raw.copy()
-            df_prices = df_prices.dropna().copy()
+            # Forward fill / backward fill per column so individual missing days don't wipe the whole dataframe
+            df_prices = df_prices.ffill().bfill()
             
-            # Save into SQLite cache
+            # Fill any completely missing ticker from cache or synthetic fallback
+            df_fallback = self._build_synthetic_fallback()
             for t in tickers:
-                if t in df_prices.columns:
+                if t not in df_prices.columns or df_prices[t].dropna().empty or len(df_prices[t].dropna()) < 30:
+                    if not df_cached.empty and t in df_cached.columns and not df_cached[t].dropna().empty:
+                        df_prices[t] = df_cached[t]
+                    else:
+                        df_prices[t] = df_fallback[t]
+                else:
                     s_col = df_prices[t].dropna()
-                    db.save_series(f"SI_{t}", s_col, {"ticker": t, "source": "YahooFinance", "frequency": "D", "unit": "USD"})
+                    if len(s_col) > 30:
+                        db.save_series(f"SI_{t}", s_col, {"ticker": t, "source": "YahooFinance", "frequency": "D", "unit": "USD"})
             return df_prices
         except Exception as e:
             logger.error(f"Failed to fetch live SI tickers: {e}")
@@ -359,13 +424,14 @@ class SuperIntelligenceEngine:
         dates = pd.date_range(end=pd.Timestamp.now(), periods=300, freq="B")
         np.random.seed(42)
         base_prices = {
-            "NVDA": 138.0, "TSM": 195.0, "AVGO": 178.0, "AMD": 156.0, "MU": 110.0,
-            "MSFT": 420.0, "GOOGL": 175.0, "AMZN": 192.0, "ORCL": 170.0, "META": 585.0
+            "NVDA": 138.0, "TSM": 195.0, "ASML": 760.0, "AVGO": 178.0, "AMD": 156.0,
+            "MU": 110.0, "WDC": 72.0, "STX": 105.0, "ORCL": 170.0,
+            "MSFT": 420.0, "GOOGL": 175.0, "AMZN": 192.0, "META": 585.0
         }
         data = {}
         for t, p0 in base_prices.items():
             drift = 0.0008  # positive trend
-            vol = 0.018 if t in ["NVDA", "MU", "AMD"] else 0.012
+            vol = 0.018 if t in ["NVDA", "MU", "AMD", "WDC", "STX"] else 0.012
             ret = np.random.normal(drift, vol, len(dates))
             ret[0] = 0.0
             price_series = p0 * np.exp(np.cumsum(ret))
@@ -382,13 +448,11 @@ class SuperIntelligenceEngine:
         df_prices = self.fetch_or_load_prices(force_refresh=force_refresh)
         tickers = list(AI_UNIVERSE_CONFIG.keys())
         
-        # Ensure columns exist
-        available_tickers = [t for t in tickers if t in df_prices.columns]
-        if len(available_tickers) < len(tickers):
-            df_fallback = self._build_synthetic_fallback()
-            for t in tickers:
-                if t not in df_prices.columns:
-                    df_prices[t] = df_fallback[t]
+        # Ensure all columns exist and are populated
+        df_fallback = self._build_synthetic_fallback()
+        for t in tickers:
+            if t not in df_prices.columns or df_prices[t].dropna().empty or len(df_prices[t].dropna()) < 30:
+                df_prices[t] = df_fallback[t]
 
         # Calculate metrics for each stock
         stock_objs: List[SuperIntelligenceStock] = []
@@ -475,8 +539,8 @@ class SuperIntelligenceEngine:
         # Subsector analysis
         subsectors = {
             "CHIPS": {"label": "Chips & Acceleratori", "color": "#10B981", "tickers": ["NVDA", "AVGO", "AMD"]},
-            "FOUNDRY": {"label": "Fonderia Sub-3nm", "color": "#06B6D4", "tickers": ["TSM"]},
-            "MEMORY": {"label": "Memorie HBM & Storage", "color": "#F59E0B", "tickers": ["MU"]},
+            "FOUNDRY": {"label": "Fonderie & Litografia EUV", "color": "#06B6D4", "tickers": ["TSM", "ASML"]},
+            "MEMORY": {"label": "Memorie HBM & Storage Flash", "color": "#F59E0B", "tickers": ["MU", "WDC", "STX"]},
             "DATACENTER": {"label": "Datacenter & Cloud Infra", "color": "#3B82F6", "tickers": ["MSFT", "AMZN", "ORCL"]},
             "SOFTWARE": {"label": "Piattaforme & Modelli Open", "color": "#8B5CF6", "tickers": ["GOOGL", "META"]},
         }

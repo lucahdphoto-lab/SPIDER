@@ -1310,17 +1310,17 @@ def show_zscore_modal():
 
 
 
-# Modal Dialog 8: SPIDER SI (Super Intelligence - 10 Giganti dell'Intelligenza Artificiale)
-@st.dialog("🤖 SPIDER SI (Super Intelligence): I 10 Giganti dell'Intelligenza Artificiale", width="large")
+# Modal Dialog 8: SPIDER SI (Super Intelligence - 13 Giganti dell'Intelligenza Artificiale)
+@st.dialog("🤖 SPIDER SI (Super Intelligence): I 13 Giganti dell'Intelligenza Artificiale", width="large")
 def show_super_intelligence_modal():
     si_state = si_engine.compute_si_state()
     st.markdown(f"""
     <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(56, 189, 248, 0.15)); border: 2px solid #8B5CF6; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
             <div>
-                <span style="font-size: 11px; text-transform: uppercase; color: #8B5CF6; font-weight: 800; letter-spacing: 0.8px;">SPIDER SI • SUPER INTELLIGENCE 10 ECOSYSTEM</span>
+                <span style="font-size: 11px; text-transform: uppercase; color: #8B5CF6; font-weight: 800; letter-spacing: 0.8px;">SPIDER SI • SUPER INTELLIGENCE 13 ECOSYSTEM</span>
                 <div style="font-size: 22px; font-weight: 800; color: #F8FAFC; margin-top: 2px;">Monitoraggio Istituzionale dell'Ecosistema AI Globale</div>
-                <div style="font-size: 12.5px; color: #CBD5E1; margin-top: 4px;">Monitoraggio congiunto della catena del valore dell'AI: Fonderie, Chip & GPU, Memorie HBM, Datacenter Hyperscalers e Piattaforme Software.</div>
+                <div style="font-size: 12.5px; color: #CBD5E1; margin-top: 4px;">Monitoraggio congiunto dell'intera filiera AI: Litografia EUV (ASML), Fonderie (TSMC), Chip & GPU (NVDA, AVGO, AMD), Memorie HBM & Storage Flash (Micron, Western Digital / SanDisk, Seagate), Datacenter Hyperscalers e Software.</div>
             </div>
             <div style="background: rgba(15, 23, 42, 0.9); border: 1.5px solid {si_state.ai_cycle_color}; border-radius: 10px; padding: 10px 16px; text-align: center; min-width: 160px;">
                 <div style="font-size: 10.5px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">AI Momentum Score</div>
@@ -1338,7 +1338,7 @@ def show_super_intelligence_modal():
         <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px 12px; text-align: center;">
             <div style="font-size: 10px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Market Cap AI Aggregato</div>
             <div style="font-size: 19px; font-weight: 800; color: #38BDF8; font-family: monospace;">${si_state.total_market_cap_t:.2f} Trilioni</div>
-            <div style="font-size: 10.5px; color: #64748B;">10 Giganti Globali</div>
+            <div style="font-size: 10.5px; color: #64748B;">13 Giganti Globali</div>
         </div>
         """, unsafe_allow_html=True)
     with c2:
@@ -1371,7 +1371,7 @@ def show_super_intelligence_modal():
     # Dual tabs inside modal: Tela Radiale & Tabella Fondamentali
     m_tab1, m_tab2, m_tab3, m_tab4 = st.tabs([
         "🕸️ Tela Radiale SPIDER SI",
-        "📋 Cockpit Fondamentale dei 10 Giganti",
+        "📋 Cockpit Fondamentale dei 13 Giganti",
         "🔗 Matrice Correlazioni & Sotto-Settori",
         "💡 Analisi Capex, Margini & Valutazioni PEG",
     ])
@@ -1632,7 +1632,7 @@ with k_si:
     st.markdown(f"""
     <div class="spider-top-kpi" style="border-left: 3px solid #8B5CF6;">
         <div class="kpi-top-row">
-            <span class="kpi-title" title="Super Intelligence (SI): I 10 Giganti dell'Intelligenza Artificiale Mondiale">SI - SUPER INT.</span>
+            <span class="kpi-title" title="Super Intelligence (SI): I 13 Giganti dell'Intelligenza Artificiale Mondiale">SI - SUPER INT.</span>
             {render_cycle_stars_badge(5)}
         </div>
         <div class="kpi-body">
@@ -1892,16 +1892,16 @@ Versione Software: {APP_VERSION} (Institutional Quantitative Architecture)
 - Ruoli Sistemici dei Nodi (Trasmettitori Netti vs Ricevitori):
 {chr(10).join(f"  * [{p.symbol:8s}] {p.name:32s}: Net Spillover {p.net_spillover_pct:+5.1f}% (TO: {p.to_others_pct:4.1f}% | FROM: {p.from_others_pct:4.1f}%) -> {p.role_badge}" for p in dy_curr.nodes_profile)}
 
-9. SPIDER SI: SUPER INTELLIGENCE (I 10 GIGANTI DELL'INTELLIGENZA ARTIFICIALE)
+9. SPIDER SI: SUPER INTELLIGENCE (I 13 GIGANTI DELL'INTELLIGENZA ARTIFICIALE)
 --------------------------------------------------------------------------------
 - Indice Composito SI (Base 1000): {si_curr.composite_index:.1f} (YTD: {si_curr.composite_ytd_pct:+.1f}% | 1 Mese: {si_curr.composite_1m_pct:+.1f}%)
-- Capitalizzazione Totale 10 Giganti AI: ${si_curr.total_market_cap_t:.2f} Trilioni
+- Capitalizzazione Totale 13 Giganti AI: ${si_curr.total_market_cap_t:.2f} Trilioni
 - Spesa in Conto Capitale Totale (Annual AI Capex): ${si_curr.total_annual_capex_b:.1f} Miliardi
 - AI Momentum Score Sistemico: {si_curr.ai_momentum_score:.1f} / 100
 - Regime Ciclo AI: {si_curr.ai_cycle_regime}
 - Top Performer: {si_curr.top_performer.name} ({si_curr.top_performer.ticker}) con {si_curr.top_performer.change_ytd_pct:+.1f}% YTD
-- Azioni Monitorate nel Cockpit Fondamentale (10 Titoli):
-{chr(10).join(f"  * [{s.ticker:5s}] {s.name:22s}: Cap ${s.market_cap_b:5.0f}B | P/E {s.pe_ratio:4.1f} | Rev YoY {s.rev_growth_yoy_pct:+5.1f}% | Capex ${s.annual_capex_b:4.1f}B | YTD {s.change_ytd_pct:+5.1f}% [{s.subsector}]" for s in sorted(si_curr.stocks, key=lambda x: x.market_cap_b, reverse=True))}
+- Azioni Monitorate nel Cockpit Fondamentale (13 Titoli Leader):
+{chr(10).join(f"  * [{s.ticker:5s}] {s.name:24s}: Cap ${s.market_cap_b:5.0f}B | P/E {s.pe_ratio:4.1f} | Rev YoY {s.rev_growth_yoy_pct:+5.1f}% | Capex ${s.annual_capex_b:4.1f}B | YTD {s.change_ytd_pct:+5.1f}% [{s.subsector}]" for s in sorted(si_curr.stocks, key=lambda x: x.market_cap_b, reverse=True))}
 
 10. DISTRIBUZIONE & DIAGNOSI Z-SCORE DEGLI INDICATORI (30 NODI)
 --------------------------------------------------------------------------------
@@ -2100,7 +2100,7 @@ with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
         df_dy_mat = dy_curr.spillover_matrix.copy().reset_index()
         df_dy_mat.rename(columns={"index": "Source_Node (FROM)"}, inplace=True)
         df_dy_mat.to_excel(writer, index=False, sheet_name="Matrice_Spillover_Diebold")
-    # Tabella SPIDER SI: 10 Giganti dell'Intelligenza Artificiale
+    # Tabella SPIDER SI: 13 Giganti dell'Intelligenza Artificiale
     si_export_data = []
     for s in si_curr.stocks:
         si_export_data.append({
@@ -2122,7 +2122,7 @@ with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
             "ZScore_Fondamentale": s.z_score,
             "Descrizione_Business": s.description,
         })
-    pd.DataFrame(si_export_data).to_excel(writer, index=False, sheet_name="SPIDER_SI_10_Azioni_AI")
+    pd.DataFrame(si_export_data).to_excel(writer, index=False, sheet_name="SPIDER_SI_13_Azioni_AI")
 
     pd.DataFrame([{
         "Versione_SPIDER": APP_VERSION,
@@ -2360,7 +2360,7 @@ tabs = st.tabs([
     "🔬 Focus Nodo & Relazioni",
     "⚡ Simulatore Stress What-If",
     "💼 Struttura Portafoglio (Asset Allocation)",
-    "🤖 SPIDER SI (Super Intelligence 10)",
+    "🤖 SPIDER SI (Super Intelligence)",
 ])
 
 
@@ -3982,11 +3982,11 @@ INTEGRAZIONE MULTI-FATTORE ATTIVA
 
 
 # ==============================================================================
-# TAB 9: SPIDER SI (SUPER INTELLIGENCE - I 10 GIGANTI DELL'AI)
+# TAB 9: SPIDER SI (SUPER INTELLIGENCE - I 13 GIGANTI DELL'AI)
 # ==============================================================================
 with tabs[8]:
-    st.markdown("#### 🤖 SPIDER SI: Cockpit Fondamentale & Rete Radiale dei 10 Giganti dell'Intelligenza Artificiale")
-    st.caption("Monitoraggio sistemico e fondamentale delle 10 aziende a maggiore capitalizzazione abilitatrici dell'ecosistema AI mondiale: chip & acceleratori, fonderie al silicio avanzate, memorie HBM, infrastruttura datacenter cloud e piattaforme software.")
+    st.markdown("#### 🤖 SPIDER SI: Cockpit Fondamentale & Rete Radiale dei 13 Giganti dell'Intelligenza Artificiale")
+    st.caption("Monitoraggio sistemico e fondamentale delle 13 aziende a maggiore capitalizzazione abilitatrici dell'ecosistema AI mondiale: chip & acceleratori (NVDA, AVGO, AMD), litografia EUV (ASML), fonderie al silicio avanzate (TSMC), memorie HBM & storage flash (Micron, Western Digital / SanDisk, Seagate), infrastruttura datacenter cloud e piattaforme software.")
 
     # Executive AI Cycle Regime Banner
     st.markdown(f"""
@@ -4014,9 +4014,9 @@ with tabs[8]:
     with col_k1:
         st.markdown(f"""
         <div class="spider-kpi">
-            <div class="kpi-title">Capitalizzazione Totale (10 Giganti)</div>
+            <div class="kpi-title">Capitalizzazione Totale (13 Giganti)</div>
             <div class="kpi-main-val" style="color: #38BDF8; font-size: 22px;">${si_curr.total_market_cap_t:.2f}T</div>
-            <div class="kpi-sub-val">~35% del peso aggregato S&P 500</div>
+            <div class="kpi-sub-val">~38% del peso aggregato S&P 500</div>
         </div>
         """, unsafe_allow_html=True)
     with col_k2:
@@ -4106,7 +4106,7 @@ with tabs[8]:
             st.caption("Ordinamento dei titoli per efficienza valutativa (PEG Ratio).")
 
     # Granular Fundamental Matrix Table
-    st.markdown("##### 📋 Matrice Fondamentale Analitica dei 10 Giganti dell'Intelligenza Artificiale:")
+    st.markdown("##### 📋 Matrice Fondamentale Analitica dei 13 Giganti dell'Intelligenza Artificiale:")
     df_si_table = pd.DataFrame([
         {
             "Ticker": s.ticker,

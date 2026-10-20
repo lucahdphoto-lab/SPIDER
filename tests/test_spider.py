@@ -222,10 +222,10 @@ class TestSpiderArchitecture(unittest.TestCase):
         si_state = si_engine.compute_si_state()
         self.assertIsInstance(si_state, SuperIntelligenceState)
 
-        # 10 Top Capitalized AI Stocks
-        self.assertEqual(len(si_state.stocks), 10, "Expected exactly 10 AI megacap stocks")
+        # 13 Top Capitalized AI Stocks
+        self.assertEqual(len(si_state.stocks), 13, "Expected exactly 13 AI megacap stocks")
         tickers = {s.ticker for s in si_state.stocks}
-        expected_tickers = {"NVDA", "TSM", "AVGO", "AMD", "MU", "MSFT", "GOOGL", "AMZN", "ORCL", "META"}
+        expected_tickers = {"NVDA", "TSM", "ASML", "AVGO", "AMD", "MU", "WDC", "STX", "MSFT", "GOOGL", "AMZN", "ORCL", "META"}
         self.assertEqual(tickers, expected_tickers)
 
         # Check Aggregates
@@ -236,11 +236,11 @@ class TestSpiderArchitecture(unittest.TestCase):
         self.assertLessEqual(si_state.ai_momentum_score, 100.0)
         self.assertIsNotNone(si_state.top_performer)
 
-        # Correlation Matrix Dimensions (10x10)
-        self.assertEqual(si_state.correlation_matrix.shape, (10, 10))
+        # Correlation Matrix Dimensions (13x13)
+        self.assertEqual(si_state.correlation_matrix.shape, (13, 13))
 
         # Check Supply-Chain & Radial Spider Links
-        self.assertGreaterEqual(len(si_state.spider_links), 15, "Expected at least 15 supply chain / radial links")
+        self.assertGreaterEqual(len(si_state.spider_links), 20, "Expected at least 20 supply chain / radial links")
 
         # Test Plotly Visual Builders
         fig_net = build_spider_si_network_figure(si_state, dark_mode=True)
