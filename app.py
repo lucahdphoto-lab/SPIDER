@@ -1371,12 +1371,13 @@ def show_super_intelligence_modal():
 
     # Report Download Bar (.txt and .xlsx)
     si_rep_txt, si_rep_xlsx = generate_si_reports(si_state)
+    si_modal_date = getattr(si_state, "last_update", datetime.datetime.now()).strftime("%Y%m%d")
     r_col1, r_col2 = st.columns(2)
     with r_col1:
         st.download_button(
             label="📄 Scarica Report SPIDER SI (.txt)",
             data=si_rep_txt,
-            file_name=f"SPIDER_SuperIntelligence_Report_{si_state.last_update.strftime('%Y%m%d')}.txt",
+            file_name=f"SPIDER_SuperIntelligence_Report_{si_modal_date}.txt",
             mime="text/plain",
             use_container_width=True,
             key="btn_download_si_txt_modal"
@@ -1385,7 +1386,7 @@ def show_super_intelligence_modal():
         st.download_button(
             label="📊 Scarica Tabella Completa SPIDER SI (.xlsx)",
             data=si_rep_xlsx,
-            file_name=f"SPIDER_SuperIntelligence_Dati_{si_state.last_update.strftime('%Y%m%d')}.xlsx",
+            file_name=f"SPIDER_SuperIntelligence_Dati_{si_modal_date}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
             key="btn_download_si_xlsx_modal"
@@ -4071,12 +4072,13 @@ with tabs[8]:
 
     # Report Download Bar (.txt and .xlsx)
     si_tab_txt, si_tab_xlsx = generate_si_reports(si_curr)
+    si_tab_date = getattr(si_curr, "last_update", datetime.datetime.now()).strftime("%Y%m%d")
     tab_r_col1, tab_r_col2 = st.columns(2)
     with tab_r_col1:
         st.download_button(
             label="📄 Scarica Report SPIDER SI (.txt)",
             data=si_tab_txt,
-            file_name=f"SPIDER_SuperIntelligence_Report_{si_curr.last_update.strftime('%Y%m%d')}.txt",
+            file_name=f"SPIDER_SuperIntelligence_Report_{si_tab_date}.txt",
             mime="text/plain",
             use_container_width=True,
             key="btn_download_si_txt_tab"
@@ -4085,7 +4087,7 @@ with tabs[8]:
         st.download_button(
             label="📊 Scarica Tabella Completa SPIDER SI (.xlsx)",
             data=si_tab_xlsx,
-            file_name=f"SPIDER_SuperIntelligence_Dati_{si_curr.last_update.strftime('%Y%m%d')}.xlsx",
+            file_name=f"SPIDER_SuperIntelligence_Dati_{si_tab_date}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
             key="btn_download_si_xlsx_tab"

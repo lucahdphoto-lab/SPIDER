@@ -352,6 +352,7 @@ class SuperIntelligenceState:
     historical_timeseries: pd.DataFrame
     spider_links: List[Dict[str, Any]]
     executive_summary: str
+    last_update: datetime.datetime = field(default_factory=datetime.datetime.now)
 
     @property
     def composite_index(self) -> float:
@@ -640,6 +641,7 @@ class SuperIntelligenceEngine:
             historical_timeseries=pd.DataFrame({"SI_COMPOSITE": composite_timeseries}),
             spider_links=spider_links,
             executive_summary=summary,
+            last_update=now,
         )
 
         self._cached_state = state
