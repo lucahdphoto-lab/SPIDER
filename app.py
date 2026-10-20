@@ -83,6 +83,7 @@ from spider_ui import (
     build_diebold_yilmaz_heatmap,
     build_spillover_net_transmission_figure,
     build_spider_si_network_figure,
+    build_spider_si_network_3d_figure,
     build_si_correlation_heatmap,
     build_si_subsector_bar_figure,
     generate_zscore_mini_svg,
@@ -1372,8 +1373,33 @@ def show_super_intelligence_modal():
         "🔗 Matrice Correlazioni & Supply Chain",
     ])
     with m_tab1:
-        fig_si_net = build_spider_si_network_figure(si_state, dark_mode=True)
-        st.plotly_chart(fig_si_net, use_container_width=True)
+        c_m_dim1, c_m_dim2 = st.columns([1.5, 2.5])
+        with c_m_dim1:
+            modal_si_dim = st.radio(
+                "Prospettiva Tela SI:",
+                ["🕸️ Vista 2D Radiale", "🌐 Vista 3D Spaziale (WebGL)"],
+                horizontal=True,
+                key="radio_si_modal_dim"
+            )
+        with c_m_dim2:
+            st.caption("🔍 **Zoom con il mouse:** Usa la rotella per zoomare. In 3D: trascina per ruotare a 360°, tasto destro per pan orbitale.")
+
+        is_modal_3d = ("3D" in modal_si_dim)
+        if is_modal_3d:
+            fig_si_net = build_spider_si_network_3d_figure(si_state, dark_mode=True)
+        else:
+            fig_si_net = build_spider_si_network_figure(si_state, dark_mode=True)
+
+        st.plotly_chart(
+            fig_si_net,
+            use_container_width=True,
+            config={
+                "scrollZoom": True,
+                "displaylogo": False,
+                "modeBarButtonsToAdd": ["zoomIn2d", "zoomOut2d", "resetScale2d"] if not is_modal_3d else [],
+            },
+            key=f"plotly_modal_si_chart_{'3d' if is_modal_3d else '2d'}"
+        )
         st.caption("ℹ️ **Legenda Tela SI:** Al centro SI_CORE. Anello 1 = Silicio & Fonderia; Anello 2 = Memorie HBM & Cloud Specializzato; Anello 3 = Hyperscalers & Software. I fili viola evidenziano i flussi di fornitura e ordini Capex tra le aziende.")
     with m_tab2:
         df_si_table = []
@@ -3974,8 +4000,34 @@ with tabs[8]:
     col_chart_left, col_chart_right = st.columns([1.1, 0.9])
     with col_chart_left:
         st.markdown("##### 🕸️ SPIDER SI: Rete Radiale Concentrica & Supply-Chain")
-        fig_si_net = build_spider_si_network_figure(si_curr, dark_mode=True)
-        st.plotly_chart(fig_si_net, use_container_width=True, key="tab_si_fig_network")
+        
+        c_si_dim1, c_si_dim2 = st.columns([1.5, 2.5])
+        with c_si_dim1:
+            tab_si_dim = st.radio(
+                "Prospettiva Rete SI:",
+                ["🕸️ Vista 2D Radiale", "🌐 Vista 3D Spaziale (WebGL)"],
+                horizontal=True,
+                key="radio_si_tab_dim"
+            )
+        with c_si_dim2:
+            st.caption("🔍 **Zoom con il mouse attivo:** Ruota la rotella per zoomare. In 3D: trascina per ruotare nello spazio 3D, tasto destro per pan.")
+
+        is_tab_3d = ("3D" in tab_si_dim)
+        if is_tab_3d:
+            fig_si_net = build_spider_si_network_3d_figure(si_curr, dark_mode=True)
+        else:
+            fig_si_net = build_spider_si_network_figure(si_curr, dark_mode=True)
+
+        st.plotly_chart(
+            fig_si_net,
+            use_container_width=True,
+            config={
+                "scrollZoom": True,
+                "displaylogo": False,
+                "modeBarButtonsToAdd": ["zoomIn2d", "zoomOut2d", "resetScale2d"] if not is_tab_3d else [],
+            },
+            key=f"tab_si_fig_network_{'3d' if is_tab_3d else '2d'}"
+        )
         st.caption("I 3 anelli concentrici rappresentano i livelli gerarchici dell'infrastruttura AI: Anello 1 (Silicio & Fonderie TSM/NVDA/AVGO/AMD), Anello 2 (Memorie HBM MU & Cloud Specializzato ORCL), Anello 3 (Hyperscalers MSFT/GOOGL/AMZN/META). Le linee mostrano i flussi di fornitura di silicio e capex di acquisto GPU.")
 
     with col_chart_right:

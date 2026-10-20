@@ -1754,6 +1754,180 @@ def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True) -> go.
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-3.4, 3.4], scaleanchor="x", scaleratio=1),
         font=dict(family="Inter, sans-serif"),
         showlegend=False,
+        dragmode="pan",
+    )
+
+    return fig
+
+
+def build_spider_si_network_3d_figure(si_state: Any, dark_mode: bool = True) -> go.Figure:
+    """
+    Costruisce la visualizzazione tridimensionale spaziale (WebGL 3D) di SPIDER SI (Super Intelligence):
+    - Centro elevato in 3D: SI_CORE
+    - 3 Cerchi concentrici nello spazio 3D (Silicio/Fonderie, Memorie/Cloud, Hyperscalers/Piattaforme)
+    - Nodi posizionati a quote Z dinamiche proporzionali allo Z-Score / Performance
+    - Fasci tridimensionali luminosi per la supply-chain e i flussi di capex GPU
+    """
+    bg_color = "rgba(11, 15, 25, 1.0)" if dark_mode else "rgba(248, 250, 252, 1.0)"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+
+    fig = go.Figure()
+
+    # 1. Coordinate 3D dei nodi
+    radius_map = {1: 1.15, 2: 2.05, 3: 2.95}
+    coords_3d: Dict[str, Tuple[float, float, float]] = {
+        "SI_CORE": (0.0, 0.0, 0.45)
+    }
+
+    for stk in si_state.stocks:
+        r = radius_map.get(stk.ring, 2.0)
+        rad = np.radians(stk.angle_deg)
+        x = float(r * np.cos(rad))
+        y = float(r * np.sin(rad))
+        # Elevazione Z legata allo Z-Score del titolo con offset a imbuto
+        z_funnel = -0.12 * (r ** 0.8)
+        z_elev = float(np.clip(stk.z_score_price * 0.22, -0.35, 0.55))
+        coords_3d[stk.ticker] = (x, y, z_funnel + z_elev)
+
+    # 2. Anelli concentrici 3D nello spazio
+    ring_theta = np.linspace(0, 2 * np.pi, 80)
+    rings_3d_meta = [
+        {"r": 1.15, "color": "rgba(56, 189, 248, 0.35)", "name": "Anello 1: Silicio & Fonderie"},
+        {"r": 2.05, "color": "rgba(245, 158, 11, 0.30)", "name": "Anello 2: Memorie HBM & Cloud"},
+        {"r": 2.95, "color": "rgba(168, 85, 247, 0.35)", "name": "Anello 3: Hyperscalers & Software"},
+    ]
+    for r_info in rings_3d_meta:
+        rad = r_info["r"]
+        cx = [float(rad * np.cos(t)) for t in ring_theta]
+        cy = [float(rad * np.sin(t)) for t in ring_theta]
+        cz = [float(-0.12 * (rad ** 0.8)) for _ in ring_theta]
+        fig.add_trace(go.Scatter3d(
+            x=cx, y=cy, z=cz,
+            mode="lines",
+            line=dict(color=r_info["color"], width=2.0),
+            hoverinfo="name",
+            name=r_info["name"],
+            showlegend=False,
+        ))
+
+    # 3. Disegno dei collegamenti 3D (Supply-Chain & Radial Hub)
+    for lnk in si_state.spider_links:
+        src = lnk["source"]
+        tgt = lnk["target"]
+        if src in coords_3d and tgt in coords_3d:
+            x0, y0, z0 = coords_3d[src]
+            x1, y1, z1 = coords_3d[tgt]
+            is_hub = (src == "SI_CORE")
+
+            line_color = "rgba(56, 189, 248, 0.28)" if is_hub else "rgba(168, 85, 247, 0.65)"
+            line_width = 2.0 if is_hub else 4.5
+
+            fig.add_trace(go.Scatter3d(
+                x=[x0, x1], y=[y0, y1], z=[z0, z1],
+                mode="lines",
+                line=dict(color=line_color, width=line_width),
+                hoverinfo="text",
+                hovertext=f"<b>Catena AI 3D:</b> {lnk['label']}<br>Correlazione Prezzo: {lnk.get('correlation', 0.7):+.2f}",
+                showlegend=False,
+            ))
+
+    # 4. Nodo Centrale SI_CORE 3D
+    core_x, core_y, core_z = coords_3d["SI_CORE"]
+    fig.add_trace(go.Scatter3d(
+        x=[core_x], y=[core_y], z=[core_z],
+        mode="markers+text",
+        marker=dict(
+            size=15,
+            symbol="diamond",
+            color="#8B5CF6",
+            line=dict(color="#38BDF8", width=3),
+            opacity=0.98,
+        ),
+        text=["<b>SI_CORE</b>"],
+        textposition="top center",
+        textfont=dict(color="#FFFFFF", size=12, family="JetBrains Mono, monospace"),
+        hoverinfo="text",
+        hovertext=(
+            f"<b>🧠 SPIDER SI_CORE (Super Intelligence 3D)</b><br>"
+            f"Indice Composito: {si_state.composite_index_value:,.1f}<br>"
+            f"Market Cap: ${si_state.total_market_cap_t:.2f}T<br>"
+            f"AI Momentum Score: {si_state.ai_momentum_score:.1f}/100<br>"
+            f"Regime: {si_state.ai_cycle_regime}<br>"
+            f"Capex AI Annuo: ${si_state.total_annual_capex_b:,.0f}B"
+        ),
+        name="SI_CORE_3D",
+        showlegend=False,
+    ))
+
+    # 5. I 10 Titoli AI in 3D
+    x_nodes, y_nodes, z_nodes = [], [], []
+    text_labels, hover_texts = [], []
+    marker_colors, marker_sizes = [], []
+
+    for stk in si_state.stocks:
+        x, y, z = coords_3d[stk.ticker]
+        x_nodes.append(x)
+        y_nodes.append(y)
+        z_nodes.append(z)
+        text_labels.append(f"<b>{stk.ticker}</b>")
+        marker_colors.append(stk.color_hex)
+        sz = int(np.clip(np.sqrt(stk.market_cap_b) * 0.26, 9, 22))
+        marker_sizes.append(sz)
+
+        htext = (
+            f"<b>{stk.name} [{stk.ticker}]</b><br>"
+            f"<b>Comparto 3D:</b> {stk.subsector} | <b>Ruolo:</b> {stk.role_badge}<br>"
+            f"<b>Prezzo:</b> ${stk.current_price:,.2f} ({stk.change_ytd_pct:+.1f}% YTD)<br>"
+            f"<b>Market Cap:</b> ${stk.market_cap_b:,.0f}B | <b>Forward P/E:</b> {stk.fwd_pe:.1f}x<br>"
+            f"<b>Crescita Ricavi YoY:</b> +{stk.rev_growth_yoy:.1f}% | <b>Margine Op.:</b> {stk.gross_margin_pct:.1f}%<br>"
+            f"<b>Capex AI Annuale:</b> ${stk.capex_impulse_b:.1f}B | <b>Z-Score:</b> {stk.z_score_price:+.2f}<br>"
+            f"<b>Catena Supply Chain:</b> {stk.supply_chain_role}"
+        )
+        hover_texts.append(htext)
+
+    fig.add_trace(go.Scatter3d(
+        x=x_nodes, y=y_nodes, z=z_nodes,
+        mode="markers+text",
+        marker=dict(
+            size=marker_sizes,
+            color=marker_colors,
+            line=dict(color="#F8FAFC", width=2),
+            opacity=0.96,
+        ),
+        text=text_labels,
+        textposition="top center",
+        textfont=dict(color="#F8FAFC", size=11, family="JetBrains Mono, monospace"),
+        hoverinfo="text",
+        hovertext=hover_texts,
+        name="10_AI_Nodes_3D",
+        showlegend=False,
+    ))
+
+    # Camera 3D dinamica angolata
+    camera = dict(
+        eye=dict(x=1.45, y=-1.55, z=1.15),
+        center=dict(x=0, y=0, z=-0.05),
+        up=dict(x=0, y=0, z=1)
+    )
+
+    fig.update_layout(
+        paper_bgcolor=bg_color,
+        scene=dict(
+            xaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False, title=""),
+            yaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False, title=""),
+            zaxis=dict(showbackground=False, showgrid=True, zeroline=False, showticklabels=False, title="", gridcolor="rgba(255,255,255,0.06)"),
+            camera=camera,
+            bgcolor=bg_color,
+        ),
+        margin=dict(l=0, r=0, t=10, b=10),
+        height=620,
+        hoverlabel=dict(
+            bgcolor="rgba(15, 23, 42, 0.95)",
+            bordercolor="#8B5CF6",
+            font_size=12,
+            font_family="Inter, sans-serif",
+            font_color="#F8FAFC",
+        ),
     )
 
     return fig

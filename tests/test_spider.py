@@ -17,6 +17,7 @@ from spider_ui import (
     build_si_correlation_heatmap,
     build_si_subsector_bar_figure,
     build_spider_si_network_figure,
+    build_spider_si_network_3d_figure,
     build_spider_web_figure,
     generate_links_dataframe,
     generate_nodes_dataframe,
@@ -243,6 +244,10 @@ class TestSpiderArchitecture(unittest.TestCase):
         fig_net = build_spider_si_network_figure(si_state, dark_mode=True)
         self.assertIsNotNone(fig_net)
         self.assertGreater(len(fig_net.data), 5)
+
+        fig_net_3d = build_spider_si_network_3d_figure(si_state, dark_mode=True)
+        self.assertIsNotNone(fig_net_3d)
+        self.assertGreater(len(fig_net_3d.data), 5)
 
         fig_corr = build_si_correlation_heatmap(si_state, dark_mode=True)
         self.assertIsNotNone(fig_corr)
