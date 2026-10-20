@@ -14,6 +14,7 @@ Settori monitorati:
 
 from dataclasses import dataclass, field
 import datetime
+import io
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -646,5 +647,237 @@ class SuperIntelligenceEngine:
         return state
 
 
+def generate_si_reports(si_state: SuperIntelligenceState) -> Tuple[str, bytes]:
+    """
+    Genera il pacchetto documentale completo SPIDER SI (Super Intelligence):
+    1. Report analitico testuale in formato .txt (Snapshot Parametri, Fondamentali, 3 Driver)
+    2. Modello tabellare avanzato multi-foglio in formato Excel .xlsx (Dati Numerici, Correlazioni, Driver)
+    """
+    now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    stocks_sorted = sorted(si_state.stocks, key=lambda s: s.market_cap_b, reverse=True)
+
+    # --------------------------------------------------------------------------
+    # 1. GENERAZIONE REPORT TESTUALE .TXT
+    # --------------------------------------------------------------------------
+    table_lines = []
+    header_fmt = f"{'Ticker':6s} | {'Azienda':24s} | {'Comparto':28s} | {'Cap ($B)':9s} | {'Prezzo':8s} | {'YTD %':7s} | {'P/E':5s} | {'PEG':5s} | {'Rev YoY':8s} | {'Margine':7s} | {'Capex':7s} | {'Z-Score':7s}"
+    sep_line = "-" * len(header_fmt)
+    table_lines.append(header_fmt)
+    table_lines.append(sep_line)
+    for s in stocks_sorted:
+        row_str = (
+            f"{s.ticker:6s} | {s.name:24s} | {s.subsector:28s} | ${s.market_cap_b:7.0f}B | "
+            f"${s.price:6.2f} | {s.change_ytd_pct:+6.1f}% | {s.pe_ratio:5.1f} | {s.peg_ratio:5.2f} | "
+            f"{s.rev_growth_yoy_pct:+7.1f}% | {s.operating_margin_pct:6.1f}% | ${s.annual_capex_b:5.1f}B | {s.z_score:+6.2f}"
+        )
+        table_lines.append(row_str)
+    stocks_formatted_table = "\n".join(table_lines)
+
+    subsectors_summary_lines = []
+    for s_code, m in si_state.subsector_metrics.items():
+        subsectors_summary_lines.append(
+            f"  * {m['label']:32s}: Cap Totale ${m['market_cap_b']:,.0f}B ({m['count']} titoli) | "
+            f"Perf. YTD: {m['change_ytd_pct']:+.1f}% | P/E Medio: {m['avg_pe']:.1f}x | Z-Score Medio: {m['avg_z_score']:+.2f}"
+        )
+
+    links_summary_lines = []
+    for lnk in si_state.spider_links:
+        if lnk.get("type") == "SUPPLY_CHAIN":
+            links_summary_lines.append(f"  * {lnk['label']:48s} -> Correlazione Prezzo: {lnk['correlation']:+.2f}")
+
+    txt_report = f"""================================================================================
+SPIDER SI: REPORT QUANTITATIVO E FONDAMENTALE DELL'ECOSISTEMA ARTIFICIAL INTELLIGENCE
+Data e Ora Generazione: {now_iso}
+Ambito: 13 Titoli Leader della Catena del Valore AI Mondiale
+================================================================================
+
+1. QUADRO DI SINTESI ESECUTIVA (AI SUPER-CYCLE REGIME)
+--------------------------------------------------------------------------------
+- Regime Attivo del Super-Ciclo AI: {si_state.ai_cycle_regime}
+- AI Momentum Score Sistemico: {si_state.ai_momentum_score:.1f} / 100
+- Indice Composito SI (Base 1000): {si_state.composite_index_value:,.2f}
+  * Variazione 1 Giorno (1D): {si_state.composite_1d_pct:+.2f}%
+  * Variazione 1 Mese (1M): {si_state.composite_1m_pct:+.2f}%
+  * Variazione Da Inizio Anno (YTD): {si_state.composite_ytd_pct:+.2f}%
+- Capitalizzazione di Mercato Aggregata (13 Titoli): ${si_state.total_market_cap_t:.2f} Trilioni
+  (Rappresenta oltre il 38% del peso aggregato dell'indice S&P 500)
+- Spesa in Conto Capitale AI Aggregata (Annual Capex): ${si_state.total_annual_capex_b:,.1f} Miliardi
+- Titolo Top Performer YTD: {si_state.top_performer.name} ({si_state.top_performer.ticker}) con {si_state.top_performer.change_ytd_pct:+.1f}% YTD
+- Titolo Lagging Performer YTD: {si_state.lagging_performer.name} ({si_state.lagging_performer.ticker}) con {si_state.lagging_performer.change_ytd_pct:+.1f}% YTD
+
+Verdetto Esecutivo:
+{si_state.executive_summary}
+
+2. MATRICE FONDAMENTALE ANALITICA (13 TITOLI LEADER DELL'AI)
+--------------------------------------------------------------------------------
+{stocks_formatted_table}
+
+3. APPROFONDIMENTO ECONOMICO-FINANZIARIO (I 3 DRIVER STRUTTURALI)
+--------------------------------------------------------------------------------
+DRIVER 1: DICOTOMIA TRA CHI FINANZIA LA RIVOLUZIONE AI E CHI LA MONETIZZA OGGI
+--------------------------------------------------------------------------------
+• I Finanziatori dell'Infrastruttura (Hyperscalers):
+  Microsoft ($55B), Amazon ($70B), Alphabet ($52B), Meta ($40B) e Oracle ($10B)
+  investono congiuntamente oltre $227 Miliardi di Capex annuo per costruire
+  la capacità computazionale dei data center del futuro. Si tratta di un modello
+  massiccio ad alta intensità di capitale (Capex-heavy) in cui il ritorno
+  economico (ROIC) richiede anni per maturare attraverso software e servizi cloud.
+• I Monetizzatori Immediati (Semiconduttori, Fonderie & Memorie):
+  All'estremo opposto, NVIDIA (+122% YoY con soli $4.5B di capex proprio), TSMC (+36% YoY),
+  Broadcom (+47% YoY), Micron (+93% YoY), WDC / SanDisk (+28% YoY) e ASML assorbono
+  direttamente questi flussi di cassa, convertendoli istantaneamente in fatturato record
+  e Free Cash Flow immediato.
+
+DRIVER 2: MARGINI OPERATIVI D'ECCELLENZA E POTERE DI PREZZO (PRICING POWER)
+--------------------------------------------------------------------------------
+• NVIDIA (75.1% Margine Lordo): L'ecosistema CUDA crea un lock-in software invalicabile,
+  consentendo prezzi unitari di $30,000–$40,000 per chip Hopper/Blackwell con margini industriali unici.
+• Meta Platforms (81.5% Margine Operativo/Lordo Software): Straordinaria leva operativa pubblicitaria
+  che finanzia integralmente lo sviluppo di Llama open-source e l'acquisto di centinaia di migliaia di GPU.
+• TSMC (57.8% Margine) & Broadcom (64.2%): Il monopolio globale sui wafer a 3nm e il packaging avanzato
+  CoWoS proteggono TSMC da qualsiasi compressione dei margini anche durante cicli macro avversi.
+• ASML (51.5% Margine): Monopolio de facto sugli scanner litografici EUV indispensabili all'intero settore.
+
+DRIVER 3: VALUTAZIONI DI MERCATO ED EFFICIENZA SUL TASSO DI CRESCITA (FORWARD P/E VS. PEG RATIO)
+--------------------------------------------------------------------------------
+• Massima Efficienza Valutativa (PEG <= 1.25):
+  WDC / SanDisk (PEG 0.85), STX (PEG 1.05), META (PEG 1.10) e NVDA (PEG 1.15)
+  si posizionano in prossimità della "soglia aurea di Peter Lynch" (PEG = 1.0).
+  Una crescita dei ricavi superiore al 100% per NVIDIA o la forte leva operativa di Meta
+  rendono il multiplo nominale estremamente attraente su base corretta per la crescita.
+• Valutazioni a Premio (PEG > 1.80):
+  Società con crescite solide ma moderate (es. MSFT a 2.10x PEG, ORCL a 1.95x)
+  scambiano a multipli che incorporano già anni di espansione futura, richiedendo
+  una perfetta esecuzione operativa nei trimestri a venire.
+
+4. BREAKDOWN DEI 5 SOTTO-SETTORI VERTICALI DELL'INTELLIGENZA ARTIFICIALE
+--------------------------------------------------------------------------------
+{chr(10).join(subsectors_summary_lines)}
+
+5. TOPOLOGIA DELLA SUPPLY CHAIN E FLUSSI CRITICI DI CAPITALE
+--------------------------------------------------------------------------------
+{chr(10).join(links_summary_lines)}
+
+================================================================================
+Fine Report SPIDER SI • Quant & Fundamental Research Monitor
+================================================================================
+"""
+
+    # --------------------------------------------------------------------------
+    # 2. GENERAZIONE CARTELLA EXCEL .XLSX MULTI-FOGLIO
+    # --------------------------------------------------------------------------
+    excel_buffer = io.BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
+        # Foglio 1: Sintesi Esecutiva
+        df_summary = pd.DataFrame([{
+            "Data_Snapshot": now_iso,
+            "Regime_Ciclo_AI": si_state.ai_cycle_regime,
+            "AI_Momentum_Score": round(si_state.ai_momentum_score, 2),
+            "Indice_Composito_SI": round(si_state.composite_index_value, 2),
+            "Variazione_1D_Pct": round(si_state.composite_1d_pct, 2),
+            "Variazione_1M_Pct": round(si_state.composite_1m_pct, 2),
+            "Variazione_YTD_Pct": round(si_state.composite_ytd_pct, 2),
+            "Market_Cap_Totale_USD_T": round(si_state.total_market_cap_t, 2),
+            "Annual_Capex_Totale_USD_B": round(si_state.total_annual_capex_b, 1),
+            "Top_Performer_Ticker": si_state.top_performer.ticker,
+            "Top_Performer_YTD": round(si_state.top_performer.change_ytd_pct, 2),
+            "Lagging_Performer_Ticker": si_state.lagging_performer.ticker,
+            "Lagging_Performer_YTD": round(si_state.lagging_performer.change_ytd_pct, 2),
+            "Sintesi_Esecutiva": si_state.executive_summary,
+        }])
+        df_summary.to_excel(writer, index=False, sheet_name="Sintesi_Esecutiva_SI")
+
+        # Foglio 2: 13 Titoli Fondamentali
+        df_stocks = pd.DataFrame([
+            {
+                "Ticker": s.ticker,
+                "Nome_Azienda": s.name,
+                "Sotto_Settore": s.subsector,
+                "Ruolo_Supply_Chain": s.supply_chain_role,
+                "Market_Cap_USD_B": s.market_cap_b,
+                "Prezzo_USD": s.price,
+                "Performance_1D_Pct": s.change_1d_pct,
+                "Performance_1M_Pct": s.change_1m_pct,
+                "Performance_YTD_Pct": s.change_ytd_pct,
+                "Forward_PE": s.pe_ratio,
+                "PEG_Ratio": s.peg_ratio,
+                "Crescita_Ricavi_YoY_Pct": s.rev_growth_yoy_pct,
+                "Margine_Lordo_Operativo_Pct": s.operating_margin_pct,
+                "Annual_Capex_USD_B": s.annual_capex_b,
+                "Volatilita_Annua_Pct": s.volatility_annual_pct,
+                "ZScore_Prezzo": s.z_score,
+                "Focus_Tecnologico": s.description,
+            }
+            for s in stocks_sorted
+        ])
+        df_stocks.to_excel(writer, index=False, sheet_name="13_Titoli_Fondamentali_SI")
+
+        # Foglio 3: I 3 Driver Istituzionali
+        df_drivers = pd.DataFrame([
+            {
+                "ID_Driver": "DRIVER_01",
+                "Titolo_Driver": "Dicotomia Finanziatori vs Monetizzatori",
+                "Tesi_Macroeconomica": "Gli Hyperscaler (MSFT, AMZN, GOOGL, META, ORCL) finanziano $227B+ di Capex all'anno; i produttori di chip, fonderie e memorie (NVDA, TSM, AVGO, MU, WDC, ASML) monetizzano all'istante con fatturato e cash flow immediati.",
+                "Gruppo_Finanziatori": "MSFT, AMZN, GOOGL, META, ORCL ($227B+ Capex combinato)",
+                "Gruppo_Monetizzatori": "NVDA (+122% YoY), TSM (+39% YoY), AVGO (+47% YoY), MU (+93% YoY), WDC (+28% YoY), ASML (+18% YoY)",
+                "Rischio_Sistemico": "Rallentamento nei ritorni sul capitale (ROIC) del cloud o saturazione della capacità datacenter.",
+            },
+            {
+                "ID_Driver": "DRIVER_02",
+                "Titolo_Driver": "Margini Operativi d'Eccellenza & Pricing Power",
+                "Tesi_Macroeconomica": "Elevatissime barriere all'entrata e potere di prezzo anelastico guidato dall'ecosistema software CUDA (NVDA), dal packaging avanzato CoWoS/3nm (TSMC) e dai macchinari EUV (ASML).",
+                "Leader_Marginalita": "META (81.5%), NVDA (75.1%), ORCL (71.0%), AVGO (64.2%), TSM (57.8%), ASML (51.5%)",
+                "Fossato_Competitivo": "Lock-in software CUDA, brevetti CoWoS, standard High-NA EUV.",
+                "Rischio_Sistemico": "Espansione di chip custom proprietari ASIC da parte di Google (TPU) e Amazon (Trainium).",
+            },
+            {
+                "ID_Driver": "DRIVER_03",
+                "Titolo_Driver": "Efficienza Valutativa (Forward P/E vs PEG Ratio)",
+                "Tesi_Macroeconomica": "Il multiplo P/E nominale è ingannevole se non corretto per la velocità di crescita. I titoli a crescita esplosiva presentano PEG vicini o inferiori a 1.0 (soglia aurea di Peter Lynch).",
+                "Leader_Efficienza_PEG": "WDC (0.85), STX (1.05), META (1.10), NVDA (1.15) -> Crescita a forte sconto",
+                "Titoli_A_Premio": "MSFT (2.10), ORCL (1.95), ASML (1.55) -> Incorporano anni di crescita futura",
+                "Rischio_Sistemico": "Compressione dei multipli in caso di tassi di interesse reali persistentemente elevati.",
+            },
+        ])
+        df_drivers.to_excel(writer, index=False, sheet_name="I_3_Driver_Istituzionali")
+
+        # Foglio 4: Matrice di Correlazione 13x13
+        df_corr = si_state.correlation_matrix.copy()
+        df_corr.to_excel(writer, sheet_name="Matrice_Correlazioni_13x13")
+
+        # Foglio 5: Breakdown Sotto-Settori
+        df_sub = pd.DataFrame([
+            {
+                "Codice_Comparto": s_code,
+                "Nome_Comparto": info["label"],
+                "Conteggio_Titoli": info["count"],
+                "Market_Cap_Totale_USD_B": info["market_cap_b"],
+                "Performance_YTD_Media_Pct": info["change_ytd_pct"],
+                "Performance_1D_Media_Pct": info["change_1d_pct"],
+                "Forward_PE_Medio": info["avg_pe"],
+                "ZScore_Medio": info["avg_z_score"],
+            }
+            for s_code, info in si_state.subsector_metrics.items()
+        ])
+        df_sub.to_excel(writer, index=False, sheet_name="Breakdown_SottoSettori")
+
+        # Foglio 6: Flussi Supply Chain
+        df_links = pd.DataFrame([
+            {
+                "Nodo_Origine": lnk["source"],
+                "Nodo_Destinazione": lnk["target"],
+                "Tipo_Relazione": lnk["type"],
+                "Descrizione_Flusso": lnk["label"],
+                "Correlazione_Prezzo": lnk.get("correlation", 0.7),
+            }
+            for lnk in si_state.spider_links
+        ])
+        df_links.to_excel(writer, index=False, sheet_name="Flussi_Supply_Chain")
+
+    excel_bytes = excel_buffer.getvalue()
+    return txt_report, excel_bytes
+
+
 # Global Singleton Engine Instance
 si_engine = SuperIntelligenceEngine()
+

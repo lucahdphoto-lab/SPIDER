@@ -65,6 +65,7 @@ from diebold_yilmaz_engine import (
 )
 from super_intelligence_engine import (
     si_engine,
+    generate_si_reports,
     SuperIntelligenceState,
     SuperIntelligenceStock,
     AI_UNIVERSE_CONFIG,
@@ -1367,6 +1368,30 @@ def show_super_intelligence_modal():
         """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
+
+    # Report Download Bar (.txt and .xlsx)
+    si_rep_txt, si_rep_xlsx = generate_si_reports(si_state)
+    r_col1, r_col2 = st.columns(2)
+    with r_col1:
+        st.download_button(
+            label="📄 Scarica Report SPIDER SI (.txt)",
+            data=si_rep_txt,
+            file_name=f"SPIDER_SuperIntelligence_Report_{si_state.last_update.strftime('%Y%m%d')}.txt",
+            mime="text/plain",
+            use_container_width=True,
+            key="btn_download_si_txt_modal"
+        )
+    with r_col2:
+        st.download_button(
+            label="📊 Scarica Tabella Completa SPIDER SI (.xlsx)",
+            data=si_rep_xlsx,
+            file_name=f"SPIDER_SuperIntelligence_Dati_{si_state.last_update.strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="btn_download_si_xlsx_modal"
+        )
+
+    st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
     
     # Dual tabs inside modal: Tela Radiale & Tabella Fondamentali
     m_tab1, m_tab2, m_tab3, m_tab4 = st.tabs([
@@ -4043,6 +4068,28 @@ with tabs[8]:
             <div class="kpi-sub-val">{si_curr.top_performer.change_ytd_pct:+.1f}% YTD • {si_curr.top_performer.name}</div>
         </div>
         """, unsafe_allow_html=True)
+
+    # Report Download Bar (.txt and .xlsx)
+    si_tab_txt, si_tab_xlsx = generate_si_reports(si_curr)
+    tab_r_col1, tab_r_col2 = st.columns(2)
+    with tab_r_col1:
+        st.download_button(
+            label="📄 Scarica Report SPIDER SI (.txt)",
+            data=si_tab_txt,
+            file_name=f"SPIDER_SuperIntelligence_Report_{si_curr.last_update.strftime('%Y%m%d')}.txt",
+            mime="text/plain",
+            use_container_width=True,
+            key="btn_download_si_txt_tab"
+        )
+    with tab_r_col2:
+        st.download_button(
+            label="📊 Scarica Tabella Completa SPIDER SI (.xlsx)",
+            data=si_tab_xlsx,
+            file_name=f"SPIDER_SuperIntelligence_Dati_{si_curr.last_update.strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="btn_download_si_xlsx_tab"
+        )
 
     st.markdown("<div style='margin-bottom: 16px;'></div>", unsafe_allow_html=True)
 

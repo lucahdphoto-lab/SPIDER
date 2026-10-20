@@ -24,7 +24,11 @@ from spider_ui import (
     generate_links_dataframe,
     generate_nodes_dataframe,
 )
-from super_intelligence_engine import SuperIntelligenceState, si_engine
+from super_intelligence_engine import (
+    SuperIntelligenceState,
+    si_engine,
+    generate_si_reports,
+)
 
 
 
@@ -266,6 +270,19 @@ class TestSpiderArchitecture(unittest.TestCase):
         fig_peg = build_si_peg_valuation_figure(si_state, dark_mode=True)
         self.assertIsNotNone(fig_peg)
         self.assertGreater(len(fig_peg.data), 0)
+
+        # Test Report Generation (.txt and .xlsx)
+        txt_report, xlsx_bytes = generate_si_reports(si_state)
+        self.assertIsInstance(txt_report, str)
+        self.assertGreater(len(txt_report), 1000, "TXT report must contain comprehensive text")
+        self.assertIn("SPIDER SI: REPORT QUANTITATIVO", txt_report)
+        self.assertIn("NVDA", txt_report)
+        self.assertIn("ASML", txt_report)
+        self.assertIn("WDC", txt_report)
+        self.assertIn("STX", txt_report)
+
+        self.assertIsInstance(xlsx_bytes, bytes)
+        self.assertGreater(len(xlsx_bytes), 5000, "Excel report bytes must be valid and populated")
 
 
 if __name__ == "__main__":
