@@ -368,7 +368,8 @@ if "active_crisis_scenario" not in st.session_state:
 
 def reset_node_selection():
     st.session_state["selected_node"] = "TUTTI (Visualizzazione Globale)"
-    st.session_state["sel_node_sidebar"] = "TUTTI (Visualizzazione Globale)"
+    if "sel_node_sidebar" in st.session_state:
+        del st.session_state["sel_node_sidebar"]
     if "spider_web_chart_selection" in st.session_state:
         del st.session_state["spider_web_chart_selection"]
 
@@ -478,28 +479,32 @@ with st.sidebar:
     st.markdown("##### 🔍 **Filtri di Visualizzazione Tela**")
     quad_opts = ["TUTTI"] + list(QUADRANTS.keys())
     quad_names = {"TUTTI": "🌐 Tutti i Quadranti", **{k: f"{v['name']}" for k, v in QUADRANTS.items()}}
-    sel_quad = st.selectbox("Filtra per Quadrante Macro:", options=quad_opts, format_func=lambda k: quad_names[k])
+    cur_quad = st.session_state.get("filter_quadrant", "TUTTI")
+    quad_idx = quad_opts.index(cur_quad) if cur_quad in quad_opts else 0
+    sel_quad = st.selectbox("Filtra per Quadrante Macro:", options=quad_opts, index=quad_idx, format_func=lambda k: quad_names[k])
     st.session_state["filter_quadrant"] = sel_quad
 
     ring_opts = [0, 1, 2, 3]
     ring_names = {0: "🌐 Tutti gli Anelli", **{k: f"{v['name']}: {v['label']}" for k, v in RINGS.items()}}
-    sel_ring = st.selectbox("Filtra per Anello Concentrico:", options=ring_opts, format_func=lambda k: ring_names[k])
+    cur_ring = st.session_state.get("filter_ring", 0)
+    ring_idx = ring_opts.index(cur_ring) if cur_ring in ring_opts else 0
+    sel_ring = st.selectbox("Filtra per Anello Concentrico:", options=ring_opts, index=ring_idx, format_func=lambda k: ring_names[k])
     st.session_state["filter_ring"] = sel_ring
 
     all_nodes_list = ["TUTTI (Visualizzazione Globale)", "SPIDER_CORE (Centro di Controllo)"] + list(NODES.keys())
-    if "sel_node_sidebar" not in st.session_state or st.session_state["sel_node_sidebar"] != st.session_state["selected_node"]:
-        st.session_state["sel_node_sidebar"] = st.session_state["selected_node"]
+    curr_sel = st.session_state.get("selected_node", "TUTTI (Visualizzazione Globale)")
+    sel_node_idx = all_nodes_list.index(curr_sel) if curr_sel in all_nodes_list else 0
     
     sel_node = st.selectbox(
         "Isola Nodo & Collegamenti (Focus):",
         options=all_nodes_list,
-        index=all_nodes_list.index(st.session_state["sel_node_sidebar"]) if st.session_state["sel_node_sidebar"] in all_nodes_list else 0,
-        key="sel_node_sidebar",
+        index=sel_node_idx,
     )
-    if sel_node != st.session_state["selected_node"]:
+    if sel_node != st.session_state.get("selected_node"):
         st.session_state["selected_node"] = sel_node
         if "spider_web_chart_selection" in st.session_state:
             del st.session_state["spider_web_chart_selection"]
+        st.rerun()
 
     st.markdown("<hr style='margin: 14px 0; border-color: rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
 
@@ -516,6 +521,7 @@ with st.sidebar:
             st.session_state["what_if_oil"] = 0.0
             st.session_state["what_if_real_yield"] = 0.0
             st.session_state["what_if_hy"] = 0.0
+            st.session_state["active_crisis_scenario"] = None
             st.rerun()
 
     st.caption("Fonti Istituzionali: FRED, BCE, Eurostat, CME, Yahoo Finance, BLS.")
@@ -2328,7 +2334,6 @@ with tabs[0]:
                     clicked_node = clicked_node[0]
                 if clicked_node in NODES and st.session_state.get("selected_node") != clicked_node:
                     st.session_state["selected_node"] = clicked_node
-                    st.session_state["sel_node_sidebar"] = clicked_node
                     st.rerun()
 
     # External dedicated analytical card (displayed cleanly outside the graph canvas so it never blocks nodes)
