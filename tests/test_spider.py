@@ -140,6 +140,8 @@ class TestSpiderArchitecture(unittest.TestCase):
         self.assertGreater(liq.corr_spx_4w, 0.4)
         self.assertFalse(liq.historical_timeseries.empty)
         self.assertIn("US_Net_Liquidity_B", liq.historical_timeseries.columns)
+        self.assertGreater(liq.us_net_liquidity_t, 5.0)
+        self.assertTrue(len(liq.macro_interpretation) > 0)
 
     def test_07_risk_parity_and_volatility_targeting(self):
         """Verify Equal Risk Contribution, Markowitz Efficient Frontier, and Systemic Tension De-risking."""

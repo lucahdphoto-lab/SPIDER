@@ -54,6 +54,16 @@ class NetLiquidityState:
     summary_diagnosis: str
     historical_timeseries: pd.DataFrame
 
+    @property
+    def us_net_liquidity_t(self) -> float:
+        """Net Liquidity expressed in Trillions USD."""
+        return round(self.us_net_liquidity_b / 1000.0, 3)
+
+    @property
+    def macro_interpretation(self) -> str:
+        """Macro interpretation badge/diagnosis."""
+        return self.summary_diagnosis
+
 
 class NetLiquidityEngine:
     """Computes Federal Reserve Balance Sheet Net Liquidity and asset transmission."""
