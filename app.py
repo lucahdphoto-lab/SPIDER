@@ -53,6 +53,11 @@ from net_liquidity_engine import (
     net_liquidity_engine,
     NetLiquidityState,
 )
+from risk_parity_engine import (
+    risk_parity_engine,
+    RiskParityState,
+    RISK_PARITY_ASSETS,
+)
 from spider_ui import (
     build_macro_regime_matrix_figure,
     build_spider_web_figure,
@@ -62,6 +67,8 @@ from spider_ui import (
     build_ciss_correlation_heatmap,
     build_net_liquidity_overview_figure,
     build_liquidity_asset_correlation_figure,
+    build_risk_parity_breakdown_figure,
+    build_efficient_frontier_figure,
     generate_zscore_mini_svg,
     generate_links_dataframe,
     generate_nodes_dataframe,
@@ -1205,6 +1212,7 @@ now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 yc_state_curr = yield_curve_engine.get_curve_regime_state()
 pring_engine_curr = PringCycleEngine(aligned_df)
 pring_res_curr = pring_engine_curr.analyze()
+rp_state_curr = risk_parity_engine.optimize_risk_parity_portfolio(aligned_df, systemic_tension_z=core_state.systemic_web_tension)
 
 # Analisi e Formattazione Z-Score dei 30 Nodi
 sorted_nodes_z = sorted(node_states.values(), key=lambda x: x.z_score)
@@ -1325,7 +1333,20 @@ Versione Software: {APP_VERSION} (Institutional Quantitative Architecture)
   * 10% Cash / Liquidità Monetaria (Rendimento privo di rischio al 5%)
   * 5% Crypto (Bitcoin - Debasement hedge asimmetrico e liquidità globale)
 
-7. DISTRIBUZIONE & DIAGNOSI Z-SCORE DEGLI INDICATORI (30 NODI)
+7. RISK PARITY & VOLATILITY TARGETING (AQR / BRIDGEWATER / MAN AHL)
+--------------------------------------------------------------------------------
+- Framework: Equal Risk Contribution (w_i ~ 1/sigma_i) vincolato alla Tensione Sistemica (|Z|)
+- Regime Attivo Tensione: {rp_state_curr.tension_badge}
+- Tensione Sistemica Rete: |Z| = {rp_state_curr.systemic_tension_z:.2f}
+- Fattore Scala Volatility Targeting: {rp_state_curr.vol_scale_factor * 100:.0f}%
+- Volatilità Complessiva Portafoglio: {rp_state_curr.portfolio_volatility_pct:.2f}% (Rendimento Atteso: {rp_state_curr.expected_return_pct:.2f}%, Sharpe: {rp_state_curr.sharpe_ratio:.2f})
+- Esposizione Beta Ciclici (Azioni, HY, Commodity): {rp_state_curr.cyclical_exposure_pct:.1f}%
+- Copertura Difensiva & Cash (T-Bills, 10Y Bond, Oro): {rp_state_curr.defensive_exposure_pct:.1f}%
+- Verdetto Esecutivo: {rp_state_curr.executive_summary}
+- Pesi Attivi e Contributi al Rischio (Equal Risk Contribution):
+{chr(10).join(f"  * {it.asset_name:32s}: Peso {it.tension_adjusted_weight_pct:5.1f}% | Contributo Rischio (RC): {it.risk_contribution_pct:5.1f}% | Vol: {it.volatility_annual_pct:4.1f}% [{it.allocation_status}]" for it in rp_state_curr.items)}
+
+8. DISTRIBUZIONE & DIAGNOSI Z-SCORE DEGLI INDICATORI (30 NODI)
 --------------------------------------------------------------------------------
 - Metodologia: Standardizzazione statistica rolling 1Y Z = (X_t - μ) / σ
 - Soglie Quantitative e Codifica Cromatica Grafica:
@@ -1486,11 +1507,34 @@ with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
         df_liq_export = liq_curr.historical_timeseries.copy().reset_index()
         df_liq_export.insert(0, "Versione_SPIDER", APP_VERSION)
         df_liq_export.to_excel(writer, index=False, sheet_name="Liquidita_Netta_Fed")
+    # Tabella Risk Parity Execution
+    rp_export_data = []
+    for it in rp_state_curr.items:
+        rp_export_data.append({
+            "Versione_SPIDER": APP_VERSION,
+            "Asset_ID": it.asset_id,
+            "Asset_Name": it.asset_name,
+            "Asset_Class": it.asset_class,
+            "Volatilta_Annua_Pct": it.volatility_annual_pct,
+            "Peso_Benchmark_60_40": it.unconstrained_weight_pct,
+            "Peso_Risk_Parity_Base": it.raw_risk_parity_weight_pct,
+            "Peso_Attivo_Tension_Adjusted": it.tension_adjusted_weight_pct,
+            "Contributo_Rischio_RC_Pct": it.risk_contribution_pct,
+            "Fattore_Leva_Scala": it.leverage_multiplier,
+            "Stato_Allocativo": it.allocation_status,
+        })
+    pd.DataFrame(rp_export_data).to_excel(writer, index=False, sheet_name="Risk_Parity_Allocation")
     pd.DataFrame([{
         "Versione_SPIDER": APP_VERSION,
         "Data_Snapshot": now_iso,
         "Macro_Regime": core_state.macro_regime,
         "Tensione_Sistemica_Z": core_state.systemic_web_tension,
+        "Risk_Parity_Regime": rp_state_curr.tension_badge,
+        "Risk_Parity_Vol_Target_Pct": rp_state_curr.portfolio_volatility_pct,
+        "Risk_Parity_Vol_Scale_Factor": rp_state_curr.vol_scale_factor,
+        "Risk_Parity_Cyclical_Exposure": rp_state_curr.cyclical_exposure_pct,
+        "Risk_Parity_Defensive_Exposure": rp_state_curr.defensive_exposure_pct,
+        "Risk_Parity_Sharpe": rp_state_curr.sharpe_ratio,
         "CISS_Score_BCE": core_state.ciss.ciss_score,
         "CISS_Stato": core_state.ciss.ciss_status,
         "CISS_Contagion_Contribution_Pct": core_state.ciss.contagion_contribution_pct,
@@ -3227,6 +3271,100 @@ INTEGRAZIONE MULTI-FATTORE ATTIVA
             },
         ])
         st.dataframe(df_tilts, use_container_width=True, hide_index=True)
+
+    # ================= MOTORE DINAMICO RISK PARITY & VOLATILITY TARGETING =================
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### ⚖️ Motore Dinamico Risk Parity & Volatility Targeting (AQR / Bridgewater / Man AHL)")
+    st.caption("Ottimizzazione quantitativa a Parità di Contributo al Rischio (Equal Risk Contribution: $w_i \\propto 1/\\sigma_i$) vincolata in tempo reale all'indice di Tensione Sistemica SPIDER ($|Z|$).")
+
+    # Compute risk parity state conditioned on current core_state.systemic_web_tension
+    t_val_rp = core_state.systemic_web_tension
+    rp_state = risk_parity_engine.optimize_risk_parity_portfolio(aligned_df, systemic_tension_z=t_val_rp)
+
+    # 4 KPI Summary Cards for Risk Parity Execution
+    rp_k1, rp_k2, rp_k3, rp_k4 = st.columns(4)
+    with rp_k1:
+        st.markdown(f"""
+        <div class="spider-kpi" style="border-left: 3px solid {rp_state.tension_color_hex};">
+            <div class="kpi-title">Regime Tensione & De-risking</div>
+            <div class="kpi-main-val" style="color: {rp_state.tension_color_hex}; font-size: 16px;">{rp_state.tension_badge.split('(')[0].strip()}</div>
+            <div class="kpi-sub-val">Tensione di Rete: <b>|Z| = {rp_state.systemic_tension_z:.2f}</b></div>
+        </div>
+        """, unsafe_allow_html=True)
+    with rp_k2:
+        st.markdown(f"""
+        <div class="spider-kpi">
+            <div class="kpi-title">Volatilità Target Portafoglio</div>
+            <div class="kpi-main-val" style="color: #38BDF8; font-size: 18px;">{rp_state.portfolio_volatility_pct:.2f}%</div>
+            <div class="kpi-sub-val">Fattore di Scala Vol: <b>{rp_state.vol_scale_factor * 100:.0f}%</b></div>
+        </div>
+        """, unsafe_allow_html=True)
+    with rp_k3:
+        st.markdown(f"""
+        <div class="spider-kpi">
+            <div class="kpi-title">Esposizione Beta Ciclici</div>
+            <div class="kpi-main-val" style="color: {'#10B981' if rp_state.cyclical_exposure_pct >= 30 else '#F59E0B'}; font-size: 18px;">{rp_state.cyclical_exposure_pct:.1f}%</div>
+            <div class="kpi-sub-val">Azionario, High Yield, Commodity</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with rp_k4:
+        st.markdown(f"""
+        <div class="spider-kpi">
+            <div class="kpi-title">Copertura Difensiva & Cash</div>
+            <div class="kpi-main-val" style="color: {'#38BDF8' if rp_state.defensive_exposure_pct >= 50 else '#A78BFA'}; font-size: 18px;">{rp_state.defensive_exposure_pct:.1f}%</div>
+            <div class="kpi-sub-val">T-Bills 1-3M, 10Y Bond, Oro Fisico</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Executive Diagnosis Banner
+    st.markdown(f"""
+    <div style="background: rgba(15, 23, 42, 0.85); border: 1.5px solid {rp_state.tension_color_hex}; border-radius: 10px; padding: 14px 18px; margin: 16px 0;">
+        <div style="font-size: 12px; font-weight: 700; color: {rp_state.tension_color_hex}; text-transform: uppercase;">
+            🏛️ Verdetto Esecutivo Risk Parity & Volatility Targeting:
+        </div>
+        <div style="font-size: 13.5px; color: #F8FAFC; margin-top: 4px; line-height: 1.5;">
+            {rp_state.executive_summary}
+        </div>
+        <div style="font-size: 12px; color: #94A3B8; margin-top: 6px;">
+            <b>Direttiva di Ribilanciamento:</b> <span style="color: #CBD5E1;">{rp_state.rebalancing_advice}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Two Main Plots: Risk Contribution Breakdown + Markowitz Efficient Frontier
+    col_chart_rp1, col_chart_rp2 = st.columns(2)
+    with col_chart_rp1:
+        fig_rp_bar = build_risk_parity_breakdown_figure(rp_state, dark_mode=True)
+        st.plotly_chart(fig_rp_bar, use_container_width=True, key="fig_risk_parity_breakdown")
+    with col_chart_rp2:
+        fig_front = build_efficient_frontier_figure(rp_state, dark_mode=True)
+        st.plotly_chart(fig_front, use_container_width=True, key="fig_efficient_frontier")
+
+    # Granular Allocation Table
+    st.markdown("##### 📋 Matrice Analitica dei Pesi Ottimali & Contributo di Rischio per Asset Class:")
+    df_rp_table = pd.DataFrame([
+        {
+            "Asset Class": it.asset_name,
+            "Cluster": it.asset_class,
+            "Volatilità Annua": f"{it.volatility_annual_pct:.1f}%",
+            "Peso 60/40 Benchmark": f"{it.unconstrained_weight_pct:.1f}%",
+            "Peso Risk Parity Base": f"{it.raw_risk_parity_weight_pct:.1f}%",
+            "Peso Attivo SPIDER (|Z|)": f"{it.tension_adjusted_weight_pct:.1f}%",
+            "Contributo Rischio (RC)": f"{it.risk_contribution_pct:.1f}%",
+            "Fattore Leva / Scala": f"{it.leverage_multiplier:.2f}x",
+            "Stato Allocativo": it.allocation_status,
+        }
+        for it in rp_state.items
+    ])
+    st.dataframe(df_rp_table, use_container_width=True, hide_index=True)
+
+    st.markdown("""
+    > **Nota Tecnica Istituzionale (AQR / Bridgewater):**  
+    > * In un portafoglio azionario-obbligazionario tradizionale (60/40), **oltre l'85% del rischio complessivo proviene dalle sole azioni** a causa della loro maggiore volatilità ($\sim 16\%$ vs $\sim 8\%$).  
+    > * Il framework **Equal Risk Contribution (Risk Parity)** dimensiona i pesi nominali in ragione inversa alla volatilità ($w_i \propto 1/\sigma_i$), garantendo che ciascuna classe contribuisca per il 20% esatto alla varianza di portafoglio.  
+    > * Quando la **Tensione Sistemica SPIDER** supera la soglia critica ($|Z| \ge 2.0$), scatta il modulo di **Volatility Targeting (Man AHL)**: la leva aggregata viene ridotta e il capitale liberato viene dirottato su **T-Bills a 1-3 mesi al 5% privi di rischio** e **Oro fisico**, neutralizzando i rischi di rovina finanziaria durante crisi note o shock imprevisti.
+    """)
+
 
 
 

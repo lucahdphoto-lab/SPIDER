@@ -1338,5 +1338,158 @@ def build_liquidity_asset_correlation_figure(liq_state: Any, dark_mode: bool = T
     return fig
 
 
+def build_risk_parity_breakdown_figure(rp_state: Any, dark_mode: bool = True) -> go.Figure:
+    """Builds a grouped horizontal bar chart comparing Capital Allocation (Weights %) vs Risk Contribution (RC %)."""
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "rgba(15, 23, 42, 0.7)" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+    grid_color = "rgba(255, 255, 255, 0.08)" if dark_mode else "rgba(15, 23, 42, 0.08)"
+
+    asset_names = [it.asset_name.split("(")[0].strip() for it in rp_state.items]
+    weights_pct = [it.tension_adjusted_weight_pct for it in rp_state.items]
+    rc_pct = [it.risk_contribution_pct for it in rp_state.items]
+
+    fig = go.Figure()
+
+    # Capital Weight Bar
+    fig.add_trace(go.Bar(
+        name="Peso Capitale Allocato (%)",
+        y=asset_names,
+        x=weights_pct,
+        orientation="h",
+        marker_color="#38BDF8",
+        text=[f"{w:.1f}%" for w in weights_pct],
+        textposition="outside",
+    ))
+
+    # Risk Contribution Bar
+    fig.add_trace(go.Bar(
+        name="Contributo al Rischio di Portafoglio (RC %)",
+        y=asset_names,
+        x=rc_pct,
+        orientation="h",
+        marker_color="#F59E0B",
+        text=[f"{rc:.1f}%" for rc in rc_pct],
+        textposition="outside",
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text="<b>⚖️ Peso Capitale Nominale vs Contributo Reale al Rischio (Equal Risk Contribution)</b>",
+            font=dict(size=14, color=text_color),
+            x=0.03,
+            y=0.96,
+        ),
+        barmode="group",
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=340,
+        margin=dict(l=150, r=40, t=50, b=25),
+        xaxis=dict(title="Percentuale (%)", range=[0, max(max(weights_pct), max(rc_pct)) * 1.25], gridcolor=grid_color, tickfont=dict(color="#CBD5E1")),
+        yaxis=dict(gridcolor=grid_color, tickfont=dict(color="#CBD5E1", size=11), autorange="reversed"),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1.0,
+            font=dict(size=11, color="#CBD5E1"),
+        ),
+        font=dict(family="Inter, sans-serif"),
+    )
+    return fig
+
+
+def build_efficient_frontier_figure(rp_state: Any, dark_mode: bool = True) -> go.Figure:
+    """Builds the Markowitz Efficient Frontier comparing Unconstrained vs Tension-Constrained Target Vol."""
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "rgba(15, 23, 42, 0.7)" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+    grid_color = "rgba(255, 255, 255, 0.08)" if dark_mode else "rgba(15, 23, 42, 0.08)"
+
+    fig = go.Figure()
+
+    # Unconstrained Markowitz Frontier
+    if rp_state.unconstrained_frontier:
+        unc_vols = [p.volatility_pct for p in rp_state.unconstrained_frontier]
+        unc_rets = [p.expected_return_pct for p in rp_state.unconstrained_frontier]
+        fig.add_trace(go.Scatter(
+            x=unc_vols,
+            y=unc_rets,
+            mode="lines",
+            name="Frontiera Efficiente Benchmark (Standard Markowitz)",
+            line=dict(color="#64748B", width=2, dash="dash"),
+            hoverinfo="text",
+            hovertext=[f"Vol: {v:.1f}% | Rend: {r:.1f}%" for v, r in zip(unc_vols, unc_rets)],
+        ))
+
+    # Constrained Risk Parity & Vol Target Frontier
+    if rp_state.frontier_curve:
+        con_vols = [p.volatility_pct for p in rp_state.frontier_curve]
+        con_rets = [p.expected_return_pct for p in rp_state.frontier_curve]
+        fig.add_trace(go.Scatter(
+            x=con_vols,
+            y=con_rets,
+            mode="lines+markers",
+            name="Frontiera Vincolata SPIDER (Risk Parity + Vol Targeting)",
+            line=dict(color="#10B981", width=3),
+            marker=dict(size=5, color="#10B981"),
+            hoverinfo="text",
+            hovertext=[f"Target Vol: {v:.1f}% | Rend: {r:.1f}% | Sharpe: {p.sharpe_ratio:.2f}" for v, r, p in zip(con_vols, con_rets, rp_state.frontier_curve)],
+        ))
+
+    # Active Portfolio Point
+    fig.add_trace(go.Scatter(
+        x=[rp_state.portfolio_volatility_pct],
+        y=[rp_state.expected_return_pct],
+        mode="markers+text",
+        name="🎯 Portafoglio Attivo SPIDER Dynamic",
+        marker=dict(size=14, color=rp_state.tension_color_hex, symbol="star", line=dict(color="#FFFFFF", width=1.5)),
+        text=["Portafoglio Attivo"],
+        textposition="top center",
+        hoverinfo="text",
+        hovertext=[f"<b>SPIDER Risk Parity Attivo</b><br>Volatilità: {rp_state.portfolio_volatility_pct:.2f}%<br>Rendimento Atteso: {rp_state.expected_return_pct:.2f}%<br>Sharpe: {rp_state.sharpe_ratio:.2f}<br>Tensione Rete: |Z|={rp_state.systemic_tension_z:.2f}"],
+    ))
+
+    # 60/40 Benchmark point for comparison (approx 12.5% vol, 7.5% return)
+    fig.add_trace(go.Scatter(
+        x=[12.5],
+        y=[7.5],
+        mode="markers+text",
+        name="Benchmark 60/40 Classico",
+        marker=dict(size=10, color="#EF4444", symbol="circle"),
+        text=["60/40 Classico"],
+        textposition="bottom right",
+        hoverinfo="text",
+        hovertext=["Benchmark 60/40 Classico<br>Volatilità: 12.5%<br>Rendimento Atteso: 7.5%<br>Rischio Sbilanciato (85% da Equity)"],
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text="<b>📈 Frontiera Efficiente di Markowitz & Portafoglio a Parità di Rischio Ottimale</b>",
+            font=dict(size=14, color=text_color),
+            x=0.03,
+            y=0.96,
+        ),
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=340,
+        margin=dict(l=45, r=35, t=50, b=35),
+        xaxis=dict(title="Volatilità Annualizzata Dev.Std (%)", gridcolor=grid_color, tickfont=dict(color="#CBD5E1")),
+        yaxis=dict(title="Rendimento Atteso Annuo (%)", gridcolor=grid_color, tickfont=dict(color="#CBD5E1")),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1.0,
+            font=dict(size=10.5, color="#CBD5E1"),
+        ),
+        font=dict(family="Inter, sans-serif"),
+    )
+    return fig
+
+
+
 
 

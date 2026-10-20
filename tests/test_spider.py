@@ -141,8 +141,36 @@ class TestSpiderArchitecture(unittest.TestCase):
         self.assertFalse(liq.historical_timeseries.empty)
         self.assertIn("US_Net_Liquidity_B", liq.historical_timeseries.columns)
 
+    def test_07_risk_parity_and_volatility_targeting(self):
+        """Verify Equal Risk Contribution, Markowitz Efficient Frontier, and Systemic Tension De-risking."""
+        from risk_parity_engine import risk_parity_engine, RiskParityState
+
+        aligned_df = engine.load_and_align_data(force_refresh=False)
+
+        # 1. Test in Equilibrium (|Z| = 0.8 < 1.25): Full Cyclical Beta
+        rp_eq = risk_parity_engine.optimize_risk_parity_portfolio(aligned_df, systemic_tension_z=0.8)
+        self.assertIsInstance(rp_eq, RiskParityState)
+        self.assertGreater(rp_eq.cyclical_exposure_pct, 25.0)
+        self.assertEqual(rp_eq.vol_scale_factor, 1.00)
+        self.assertEqual(len(rp_eq.items), 6)
+        # Verify Equal Risk Contribution among the core assets (~20% each)
+        for it in rp_eq.items[:5]:
+            self.assertAlmostEqual(it.risk_contribution_pct, 20.0, delta=2.5)
+
+        # 2. Test in Systemic Rupture (|Z| = 2.4 >= 2.0): Volatility Targeting De-risking
+        rp_rup = risk_parity_engine.optimize_risk_parity_portfolio(aligned_df, systemic_tension_z=2.4)
+        self.assertLess(rp_rup.cyclical_exposure_pct, rp_eq.cyclical_exposure_pct)
+        self.assertGreater(rp_rup.defensive_exposure_pct, 70.0)
+        self.assertLess(rp_rup.vol_scale_factor, 0.65)
+        self.assertLess(rp_rup.portfolio_volatility_pct, rp_eq.portfolio_volatility_pct)
+
+        # Verify Efficient Frontier Curves
+        self.assertGreater(len(rp_eq.frontier_curve), 5)
+        self.assertGreater(len(rp_eq.unconstrained_frontier), 5)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
