@@ -65,6 +65,13 @@ class TestSpiderArchitecture(unittest.TestCase):
             "Tensione Moderata (Attrito Macro)",
             "CRITICA (Rottura Correlazioni Sistemiche)"
         ])
+        # ECB CISS Model Assertions
+        self.assertIsNotNone(core.ciss)
+        self.assertGreaterEqual(core.ciss.ciss_score, 0.0)
+        self.assertLessEqual(core.ciss.ciss_score, 1.0)
+        self.assertEqual(len(core.ciss.quadrant_stress), 4)
+        self.assertEqual(len(core.ciss.corr_matrix), 4)
+        self.assertGreaterEqual(core.ciss.contagion_contribution_pct, 0.0)
 
     def test_04_ui_components(self):
         """Test Plotly spider web figure and dataframe generators."""

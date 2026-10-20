@@ -1046,3 +1046,138 @@ def generate_zscore_mini_svg(node_states: Dict[str, NodeState]) -> str:
     return svg
 
 
+def build_ciss_gauge_and_decomposition_figure(ciss: Any, dark_mode: bool = True) -> go.Figure:
+    """
+    Constructs a dual-panel figure:
+    1. Indicator Gauge of Total CISS Stress with ECB threshold zones
+    2. Waterfall / Bar Chart of Quadrant Stresses and Contagion vs Idiosyncratic Decomposition
+    """
+    from plotly.subplots import make_subplots
+
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "rgba(15, 23, 42, 0.7)" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+    grid_color = "rgba(255, 255, 255, 0.08)" if dark_mode else "rgba(15, 23, 42, 0.08)"
+
+    fig = make_subplots(
+        rows=1, cols=2,
+        column_widths=[0.42, 0.58],
+        specs=[[{"type": "indicator"}, {"type": "bar"}]],
+        subplot_titles=[
+            "<b>Termometro CISS (Stress Non-Lineare)</b>",
+            "<b>Stress dei 4 Quadranti & Rischio di Contagio</b>"
+        ]
+    )
+
+    # 1. Gauge indicator
+    fig.add_trace(
+        go.Indicator(
+            mode="gauge+number+delta",
+            value=ciss.ciss_score * 100.0,
+            number={"suffix": "%", "font": {"size": 36, "color": ciss.status_color, "family": "Inter, monospace"}},
+            title={"text": f"<b>{ciss.ciss_status.split('(')[0].strip()}</b>", "font": {"size": 13, "color": "#94A3B8"}},
+            gauge={
+                "axis": {"range": [0, 100], "tickwidth": 1, "tickcolor": "#94A3B8", "ticksuffix": "%"},
+                "bar": {"color": ciss.status_color, "thickness": 0.28},
+                "bgcolor": "rgba(255,255,255,0.05)",
+                "borderwidth": 1,
+                "bordercolor": "rgba(255,255,255,0.15)",
+                "steps": [
+                    {"range": [0, 25], "color": "rgba(16, 185, 129, 0.20)"},
+                    {"range": [25, 50], "color": "rgba(245, 158, 11, 0.20)"},
+                    {"range": [50, 100], "color": "rgba(239, 68, 68, 0.25)"},
+                ],
+                "threshold": {
+                    "line": {"color": "#EF4444", "width": 3},
+                    "thickness": 0.8,
+                    "value": 50,
+                },
+            },
+        ),
+        row=1, col=1
+    )
+
+    # 2. Quadrant sub-indices bars
+    quad_labels = [QUADRANTS.get(qk, {}).get("name", qk) for qk in ciss.quadrant_stress.keys()]
+    quad_vals = [ciss.quadrant_stress[qk] * 100.0 for qk in ciss.quadrant_stress.keys()]
+    quad_colors = [QUADRANTS.get(qk, {}).get("color", "#38BDF8") for qk in ciss.quadrant_stress.keys()]
+
+    fig.add_trace(
+        go.Bar(
+            x=quad_labels,
+            y=quad_vals,
+            marker=dict(color=quad_colors, line=dict(color="rgba(255,255,255,0.2)", width=1)),
+            text=[f"{v:.1f}%" for v in quad_vals],
+            textposition="outside",
+            name="Stress Quadrante (s_i)",
+            showlegend=False,
+        ),
+        row=1, col=2
+    )
+
+    fig.update_layout(
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=320,
+        margin=dict(l=20, r=20, t=45, b=25),
+        font=dict(family="Inter, sans-serif", color=text_color),
+    )
+    fig.update_yaxes(range=[0, 115], gridcolor=grid_color, row=1, col=2)
+    fig.update_xaxes(gridcolor=grid_color, row=1, col=2)
+
+    return fig
+
+
+def build_ciss_correlation_heatmap(ciss: Any, dark_mode: bool = True) -> go.Figure:
+    """Constructs a heatmap of the dynamic cross-quadrant correlation matrix C_t."""
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "rgba(15, 23, 42, 0.7)" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+
+    quad_keys = list(ciss.corr_matrix.keys())
+    quad_labels = [QUADRANTS.get(k, {}).get("name", k).split('&')[0].strip() for k in quad_keys]
+
+    z_vals = [[ciss.corr_matrix[q1][q2] for q2 in quad_keys] for q1 in quad_keys]
+    text_vals = [[f"{ciss.corr_matrix[q1][q2]:+.2f}" for q2 in quad_keys] for q1 in quad_keys]
+
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=z_vals,
+            x=quad_labels,
+            y=quad_labels,
+            text=text_vals,
+            texttemplate="%{text}",
+            textfont={"size": 13, "color": "#F8FAFC", "family": "JetBrains Mono, monospace"},
+            colorscale=[
+                [0.0, "#3B82F6"],   # Strong negative correlation (Diversifying)
+                [0.5, "#0F172A"],   # Uncorrelated
+                [1.0, "#EF4444"],   # Strong positive correlation (Contagion)
+            ],
+            zmin=-1.0,
+            zmax=1.0,
+            colorbar=dict(
+                title=dict(text="Corr ρ", font=dict(color=text_color, size=11)),
+                tickfont=dict(color="#CBD5E1"),
+                len=0.9,
+            ),
+        )
+    )
+
+    fig.update_layout(
+        title=dict(
+            text="<b>Matrice di Cross-Correlazione Dinamica tra Quadranti (C_t)</b>",
+            font=dict(size=14, color=text_color),
+            x=0.03,
+            y=0.96,
+        ),
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=320,
+        margin=dict(l=10, r=10, t=45, b=20),
+        xaxis=dict(tickfont=dict(color="#CBD5E1", size=11), side="bottom"),
+        yaxis=dict(tickfont=dict(color="#CBD5E1", size=11), autorange="reversed"),
+    )
+    return fig
+
+
+

@@ -49,6 +49,8 @@ from spider_ui import (
     build_spider_web_figure,
     build_spider_web_3d_figure,
     build_zscore_distribution_figure,
+    build_ciss_gauge_and_decomposition_figure,
+    build_ciss_correlation_heatmap,
     generate_zscore_mini_svg,
     generate_links_dataframe,
     generate_nodes_dataframe,
@@ -255,7 +257,7 @@ def get_computed_engine_data(window_key: str, use_spearman: bool, refresh_id: in
     aligned_df = engine.load_and_align_data(force_refresh=(refresh_id > 0))
     node_states = engine.compute_node_states(window_key=window_key)
     link_states = engine.compute_link_states(node_states, window_key=window_key, use_spearman=use_spearman)
-    core_state = engine.compute_spider_core(node_states, link_states)
+    core_state = engine.compute_spider_core(node_states, link_states, window_key=window_key)
     return node_states, link_states, core_state, aligned_df
 
 
@@ -403,6 +405,7 @@ st.markdown(f"""
         <br>
         <b>Regime Attivo:</b> <span style="color: #38BDF8;">{core_state.macro_regime}</span> | 
         <b>Tensione Tela (|Z|):</b> <span style="color: #FBBF24;">{core_state.systemic_web_tension:.2f}</span> | 
+        <b>Contagio CISS (ECB):</b> <span style="color: {core_state.ciss.status_color}; font-weight: 700;">{core_state.ciss.ciss_score * 100:.1f}% ({core_state.ciss.ciss_status.split('(')[0].strip()})</span> | 
         <b>Bias Banche Centrali:</b> <span style="color: #A78BFA;">{core_state.central_bank_bias}</span>
     </div>
 </div>
@@ -665,6 +668,83 @@ def show_web_tension_modal():
 
 
 
+# Modal Dialog: Indice di Contagio Non-Lineare CISS (ECB / OFR Framework)
+@st.dialog("⚡ Indice di Contagio Sistemico Non-Lineare (ECB CISS & OFR)", width="large")
+def show_ciss_modal():
+    ciss = core_state.ciss
+    st.markdown(f"### 🌐 ECB CISS Stress Index: <span style='color: {ciss.status_color};'>{ciss.ciss_score * 100:.1f}% • {ciss.ciss_status}</span>", unsafe_allow_html=True)
+    st.caption("Modello di rischio non-lineare basato sulla teoria di portafoglio: aggrega lo stress dei 4 quadranti macroeconomici attraverso la matrice di cross-correlazione dinamica $C_t$.")
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1.5px solid {ciss.status_color}; border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Indice CISS Globale</div>
+            <div style="font-size: 24px; font-weight: 800; color: {ciss.status_color}; font-family: monospace;">{ciss.ciss_score * 100:.1f}%</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Soglia critica: 50%</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c2:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Effetto Contagio Cross-Asset</div>
+            <div style="font-size: 24px; font-weight: 800; color: #38BDF8; font-family: monospace;">{ciss.contagion_contribution_pct:.1f}%</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Quota varianza da cross-correlazione</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c3:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Rischio Idiosincratico Puro</div>
+            <div style="font-size: 24px; font-weight: 800; color: #A78BFA; font-family: monospace;">{ciss.idiosyncratic_risk * 100:.2f}%</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Stress isolato dei singoli mercati</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with c4:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Stato Sistemico</div>
+            <div style="font-size: 16px; font-weight: 800; color: {ciss.status_color}; margin-top: 5px;">{ciss.ciss_status.split('(')[0].strip()}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 4px;">Standard BCE / OFR</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Visualizzazioni grafiche Plotly CISS
+    fig_ciss_bars = build_ciss_gauge_and_decomposition_figure(ciss, dark_mode=True)
+    st.plotly_chart(fig_ciss_bars, use_container_width=True)
+
+    col_h1, col_h2 = st.columns([1.1, 0.9])
+    with col_h1:
+        fig_ciss_heat = build_ciss_correlation_heatmap(ciss, dark_mode=True)
+        st.plotly_chart(fig_ciss_heat, use_container_width=True)
+    with col_h2:
+        st.markdown("#### 🔬 Fondamento Matematico (ECB CISS)")
+        st.markdown("""
+        L'indice CISS sviluppato da **Hóllo, Kremer e Lo Duca (BCE Working Paper No. 1426)** supera il limite delle medie lineari aggregando i sub-indici di stress dei 4 quadranti attraverso l'equazione di varianza di portafoglio:
+        $$\\text{CISS}_t = \\mathbf{s}_t' \\cdot \\mathbf{C}_t \\cdot \\mathbf{s}_t = \\sum_{i=1}^4 w_i^2 s_{i,t}^2 + 2 \\sum_{i < j} w_i w_j \\rho_{ij,t} s_{i,t} s_{j,t}$$
+        * **$s_{i,t} \\in [0, 1]$:** Livello di stress standardizzato tramite la Funzione di Distribuzione Cumulativa empirica ($CDF$).
+        * **$\\mathbf{C}_t$:** Matrice di cross-correlazione rolling a 90 giorni tra i quadranti.
+        * **Effetto Moltiplicatore di Contagio:** Se lo stress colpisce un solo settore (es. correzione tecnologica isolata), il termine di cross-correlazione è vicino a zero e l'indice resta contenuto. Se invece tassi, inflazione, borse e credito subiscono vendite simultanee, $\\rho_{ij}$ sale ed esplode l'effetto moltiplicativo sistemico.
+        """)
+
+    st.markdown("---")
+    st.markdown("#### 📋 Tabella Sotto-Indici dei Quadranti Macro:")
+    q_table_data = []
+    for qk, q_stress in ciss.quadrant_stress.items():
+        q_name = QUADRANTS.get(qk, {}).get("name", qk)
+        w_val = ciss.weights.get(qk, 0.25)
+        q_table_data.append({
+            "Quadrante Macro": q_name,
+            "Peso Algoritmico (w_i)": f"{w_val * 100:.0f}%",
+            "Stress Sub-Index (s_i)": f"{q_stress * 100:.1f}%",
+            "Contributo Ponderato (w_i * s_i)": f"{w_val * q_stress * 100:.2f}%",
+            "Stato Settoriale": "Critico (>50%)" if q_stress >= 0.50 else ("Attenzione (25-50%)" if q_stress >= 0.25 else "Fisiologico (<25%)")
+        })
+    st.dataframe(pd.DataFrame(q_table_data), use_container_width=True, hide_index=True)
+
+
 # Modal Dialog 4: Bias Banche Centrali (Central Bank Policy Bias)
 @st.dialog("🏛️ Dettaglio Analitico: Bias e Tassi Reali delle Banche Centrali", width="large")
 def show_cb_bias_modal():
@@ -910,8 +990,8 @@ def show_zscore_modal():
 
 
 
-# 7 Colonne di KPI Superiori (con Box Z-Score riepilogativo)
-k1, k2, k3, k4, k5, k6, k7 = st.columns([1, 1, 1, 1, 1, 1, 1.35])
+# 8 Colonne di KPI Superiori (con Box CISS Contagio & Z-Score)
+k1, k2, k3, k4, k5, k6, k7, k8 = st.columns([1, 1, 1, 1.05, 1, 1, 0.95, 1.25])
 with k1:
     st.markdown(f"""
     <div class="spider-kpi">
@@ -944,6 +1024,17 @@ with k3:
     if st.button("ℹ️ Dettagli Tensione", key="btn_open_tension_modal", use_container_width=True, type="secondary"):
         show_web_tension_modal()
 with k4:
+    ciss_obj = core_state.ciss
+    st.markdown(f"""
+    <div class="spider-kpi" style="border-left: 3px solid {ciss_obj.status_color};">
+        <div class="kpi-title">Contagio CISS (BCE)</div>
+        <div class="kpi-main-val" style="color: {ciss_obj.status_color}; font-size: 16px;">{ciss_obj.ciss_score * 100:.1f}%</div>
+        <div class="kpi-sub-val">{ciss_obj.ciss_status.split('(')[0].strip()}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("⚡ Dettagli CISS", key="btn_open_ciss_modal", use_container_width=True, type="secondary"):
+        show_ciss_modal()
+with k5:
     st.markdown(f"""
     <div class="spider-kpi">
         <div class="kpi-title">Bias Banche Centrali</div>
@@ -953,7 +1044,7 @@ with k4:
     """, unsafe_allow_html=True)
     if st.button("ℹ️ Dettagli Banche", key="btn_open_cb_bias_modal", use_container_width=True, type="secondary"):
         show_cb_bias_modal()
-with k5:
+with k6:
     st.markdown(f"""
     <div class="spider-kpi">
         <div class="kpi-title">Taylor Rule Gap</div>
@@ -963,17 +1054,17 @@ with k5:
     """, unsafe_allow_html=True)
     if st.button("ℹ️ Dettagli Taylor", key="btn_open_taylor_modal", use_container_width=True, type="secondary"):
         show_taylor_rule_modal()
-with k6:
+with k7:
     st.markdown(f"""
     <div class="spider-kpi">
-        <div class="kpi-title">Nodi Monitorati</div>
+        <div class="kpi-title">Nodi Rete</div>
         <div class="kpi-main-val" style="color: #F8FAFC;">{len(node_states)} / 30</div>
-        <div class="kpi-sub-val">10 Fili Maestri + 16 Spokes</div>
+        <div class="kpi-sub-val">10 Fili + 16 Spoke</div>
     </div>
     """, unsafe_allow_html=True)
     if st.button("ℹ️ Dettagli Nodi", key="btn_open_nodes_modal", use_container_width=True, type="secondary"):
         show_network_nodes_modal()
-with k7:
+with k8:
     n_ext_tot = sum(1 for ns in node_states.values() if abs(ns.z_score) >= 2.0)
     n_att_tot = sum(1 for ns in node_states.values() if 1.25 <= abs(ns.z_score) < 2.0)
     n_norm_tot = sum(1 for ns in node_states.values() if abs(ns.z_score) < 1.25)
@@ -1045,6 +1136,13 @@ Versione Software: {APP_VERSION} (Institutional Quantitative Architecture)
 - Inflation Score: {core_state.inflation_score:+.2f}
 - Coordinate Spaziali Regimi: ({core_state.regime_coords[0]:.2f}, {core_state.regime_coords[1]:.2f})
 - Tensione Sistemica della Tela: |Z| = {core_state.systemic_web_tension:.2f} ({core_state.web_tension_status})
+- Indice di Contagio Non-Lineare CISS (ECB / OFR): {core_state.ciss.ciss_score * 100:.1f}% ({core_state.ciss.ciss_status})
+  * Quota Varianza da Contagio Cross-Asset: {core_state.ciss.contagion_contribution_pct:.1f}%
+  * Rischio Idiosincratico Puro: {core_state.ciss.idiosyncratic_risk * 100:.2f}%
+  * Stress Quadrante Inflazione & Commodities: {core_state.ciss.quadrant_stress.get('INFLATION', 0.0) * 100:.1f}%
+  * Stress Quadrante Crescita & Produzione: {core_state.ciss.quadrant_stress.get('GROWTH', 0.0) * 100:.1f}%
+  * Stress Quadrante Lavoro & Occupazione: {core_state.ciss.quadrant_stress.get('LABOR', 0.0) * 100:.1f}%
+  * Stress Quadrante Liquidità, Rischio & Tassi: {core_state.ciss.quadrant_stress.get('LIQUIDITY_RISK', 0.0) * 100:.1f}%
 - Bias Banche Centrali: {core_state.central_bank_bias}
 - Tasso Reale FED: {core_state.fed_real_rate:+.2f}% | Tasso Reale BCE: {core_state.ecb_real_rate:+.2f}%
 - Taylor Rule Gap: {core_state.taylor_rate_gap_bps:+.0f} bps (Posizione: {'Restrittiva (Surplus)' if core_state.taylor_rate_gap_bps >= 0 else 'Accomodante (Deficit / Behind the curve)'})
@@ -1201,16 +1299,47 @@ for rank_i, ns in enumerate(sorted_nodes_z, 1):
     })
 df_file_b_zscore = pd.DataFrame(zscore_table_data)
 
+# Tabella dedicata CISS Quadranti & Correlazioni
+ciss_quad_data = []
+for qk, q_stress in core_state.ciss.quadrant_stress.items():
+    q_name = QUADRANTS.get(qk, {}).get("name", qk)
+    w_val = core_state.ciss.weights.get(qk, 0.25)
+    ciss_quad_data.append({
+        "Versione_SPIDER": APP_VERSION,
+        "ID_Quadrante": qk,
+        "Nome_Quadrante": q_name,
+        "Peso_Algoritmico": w_val,
+        "Stress_CDF_SubIndex": q_stress,
+        "Contributo_Ponderato": round(w_val * q_stress, 4),
+        "Stato_Settoriale": "Critico (>50%)" if q_stress >= 0.50 else ("Attenzione (25-50%)" if q_stress >= 0.25 else "Fisiologico (<25%)")
+    })
+df_file_b_ciss_quad = pd.DataFrame(ciss_quad_data)
+
+# Tabella matrice di correlazione tra quadranti C_t
+ciss_corr_data = []
+for q1, row_corr in core_state.ciss.corr_matrix.items():
+    row_dict = {"Versione_SPIDER": APP_VERSION, "Quadrante_Asse_Y": q1}
+    for q2, val in row_corr.items():
+        row_dict[f"Corr_{q2}"] = val
+    ciss_corr_data.append(row_dict)
+df_file_b_ciss_corr = pd.DataFrame(ciss_corr_data)
+
 excel_b_buffer = io.BytesIO()
 with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
     df_file_b_nodes.to_excel(writer, index=False, sheet_name="Dati_Numerici_30_Nodi")
     df_file_b_links.to_excel(writer, index=False, sheet_name="Correlazioni_10_Fili")
     df_file_b_zscore.to_excel(writer, index=False, sheet_name="Distribuzione_ZScore_30_Nodi")
+    df_file_b_ciss_quad.to_excel(writer, index=False, sheet_name="Stress_Quadranti_CISS")
+    df_file_b_ciss_corr.to_excel(writer, index=False, sheet_name="Matrice_CrossCorr_CISS")
     pd.DataFrame([{
         "Versione_SPIDER": APP_VERSION,
         "Data_Snapshot": now_iso,
         "Macro_Regime": core_state.macro_regime,
         "Tensione_Sistemica_Z": core_state.systemic_web_tension,
+        "CISS_Score_BCE": core_state.ciss.ciss_score,
+        "CISS_Stato": core_state.ciss.ciss_status,
+        "CISS_Contagion_Contribution_Pct": core_state.ciss.contagion_contribution_pct,
+        "CISS_Idiosyncratic_Risk": core_state.ciss.idiosyncratic_risk,
         "Landing_Scenario": core_state.landing_scenario.scenario_title,
         "Prob_No_Landing": core_state.landing_scenario.prob_no_landing,
         "Pring_Stage": pring_res_curr.stage_title,
@@ -1324,6 +1453,10 @@ def show_spider_core_modal():
             <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Rank #{yc_s.rank} Ciclo Economico</div>
         </div>
         """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("#### ⚡ Termometro di Rischio Sistemico & Contagio Multi-Mercato (ECB CISS):")
+    st.plotly_chart(build_ciss_gauge_and_decomposition_figure(core_state.ciss, dark_mode=True), use_container_width=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("#### ⚡ Matrice Anomalie Critiche & Fili Maestri in Tensione:")

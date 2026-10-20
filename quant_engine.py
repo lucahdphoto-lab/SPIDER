@@ -5,6 +5,7 @@ rolling Pearson/Spearman correlations, link tension Z-scores, Macro Regime Matri
 Systemic Web Tension, and Central Bank Policy Bias.
 """
 
+import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -94,6 +95,24 @@ class LandingScenarioState:
 
 
 @dataclass
+class CISSState:
+    """
+    ECB CISS (Composite Indicator of Systemic Stress) & Non-Linear Contagion State.
+    Aggregates sub-indices of systemic stress across 4 macro quadrants using portfolio theory:
+    CISS = s' * C * s = sum_i sum_j w_i * w_j * rho_ij * s_i * s_j
+    """
+    ciss_score: float                   # Overall index in [0, 1]
+    ciss_status: str                    # "Calma Fisiologica", "Allerta Settoriale", "Contagio Sistemico Severo"
+    status_color: str                   # "#10B981", "#F59E0B", "#EF4444"
+    quadrant_stress: Dict[str, float]   # Stress sub-index s_i in [0, 1] for each quadrant
+    weights: Dict[str, float]           # Weights w_i summing to 1.0
+    corr_matrix: Dict[str, Dict[str, float]] # Dynamic rolling correlation matrix C_t
+    idiosyncratic_risk: float           # Risk assuming zero cross-correlation: sum(w_i^2 * s_i^2)
+    contagion_effect: float             # Cross-market contagion term: sum_{i != j} w_i * w_j * rho_ij * s_i * s_j
+    contagion_contribution_pct: float   # Percentage of total CISS variance explained by systemic contagion
+
+
+@dataclass
 class SpiderCoreState:
     macro_regime: str
     macro_regime_desc: str
@@ -109,6 +128,7 @@ class SpiderCoreState:
     taylor_rate_gap_bps: float
     active_critical_alerts: List[str]
     landing_scenario: LandingScenarioState
+    ciss: CISSState
 
 
 class SpiderQuantEngine:
@@ -476,7 +496,8 @@ class SpiderQuantEngine:
     def compute_spider_core(
         self,
         node_states: Dict[str, NodeState],
-        link_states: List[LinkState]
+        link_states: List[LinkState],
+        window_key: str = "90D",
     ) -> SpiderCoreState:
         """Synthesize the state of the central control hub."""
         # 1. Macro Regime Composites (Standard Institutional Benchmarking)
@@ -727,6 +748,9 @@ class SpiderQuantEngine:
             policy_reaction=l_policy,
         )
 
+        # 4. ECB CISS (Composite Indicator of Systemic Stress) Non-Linear Model
+        ciss_state = self.compute_ecb_ciss(node_states, window_key=window_key)
+
         return SpiderCoreState(
             macro_regime=regime,
             macro_regime_desc=desc,
@@ -742,7 +766,126 @@ class SpiderQuantEngine:
             taylor_rate_gap_bps=taylor_gap_bps,
             active_critical_alerts=critical_alerts,
             landing_scenario=landing_state,
+            ciss=ciss_state,
+        )
+
+    def compute_ecb_ciss(self, node_states: Dict[str, NodeState], window_key: str = "90D") -> CISSState:
+        """
+        Computes the ECB CISS (Composite Indicator of Systemic Stress) using Portfolio Theory:
+        CISS_t = s' * C_t * s = sum_i sum_j w_i * w_j * rho_ij * s_i * s_j
+        where:
+          s_i in [0, 1] is the CDF-transformed systemic stress for quadrant i
+          C_t is the dynamic rolling cross-correlation matrix between quadrants
+        """
+        quad_keys = ["INFLATION", "GROWTH", "LABOR", "LIQUIDITY_RISK"]
+        quad_weights = {
+            "INFLATION": 0.25,
+            "GROWTH": 0.25,
+            "LABOR": 0.20,
+            "LIQUIDITY_RISK": 0.30,  # Money market, rates, credit & systemic risk carry higher weight
+        }
+
+        # Calculate quadrant stress sub-index s_i in [0, 1] using empirical CDF of |Z-Score|
+        quad_stresses: Dict[str, float] = {}
+        for qk in quad_keys:
+            q_nodes = [ns for ns in node_states.values() if ns.quadrant == qk]
+            if not q_nodes:
+                quad_stresses[qk] = 0.25
+                continue
+
+            # In financial stress models (e.g. CISS / OFR), individual stress indicators are mapped to [0, 1]
+            # through standard normal or empirical CDF: Phi(|Z|), where |Z| > 1.96 yields ~0.95 stress.
+            z_scores = [abs(ns.z_score) for ns in q_nodes]
+            # Average Z of quadrant
+            avg_z = float(np.mean(z_scores)) if z_scores else 0.0
+            # Transform to [0, 1] using logistic/error function CDF mapping:
+            # 2 * Phi(|Z|) - 1 or erf(|Z| / sqrt(2)), mapping 0 -> 0.0, 1.25 -> ~0.78, 2.0 -> ~0.95
+            stress_cdf = float(math.erf(avg_z / (math.sqrt(2.0) * 1.2)))
+            stress_cdf = max(0.01, min(0.99, stress_cdf))
+            quad_stresses[qk] = stress_cdf
+
+        # Compute dynamic cross-correlation matrix C_t across the 4 quadrants
+        days = TIME_WINDOWS.get(window_key, {}).get("days", 90)
+        corr_matrix: Dict[str, Dict[str, float]] = {q1: {q2: 1.0 if q1 == q2 else 0.0 for q2 in quad_keys} for q1 in quad_keys}
+
+        if not self.aligned_df.empty:
+            sub_df = self.aligned_df.iloc[-days:].copy() if len(self.aligned_df) >= days else self.aligned_df.copy()
+            # Build quadrant-level daily returns / changes
+            quad_series: Dict[str, pd.Series] = {}
+            for qk in quad_keys:
+                q_cols = [nid for nid, nd in NODES.items() if nd.quadrant == qk and nid in sub_df.columns]
+                if q_cols:
+                    # Normalized z-score rolling series for each node in quadrant, then mean
+                    normed_cols = []
+                    for c in q_cols:
+                        series = sub_df[c].dropna()
+                        if len(series) >= 10:
+                            s_std = series.std()
+                            if s_std > 1e-6:
+                                normed = (series - series.mean()) / s_std
+                                normed_cols.append(normed)
+                    if normed_cols:
+                        quad_series[qk] = pd.concat(normed_cols, axis=1).mean(axis=1)
+
+            # Compute empirical Pearson correlation matrix
+            if len(quad_series) == len(quad_keys):
+                comb_df = pd.DataFrame(quad_series).dropna()
+                if len(comb_df) >= 15:
+                    r_mat = comb_df.corr(method="pearson")
+                    for q1 in quad_keys:
+                        for q2 in quad_keys:
+                            val = float(r_mat.loc[q1, q2])
+                            if not np.isnan(val):
+                                corr_matrix[q1][q2] = round(val, 4)
+
+        # Portfolio-theoretic CISS Aggregation:
+        # Idiosyncratic risk = sum_i (w_i^2 * s_i^2)
+        # Contagion effect = sum_{i != j} (w_i * w_j * rho_ij * s_i * s_j)
+        # Total CISS = sqrt(Idiosyncratic + max(0, Contagion))
+        s_vec = np.array([quad_stresses[qk] for qk in quad_keys])
+        w_vec = np.array([quad_weights[qk] for qk in quad_keys])
+        c_mat = np.array([[corr_matrix[q1][q2] for q2 in quad_keys] for q1 in quad_keys])
+
+        idiosyncratic_term = float(np.sum((w_vec * s_vec) ** 2))
+
+        # Total portfolio variance term: s' * diag(w) * C * diag(w) * s
+        w_s = w_vec * s_vec
+        total_variance = float(w_s.T @ c_mat @ w_s)
+        total_variance = max(0.0001, total_variance)
+
+        contagion_term = float(total_variance - idiosyncratic_term)
+        ciss_score = float(math.sqrt(total_variance))
+        ciss_score = max(0.0, min(1.0, ciss_score))
+
+        # Contagion contribution percentage
+        if total_variance > 0:
+            contagion_pct = max(0.0, min(100.0, (contagion_term / total_variance) * 100.0))
+        else:
+            contagion_pct = 0.0
+
+        # Status & classification according to ECB CISS empirical percentiles
+        if ciss_score >= 0.50:
+            ciss_status = "Contagio Sistemico Severo (Rischio Multi-Mercato)"
+            status_color = "#EF4444"
+        elif ciss_score >= 0.25:
+            ciss_status = "Allerta Settoriale Moderata (Primi Focolai Cross-Asset)"
+            status_color = "#F59E0B"
+        else:
+            ciss_status = "Calma Fisiologica (Rischio Isolato o Minimo)"
+            status_color = "#10B981"
+
+        return CISSState(
+            ciss_score=round(ciss_score, 4),
+            ciss_status=ciss_status,
+            status_color=status_color,
+            quadrant_stress={qk: round(quad_stresses[qk], 4) for qk in quad_keys},
+            weights=quad_weights,
+            corr_matrix=corr_matrix,
+            idiosyncratic_risk=round(idiosyncratic_term, 5),
+            contagion_effect=round(contagion_term, 5),
+            contagion_contribution_pct=round(contagion_pct, 1),
         )
 
 
 engine = SpiderQuantEngine()
+
