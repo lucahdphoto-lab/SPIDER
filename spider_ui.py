@@ -1028,8 +1028,8 @@ def generate_zscore_mini_svg(node_states: Dict[str, NodeState]) -> str:
     bars_html = "".join(svg_bars)
 
     svg = (
-        f'<div style="width: 100%; display: flex; justify-content: center; margin: 2px 0;">'
-        f'<svg viewBox="0 0 220 86" style="width: 100%; max-height: 78px; overflow: visible;">'
+        f'<div style="width: 100%; display: flex; justify-content: center; margin: 1px 0;">'
+        f'<svg viewBox="0 0 220 86" style="width: 100%; max-height: 56px; height: 56px; overflow: visible;">'
         f'<line x1="20" y1="3" x2="20" y2="78" stroke="rgba(255,255,255,0.08)" stroke-width="0.7" stroke-dasharray="2,2"/>'
         f'<line x1="50" y1="3" x2="50" y2="78" stroke="rgba(59,130,246,0.25)" stroke-width="0.8" stroke-dasharray="2,2"/>'
         f'<line x1="170" y1="3" x2="170" y2="78" stroke="rgba(59,130,246,0.25)" stroke-width="0.8" stroke-dasharray="2,2"/>'

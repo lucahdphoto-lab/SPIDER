@@ -204,24 +204,110 @@ st.markdown("""
         backdrop-filter: blur(8px);
         margin-bottom: 12px;
     }
+    .spider-top-kpi {
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.88) 0%, rgba(10, 15, 26, 0.96) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 9px 9px 8px 9px;
+        backdrop-filter: blur(8px);
+        margin-bottom: 8px;
+        height: 148px;
+        min-height: 148px;
+        max-height: 148px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-sizing: border-box;
+        overflow: hidden;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+    .spider-top-kpi:hover {
+        border-color: rgba(56, 189, 248, 0.4);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    }
+    .kpi-top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 2px;
+        gap: 2px;
+    }
     .kpi-title {
-        font-size: 11px;
-        font-weight: 600;
+        font-size: 9.5px;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.8px;
+        letter-spacing: 0.5px;
         color: #94A3B8;
-        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .kpi-stars-badge {
+        display: inline-flex;
+        align-items: center;
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.28);
+        border-radius: 4px;
+        padding: 1px 3px;
+        font-size: 8px;
+        line-height: 1;
+        white-space: nowrap;
+        cursor: help;
+    }
+    .kpi-stars-gold {
+        color: #F59E0B;
+        letter-spacing: -0.5px;
+        text-shadow: 0 0 4px rgba(245, 158, 11, 0.4);
+    }
+    .kpi-stars-dim {
+        color: rgba(148, 163, 184, 0.22);
+        letter-spacing: -0.5px;
+    }
+    .kpi-body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        flex: 1;
+        margin: 2px 0;
     }
     .kpi-main-val {
-        font-size: 20px;
+        font-size: 15px;
         font-weight: 800;
         color: #F8FAFC;
-        font-family: 'JetBrains Mono', monospace;
+        font-family: 'JetBrains Mono', -apple-system, monospace;
+        line-height: 1.15;
+        margin: 1px 0;
+        word-break: break-word;
     }
     .kpi-sub-val {
-        font-size: 11.5px;
+        font-size: 9.5px;
         color: #64748B;
+        line-height: 1.2;
+        margin-top: 2px;
+        white-space: normal;
+    }
+    .kpi-footer-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
         margin-top: 3px;
+        padding-top: 3px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .kpi-influence-pill {
+        font-size: 8px;
+        font-weight: 700;
+        color: #F59E0B;
+        letter-spacing: 0.2px;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     section[data-testid="stSidebar"] {
@@ -230,17 +316,25 @@ st.markdown("""
     }
     
     /* Uniform height & style for KPI detail buttons */
+    div[data-testid="stHorizontalBlock"] > div:has(.spider-top-kpi) button,
     div[data-testid="stHorizontalBlock"] > div:has(.spider-kpi) button {
         border-radius: 8px !important;
-        font-size: 11.5px !important;
+        font-size: 10.5px !important;
         font-weight: 600 !important;
-        padding: 4px 8px !important;
+        padding: 4px 2px !important;
         min-height: 32px !important;
+        height: 32px !important;
+        max-height: 32px !important;
         background: rgba(255, 255, 255, 0.04) !important;
         border: 1px solid rgba(255, 255, 255, 0.12) !important;
         color: #94A3B8 !important;
         transition: all 0.2s ease !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        width: 100% !important;
     }
+    div[data-testid="stHorizontalBlock"] > div:has(.spider-top-kpi) button:hover,
     div[data-testid="stHorizontalBlock"] > div:has(.spider-kpi) button:hover {
         background: rgba(56, 189, 248, 0.12) !important;
         border-color: #38BDF8 !important;
@@ -1198,124 +1292,244 @@ def show_zscore_modal():
 
 
 
-# 10 Colonne di KPI Superiori (con Liquidità Netta, CISS, Diebold-Yilmaz Spillover & Z-Score)
-k1, k2, k3, k4, k5, k_dy, k6, k7, k8, k9 = st.columns([1, 1, 1, 1.05, 1.05, 1.1, 1, 1, 0.95, 1.25])
+# Helper per rendering stelle importanza ciclo economico (1 a 5 stelle)
+def render_cycle_stars_badge(stars: int, max_stars: int = 5) -> str:
+    gold = "★" * stars
+    dim = "☆" * (max_stars - stars)
+    return (
+        f'<span class="kpi-stars-badge" title="Importanza & Influenza sul Ciclo Economico: {stars}/{max_stars}">'
+        f'<span class="kpi-stars-gold">{gold}</span><span class="kpi-stars-dim">{dim}</span>'
+        f'</span>'
+    )
+
+
+# 10 Colonne di KPI Superiori (Layout uniformato con stelle di influenza ciclo economico)
+k1, k2, k3, k4, k5, k_dy, k6, k7, k8, k9 = st.columns([1.0, 1.0, 1.0, 1.05, 1.08, 1.08, 1.0, 1.0, 0.95, 1.25])
+
 with k1:
     st.markdown(f"""
-    <div class="spider-kpi">
-        <div class="kpi-title">Regime Macroeconomico</div>
-        <div class="kpi-main-val" style="font-size: 15px; color: #38BDF8;">{core_state.macro_regime.split('/')[0].split('(')[0].strip()}</div>
-        <div class="kpi-sub-val">Growth: {core_state.growth_score:+.2f} | Inf: {core_state.inflation_score:+.2f}</div>
+    <div class="spider-top-kpi" style="border-left: 3px solid #38BDF8;">
+        <div class="kpi-top-row">
+            <span class="kpi-title" title="Regime Macroeconomico Primario">REGIME MACRO</span>
+            {render_cycle_stars_badge(5)}
+        </div>
+        <div class="kpi-body">
+            <div class="kpi-main-val" style="font-size: 13.5px; color: #38BDF8;">{core_state.macro_regime.split('/')[0].split('(')[0].strip()}</div>
+            <div class="kpi-sub-val">Growth: {core_state.growth_score:+.2f} | Inf: {core_state.inflation_score:+.2f}</div>
+        </div>
+        <div class="kpi-footer-row">
+            <span class="kpi-influence-pill" title="Influenza Massima (5/5): la combinazione Crescita/Inflazione governa l'allocazione primaria">
+                <span>★ 5/5</span> <span style="color: #94A3B8; font-weight: 500;">Driver Ciclo</span>
+            </span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("ℹ️ Dettagli Regime", key="btn_open_regime_modal", use_container_width=True, type="secondary"):
+    if st.button("ℹ️ Dett. Regime", key="btn_open_regime_modal", use_container_width=True, type="secondary"):
         show_macro_regime_modal()
+
 with k2:
     ls_obj = core_state.landing_scenario
     st.markdown(f"""
-    <div class="spider-kpi" style="border-left: 3px solid {ls_obj.color_hex};">
-        <div class="kpi-title">Scenario Atterraggio (Landing)</div>
-        <div class="kpi-main-val" style="font-size: 15px; color: {ls_obj.color_hex};">{ls_obj.scenario_badge}</div>
-        <div class="kpi-sub-val">Confidenza: {ls_obj.confidence_pct:.1f}% (NoLand {ls_obj.prob_no_landing:.0f}%)</div>
+    <div class="spider-top-kpi" style="border-left: 3px solid {ls_obj.color_hex};">
+        <div class="kpi-top-row">
+            <span class="kpi-title" title="Scenario Atterraggio Ciclico (Landing)">SCENARIO LANDING</span>
+            {render_cycle_stars_badge(4)}
+        </div>
+        <div class="kpi-body">
+            <div class="kpi-main-val" style="font-size: 14px; color: {ls_obj.color_hex};">{ls_obj.scenario_badge}</div>
+            <div class="kpi-sub-val">Conf: {ls_obj.confidence_pct:.0f}% (NoLand {ls_obj.prob_no_landing:.0f}%)</div>
+        </div>
+        <div class="kpi-footer-row">
+            <span class="kpi-influence-pill" title="Importanza Elevata (4/5): anticipa i punti di svolta tra soft landing, hard landing e no landing">
+                <span>★ 4/5</span> <span style="color: #94A3B8; font-weight: 500;">Svolta Ciclica</span>
+            </span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("ℹ️ Dettagli Landing", key="btn_open_landing_modal", use_container_width=True, type="secondary"):
+    if st.button("ℹ️ Dett. Landing", key="btn_open_landing_modal", use_container_width=True, type="secondary"):
         show_landing_scenario_modal()
+
 with k3:
+    t_val = core_state.systemic_web_tension
+    t_col = '#EF4444' if t_val >= 2.0 else ('#F59E0B' if t_val >= 1.25 else '#10B981')
     st.markdown(f"""
-    <div class="spider-kpi">
-        <div class="kpi-title">Tensione Sistemica Tela</div>
-        <div class="kpi-main-val" style="color: {'#EF4444' if core_state.systemic_web_tension >= 2.0 else ('#F59E0B' if core_state.systemic_web_tension >= 1.25 else '#10B981')};">{core_state.systemic_web_tension:.2f}</div>
-        <div class="kpi-sub-val">{core_state.web_tension_status.split('(')[0]}</div>
+    <div class="spider-top-kpi" style="border-left: 3px solid {t_col};">
+        <div class="kpi-top-row">
+            <span class="kpi-title" title="Tensione Sistemica Tela Intermarket (|Z|)">TENSIONE TELA</span>
+            {render_cycle_stars_badge(5)}
+        </div>
+        <div class="kpi-body">
+            <div class="kpi-main-val" style="color: {t_col}; font-size: 18px;">|Z| = {t_val:.2f}</div>
+            <div class="kpi-sub-val">{core_state.web_tension_status.split('(')[0].strip()}</div>
+        </div>
+        <div class="kpi-footer-row">
+            <span class="kpi-influence-pill" title="Influenza Massima (5/5): misura la stabilità d'insieme della rete e guida il de-risking">
+                <span>★ 5/5</span> <span style="color: #94A3B8; font-weight: 500;">De-risking Rete</span>
+            </span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("ℹ️ Dettagli Tensione", key="btn_open_tension_modal", use_container_width=True, type="secondary"):
+    if st.button("ℹ️ Dett. Tensione", key="btn_open_tension_modal", use_container_width=True, type="secondary"):
         show_web_tension_modal()
+
 with k4:
     ciss_obj = core_state.ciss
     st.markdown(f"""
-    <div class="spider-kpi" style="border-left: 3px solid {ciss_obj.status_color};">
-        <div class="kpi-title">Contagio CISS (BCE)</div>
-        <div class="kpi-main-val" style="color: {ciss_obj.status_color}; font-size: 16px;">{ciss_obj.ciss_score * 100:.1f}%</div>
-        <div class="kpi-sub-val">{ciss_obj.ciss_status.split('(')[0].strip()}</div>
+    <div class="spider-top-kpi" style="border-left: 3px solid {ciss_obj.status_color};">
+        <div class="kpi-top-row">
+            <span class="kpi-title" title="Composite Indicator of Systemic Stress (BCE)">CONTAGIO CISS</span>
+            {render_cycle_stars_badge(4)}
+        </div>
+        <div class="kpi-body">
+            <div class="kpi-main-val" style="color: {ciss_obj.status_color}; font-size: 17px;">{ciss_obj.ciss_score * 100:.1f}%</div>
+            <div class="kpi-sub-val">{ciss_obj.ciss_status.split('(')[0].strip()}</div>
+        </div>
+        <div class="kpi-footer-row">
+            <span class="kpi-influence-pill" title="Importanza Elevata (4/5): rileva la sincronizzazione dello stress nei 5 quadranti finanziari">
+                <span>★ 4/5</span> <span style="color: #94A3B8; font-weight: 500;">Stress BCE</span>
+            </span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("⚡ Dettagli CISS", key="btn_open_ciss_modal", use_container_width=True, type="secondary"):
+    if st.button("⚡ Dett. CISS", key="btn_open_ciss_modal", use_container_width=True, type="secondary"):
         show_ciss_modal()
+
 with k5:
     liq_curr = net_liquidity_engine.compute_net_liquidity(aligned_df)
     st.markdown(f"""
-    <div class="spider-kpi" style="border-left: 3px solid {liq_curr.liquidity_color_hex};">
-        <div class="kpi-title">US Net Liquidity (Fed)</div>
-        <div class="kpi-main-val" style="color: #38BDF8; font-size: 16px;">${liq_curr.us_net_liquidity_b:,.0f} B</div>
-        <div class="kpi-sub-val">Δ 4W: {liq_curr.us_net_liquidity_delta_4w_b:+,.0f} B ({liq_curr.us_net_liquidity_delta_4w_pct:+.1f}%)</div>
+    <div class="spider-top-kpi" style="border-left: 3px solid {liq_curr.liquidity_color_hex};">
+        <div class="kpi-top-row">
+            <span class="kpi-title" title="Federal Reserve Net Liquidity = Assets - TGA - RRP">NET LIQUIDITY</span>
+            {render_cycle_stars_badge(5)}
+        </div>
+        <div class="kpi-body">
+            <div class="kpi-main-val" style="color: #38BDF8; font-size: 16px;">${liq_curr.us_net_liquidity_b:,.0f} B</div>
+            <div class="kpi-sub-val">Δ 4W: {liq_curr.us_net_liquidity_delta_4w_b:+,.0f}B ({liq_curr.us_net_liquidity_delta_4w_pct:+.1f}%)</div>
+        </div>
+        <div class="kpi-footer-row">
+            <span class="kpi-influence-pill" title="Influenza Massima (5/5): la liquidità quantitativa anticipa le asset class di 4-8 settimane">
+                <span>★ 5/5</span> <span style="color: #94A3B8; font-weight: 500;">Driver Fed 4-8W</span>
+            </span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("🌊 Dettagli Liquidità", key="btn_open_liquidity_modal", use_container_width=True, type="secondary"):
+    if st.button("🌊 Dett. Liquidità", key="btn_open_liquidity_modal", use_container_width=True, type="secondary"):
         show_net_liquidity_modal()
+
 with k_dy:
     dy_curr = diebold_yilmaz_engine.calculate_spillover_state(aligned_df)
     top_tx_label = dy_curr.top_transmitters[0].symbol if dy_curr.top_transmitters else "N/A"
     st.markdown(f"""
-    <div class="spider-kpi" style="border-left: 3px solid {dy_curr.tci_color_hex};">
-        <div class="kpi-title">Spillover TCI (Diebold)</div>
-        <div class="kpi-main-val" style="color: {dy_curr.tci_color_hex}; font-size: 16px;">{dy_curr.total_connectedness_index:.1f}%</div>
-        <div class="kpi-sub-val">Leader: <b style="color: #EF4444;">{top_tx_label}</b> ({dy_curr.top_transmitters[0].net_spillover_pct:+.1f}%)</div>
+    <div class="spider-top-kpi" style="border-left: 3px solid {dy_curr.tci_color_hex};">
+        <div class="kpi-top-row">
+            <span class="kpi-title" title="Total Connectedness Index (Diebold-Yilmaz VAR/GFEVD)">SPILLOVER TCI</span>
+            {render_cycle_stars_badge(4)}
+        </div>
+        <div class="kpi-body">
+            <div class="kpi-main-val" style="color: {dy_curr.tci_color_hex}; font-size: 17px;">{dy_curr.total_connectedness_index:.1f}%</div>
+            <div class="kpi-sub-val">Leader: <b style="color: #EF4444;">{top_tx_label}</b> ({dy_curr.top_transmitters[0].net_spillover_pct:+.1f}%)</div>
+        </div>
+        <div class="kpi-footer-row">
+            <span class="kpi-influence-pill" title="Importanza Elevata (4/5): misura la propagazione e la causalità direzionale del contagio">
+                <span>★ 4/5</span> <span style="color: #94A3B8; font-weight: 500;">Chi Contagia</span>
+            </span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("🕸️ Chi Contagia Chi", key="btn_open_diebold_modal", use_container_width=True, type="secondary"):
+    if st.button("🕸️ Chi Contagia", key="btn_open_diebold_modal", use_container_width=True, type="secondary"):
         show_diebold_spillover_modal()
+
 with k6:
     st.markdown(f"""
-    <div class="spider-kpi">
-        <div class="kpi-title">Bias Banche Centrali</div>
-        <div class="kpi-main-val" style="font-size: 15px; color: #A78BFA;">{core_state.central_bank_bias.split('(')[0]}</div>
-        <div class="kpi-sub-val">FED Reale: {core_state.fed_real_rate:+.2f}% | BCE: {core_state.ecb_real_rate:+.2f}%</div>
+    <div class="spider-top-kpi" style="border-left: 3px solid #A78BFA;">
+        <div class="kpi-top-row">
+            <span class="kpi-title" title="Orientamento di Politica Monetaria Fed & BCE">BANCHE CENTRALI</span>
+            {render_cycle_stars_badge(5)}
+        </div>
+        <div class="kpi-body">
+            <div class="kpi-main-val" style="font-size: 15px; color: #A78BFA;">{core_state.central_bank_bias.split('(')[0].strip()}</div>
+            <div class="kpi-sub-val">FED: {core_state.fed_real_rate:+.2f}% | BCE: {core_state.ecb_real_rate:+.2f}%</div>
+        </div>
+        <div class="kpi-footer-row">
+            <span class="kpi-influence-pill" title="Influenza Massima (5/5): stabilisce il costo del denaro e i tassi reali che pilotano il ciclo">
+                <span>★ 5/5</span> <span style="color: #94A3B8; font-weight: 500;">Tassi Reali</span>
+            </span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("ℹ️ Dettagli Banche", key="btn_open_cb_bias_modal", use_container_width=True, type="secondary"):
+    if st.button("ℹ️ Dett. Banche", key="btn_open_cb_bias_modal", use_container_width=True, type="secondary"):
         show_cb_bias_modal()
+
 with k7:
     st.markdown(f"""
-    <div class="spider-kpi">
-        <div class="kpi-title">Taylor Rule Gap</div>
-        <div class="kpi-main-val" style="color: {'#10B981' if core_state.taylor_rate_gap_bps >= 0 else '#EF4444'};">{core_state.taylor_rate_gap_bps:+.0f} bps</div>
-        <div class="kpi-sub-val">Tasso Reale Restrittivo</div>
+    <div class="spider-top-kpi" style="border-left: 3px solid {'#10B981' if core_state.taylor_rate_gap_bps >= 0 else '#EF4444'};">
+        <div class="kpi-top-row">
+            <span class="kpi-title" title="Scostamento del Tasso Effettivo dalla Regola di Taylor">TAYLOR GAP</span>
+            {render_cycle_stars_badge(3)}
+        </div>
+        <div class="kpi-body">
+            <div class="kpi-main-val" style="color: {'#10B981' if core_state.taylor_rate_gap_bps >= 0 else '#EF4444'}; font-size: 17px;">{core_state.taylor_rate_gap_bps:+.0f} bps</div>
+            <div class="kpi-sub-val">{'Tasso Restrittivo' if core_state.taylor_rate_gap_bps >= 0 else 'Accomodante'}</div>
+        </div>
+        <div class="kpi-footer-row">
+            <span class="kpi-influence-pill" title="Importanza Media (3/5): misura la deviazione dal tasso neutrale di lungo termine">
+                <span>★ 3/5</span> <span style="color: #94A3B8; font-weight: 500;">Tasso Neutrale</span>
+            </span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("ℹ️ Dettagli Taylor", key="btn_open_taylor_modal", use_container_width=True, type="secondary"):
+    if st.button("ℹ️ Dett. Taylor", key="btn_open_taylor_modal", use_container_width=True, type="secondary"):
         show_taylor_rule_modal()
+
 with k8:
     st.markdown(f"""
-    <div class="spider-kpi">
-        <div class="kpi-title">Nodi Rete</div>
-        <div class="kpi-main-val" style="color: #F8FAFC;">{len(node_states)} / 30</div>
-        <div class="kpi-sub-val">10 Fili + 16 Spoke</div>
+    <div class="spider-top-kpi" style="border-left: 3px solid rgba(255,255,255,0.25);">
+        <div class="kpi-top-row">
+            <span class="kpi-title" title="Completezza dell'Universo dei Nodi SPIDER">NODI RETE</span>
+            {render_cycle_stars_badge(3)}
+        </div>
+        <div class="kpi-body">
+            <div class="kpi-main-val" style="color: #F8FAFC; font-size: 18px;">{len(node_states)} / 30</div>
+            <div class="kpi-sub-val">10 Fili • 16 Spoke • 4 Sat</div>
+        </div>
+        <div class="kpi-footer-row">
+            <span class="kpi-influence-pill" title="Importanza Media (3/5): granularità informativa e copertura multi-mercato">
+                <span>★ 3/5</span> <span style="color: #94A3B8; font-weight: 500;">Copertura Rete</span>
+            </span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("ℹ️ Dettagli Nodi", key="btn_open_nodes_modal", use_container_width=True, type="secondary"):
+    if st.button("ℹ️ Dett. Nodi", key="btn_open_nodes_modal", use_container_width=True, type="secondary"):
         show_network_nodes_modal()
+
 with k9:
     n_ext_tot = sum(1 for ns in node_states.values() if abs(ns.z_score) >= 2.0)
     n_att_tot = sum(1 for ns in node_states.values() if 1.25 <= abs(ns.z_score) < 2.0)
     n_norm_tot = sum(1 for ns in node_states.values() if abs(ns.z_score) < 1.25)
     z_mini_svg = generate_zscore_mini_svg(node_states)
     st.markdown(
-        f'<div class="spider-kpi" style="padding: 10px 12px; margin-bottom: 8px;">'
-        f'<div class="kpi-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">'
-        f'<span>Z-Score (30 Nodi)</span>'
-        f'<span style="font-size: 10px; color: #38BDF8; font-weight: 700;">{n_ext_tot} Estremi</span>'
+        f'<div class="spider-top-kpi" style="border-left: 3px solid #38BDF8; padding: 7px 7px 6px 7px;">'
+        f'<div class="kpi-top-row">'
+        f'<span class="kpi-title" title="Distribuzione Statistica Z-Score dei 30 Nodi">Z-SCORE 30N</span>'
+        f'{render_cycle_stars_badge(4)}'
         f'</div>'
+        f'<div class="kpi-body" style="margin: 0;">'
         f'{z_mini_svg}'
-        f'<div style="font-size: 9.5px; color: #CBD5E1; text-align: center; margin-top: 3px; display: flex; justify-content: space-between;">'
-        f'<span><b style="color: #3B82F6;">{n_ext_tot}</b> Estremi</span>'
-        f'<span><b style="color: #EF4444;">{n_att_tot}</b> Attenz.</span>'
-        f'<span><b style="color: #F59E0B;">{n_norm_tot}</b> Norm.</span>'
+        f'<div style="font-size: 8.5px; color: #CBD5E1; text-align: center; margin-top: 1px; display: flex; justify-content: space-between;">'
+        f'<span><b style="color: #3B82F6;">{n_ext_tot}</b> Estr</span>'
+        f'<span><b style="color: #EF4444;">{n_att_tot}</b> Att</span>'
+        f'<span><b style="color: #F59E0B;">{n_norm_tot}</b> Norm</span>'
+        f'</div>'
+        f'</div>'
+        f'<div class="kpi-footer-row">'
+        f'<span class="kpi-influence-pill" title="Importanza Elevata (4/5): rileva le dislocazioni e anomalie estreme dei prezzi">'
+        f'<span>★ 4/5</span> <span style="color: #94A3B8; font-weight: 500;">Dislocazioni</span>'
+        f'</span>'
         f'</div>'
         f'</div>',
         unsafe_allow_html=True,
     )
-    if st.button("ℹ️ Dettagli Zscore", key="btn_open_zscore_modal", use_container_width=True, type="secondary"):
+    if st.button("ℹ️ Dett. Z-Score", key="btn_open_zscore_modal", use_container_width=True, type="secondary"):
         show_zscore_modal()
 
 
