@@ -168,6 +168,41 @@ class TestSpiderArchitecture(unittest.TestCase):
         self.assertGreater(len(rp_eq.frontier_curve), 5)
         self.assertGreater(len(rp_eq.unconstrained_frontier), 5)
 
+    def test_08_diebold_yilmaz_spillover(self):
+        """Verify Diebold-Yilmaz Spillover VAR(p)/GFEVD directional network, TCI, and net transmitters."""
+        from diebold_yilmaz_engine import diebold_yilmaz_engine, DieboldYilmazState
+
+        aligned_df = engine.load_and_align_data(force_refresh=False)
+        dy = diebold_yilmaz_engine.calculate_spillover_state(aligned_df)
+
+        self.assertIsInstance(dy, DieboldYilmazState)
+        # TCI is non-negative and bounded (typically between 10% and 90%)
+        self.assertGreater(dy.total_connectedness_index, 0.0)
+        self.assertLess(dy.total_connectedness_index, 100.0)
+
+        # Spillover matrix dimensions
+        self.assertEqual(dy.spillover_matrix.shape[0], 8)
+        self.assertEqual(dy.spillover_matrix.shape[1], 8)
+
+        # Row sums of GFEVD matrix must sum to ~100%
+        row_sums = dy.spillover_matrix.sum(axis=1)
+        for r_sum in row_sums:
+            self.assertAlmostEqual(r_sum, 100.0, delta=1.0)
+
+        # Profile list and top transmitter/receiver logic
+        self.assertEqual(len(dy.nodes_profile), 8)
+        self.assertGreater(len(dy.top_transmitters), 0)
+        self.assertGreater(len(dy.top_receivers), 0)
+
+        # Sum of Net Spillovers across all nodes must be identically 0 (conservation of spillover)
+        net_sum = sum(p.net_spillover_pct for p in dy.nodes_profile)
+        self.assertAlmostEqual(net_sum, 0.0, delta=0.5)
+
+        # Links for directional graph
+        self.assertGreater(len(dy.pairwise_links), 5)
+        for lnk in dy.pairwise_links:
+            self.assertGreater(lnk.gross_spillover, 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

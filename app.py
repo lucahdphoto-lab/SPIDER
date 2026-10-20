@@ -58,6 +58,11 @@ from risk_parity_engine import (
     RiskParityState,
     RISK_PARITY_ASSETS,
 )
+from diebold_yilmaz_engine import (
+    diebold_yilmaz_engine,
+    DieboldYilmazState,
+    SPILLOVER_NODES,
+)
 from spider_ui import (
     build_macro_regime_matrix_figure,
     build_spider_web_figure,
@@ -69,6 +74,8 @@ from spider_ui import (
     build_liquidity_asset_correlation_figure,
     build_risk_parity_breakdown_figure,
     build_efficient_frontier_figure,
+    build_diebold_yilmaz_heatmap,
+    build_spillover_net_transmission_figure,
     generate_zscore_mini_svg,
     generate_links_dataframe,
     generate_nodes_dataframe,
@@ -962,6 +969,99 @@ def show_net_liquidity_modal():
     st.dataframe(pd.DataFrame(corr_table), use_container_width=True, hide_index=True)
 
 
+# Modal Dialog: Diebold-Yilmaz Spillover Network (Directional Contagion & Net Transmitters)
+@st.dialog("🕸️ Diebold-Yılmaz Spillover Network (Chi Contagia Chi • VAR/GFEVD)", width="large")
+def show_diebold_spillover_modal():
+    dy_state = diebold_yilmaz_engine.calculate_spillover_state(aligned_df)
+    st.markdown(f"### 🕸️ Indice di Connessione Totale (TCI): <span style='color: {dy_state.tci_color_hex};'>{dy_state.total_connectedness_index:.1f}% • {dy_state.tci_regime.split('(')[0].strip()}</span>", unsafe_allow_html=True)
+    st.caption("Framework Econometrico Diebold-Yılmaz (Wharton / Journal of Econometrics): quantifica la direzione causale degli shock (VAR/GFEVD a 10 giorni) isolando i Trasmettitori Netti di stress sistemico dagli Assorbitori.")
+
+    dy_k1, dy_k2, dy_k3, dy_k4 = st.columns(4)
+    with dy_k1:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1.5px solid {dy_state.tci_color_hex}; border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Indice Connessione (TCI)</div>
+            <div style="font-size: 24px; font-weight: 800; color: {dy_state.tci_color_hex}; font-family: monospace;">{dy_state.total_connectedness_index:.1f}%</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Varianza da Spillover Cross-Asset</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with dy_k2:
+        top_tx = dy_state.top_transmitters[0] if dy_state.top_transmitters else None
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #EF4444; font-weight: 700;">Top Trasmettitore Netto</div>
+            <div style="font-size: 18px; font-weight: 800; color: #EF4444; margin-top: 4px;">{top_tx.symbol if top_tx else 'N/A'}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Net Spillover: <b>{top_tx.net_spillover_pct:+.1f}%</b></div>
+        </div>
+        """, unsafe_allow_html=True)
+    with dy_k3:
+        top_rx = dy_state.top_receivers[-1] if dy_state.top_receivers else None
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #10B981; font-weight: 700;">Top Ricevitore Netto</div>
+            <div style="font-size: 18px; font-weight: 800; color: #10B981; margin-top: 4px;">{top_rx.symbol if top_rx else 'N/A'}</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">Net Spillover: <b>{top_rx.net_spillover_pct:+.1f}%</b></div>
+        </div>
+        """, unsafe_allow_html=True)
+    with dy_k4:
+        st.markdown(f"""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Orizzonte Forecast (H)</div>
+            <div style="font-size: 24px; font-weight: 800; color: #F8FAFC; font-family: monospace;">{dy_state.horizon_steps} Giorni</div>
+            <div style="font-size: 11px; color: #CBD5E1; margin-top: 2px;">GFEVD Ordine-Invariante (VAR {dy_state.var_lags})</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Executive Banner
+    st.markdown(f"""
+    <div style="background: rgba(15, 23, 42, 0.85); border: 1.5px solid {dy_state.tci_color_hex}; border-radius: 10px; padding: 14px 18px; margin-bottom: 16px;">
+        <div style="font-size: 12px; font-weight: 700; color: {dy_state.tci_color_hex}; text-transform: uppercase;">
+            🔍 Diagnosi Causale della Rete di Contagio:
+        </div>
+        <div style="font-size: 13.5px; color: #F8FAFC; margin-top: 4px; line-height: 1.5;">
+            {dy_state.executive_diagnosis}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Plotly Charts: Heatmap Matrix + Net Transmission Bars
+    col_dy1, col_dy2 = st.columns([1.1, 0.9])
+    with col_dy1:
+        fig_dy_heat = build_diebold_yilmaz_heatmap(dy_state, dark_mode=True)
+        st.plotly_chart(fig_dy_heat, use_container_width=True)
+    with col_dy2:
+        fig_dy_bar = build_spillover_net_transmission_figure(dy_state, dark_mode=True)
+        st.plotly_chart(fig_dy_bar, use_container_width=True)
+
+    st.markdown("#### 📋 Tabella Direzionale Completa Diebold-Yılmaz (Ruoli di Trasmissione & Infezione):")
+    df_profiles = pd.DataFrame([
+        {
+            "Simbolo": p.symbol,
+            "Nome Pilastro Sistemico": p.name,
+            "Cluster": p.cluster,
+            "Varianza Propria (%)": f"{p.own_variance_pct:.1f}%",
+            "Ricevuto dagli Altri (FROM %)": f"{p.from_others_pct:.1f}%",
+            "Trasmesso agli Altri (TO %)": f"{p.to_others_pct:.1f}%",
+            "Spillover Netto (TO - FROM)": f"{p.net_spillover_pct:+.1f}%",
+            "Ruolo Sistemico": p.role_badge,
+            "Bersaglio Principale": p.top_transmission_target,
+            "Fonte Infezione Principale": p.top_infection_source,
+        }
+        for p in dy_state.nodes_profile
+    ])
+    st.dataframe(df_profiles, use_container_width=True, hide_index=True)
+
+    st.markdown("""
+    > **Note Metodologiche (Diebold & Yılmaz, Wharton School):**  
+    > * **Order-Invariance:** Grazie alla scomposizione della varianza generalizzata di Pesaran-Shin (1998), i risultati **non dipendono dall'ordinamento delle variabili nel VAR**, superando il limite della fattorizzazione di Cholesky classica.  
+    > * **Lettura Causale Direzionale:**  
+    >   - Se $\text{Net Spillover} > 0$ (Barra Rossa): Il nodo è un **Trasmettitore Netto** (esporta più volatilità di quanta ne importi). Quando entra in crisi, trascina il resto del mercato.  
+    >   - Se $\text{Net Spillover} < 0$ (Barra Verde): Il nodo è un **Ricevitore / Assorbitore Netto** di shock esterni (subisce passivamente le turbolenze originate altrove).
+    """)
+
+
 # Modal Dialog 6: Nodi Monitorati & Architettura Radiale
 @st.dialog("🕸️ Dettaglio Analitico: Architettura dei 30 Nodi e Topologia della Rete", width="large")
 def show_network_nodes_modal():
@@ -1098,8 +1198,8 @@ def show_zscore_modal():
 
 
 
-# 9 Colonne di KPI Superiori (con Liquidità Netta, CISS & Z-Score)
-k1, k2, k3, k4, k5, k6, k7, k8, k9 = st.columns([1, 1, 1, 1.05, 1.1, 1, 1, 0.95, 1.25])
+# 10 Colonne di KPI Superiori (con Liquidità Netta, CISS, Diebold-Yilmaz Spillover & Z-Score)
+k1, k2, k3, k4, k5, k_dy, k6, k7, k8, k9 = st.columns([1, 1, 1, 1.05, 1.05, 1.1, 1, 1, 0.95, 1.25])
 with k1:
     st.markdown(f"""
     <div class="spider-kpi">
@@ -1153,6 +1253,18 @@ with k5:
     """, unsafe_allow_html=True)
     if st.button("🌊 Dettagli Liquidità", key="btn_open_liquidity_modal", use_container_width=True, type="secondary"):
         show_net_liquidity_modal()
+with k_dy:
+    dy_curr = diebold_yilmaz_engine.calculate_spillover_state(aligned_df)
+    top_tx_label = dy_curr.top_transmitters[0].symbol if dy_curr.top_transmitters else "N/A"
+    st.markdown(f"""
+    <div class="spider-kpi" style="border-left: 3px solid {dy_curr.tci_color_hex};">
+        <div class="kpi-title">Spillover TCI (Diebold)</div>
+        <div class="kpi-main-val" style="color: {dy_curr.tci_color_hex}; font-size: 16px;">{dy_curr.total_connectedness_index:.1f}%</div>
+        <div class="kpi-sub-val">Leader: <b style="color: #EF4444;">{top_tx_label}</b> ({dy_curr.top_transmitters[0].net_spillover_pct:+.1f}%)</div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("🕸️ Chi Contagia Chi", key="btn_open_diebold_modal", use_container_width=True, type="secondary"):
+        show_diebold_spillover_modal()
 with k6:
     st.markdown(f"""
     <div class="spider-kpi">
@@ -1346,7 +1458,17 @@ Versione Software: {APP_VERSION} (Institutional Quantitative Architecture)
 - Pesi Attivi e Contributi al Rischio (Equal Risk Contribution):
 {chr(10).join(f"  * {it.asset_name:32s}: Peso {it.tension_adjusted_weight_pct:5.1f}% | Contributo Rischio (RC): {it.risk_contribution_pct:5.1f}% | Vol: {it.volatility_annual_pct:4.1f}% [{it.allocation_status}]" for it in rp_state_curr.items)}
 
-8. DISTRIBUZIONE & DIAGNOSI Z-SCORE DEGLI INDICATORI (30 NODI)
+8. DIEBOLD-YILMAZ SPILLOVER NETWORK (CHI CONTAGIA CHI • VAR/GFEVD)
+--------------------------------------------------------------------------------
+- Framework: Generalized Forecast Error Variance Decomposition (Pesaran-Shin order-invariant)
+- Indice di Connessione Totale (TCI): {dy_curr.total_connectedness_index:.1f}% ({dy_curr.tci_regime})
+- Quota Varianza da Shock Esterni (Cross-Spillover): {dy_curr.total_connectedness_index:.1f}% | Varianza Idiosincratica: {100.0 - dy_curr.total_connectedness_index:.1f}%
+- Orizzonte di Previsione (H): {dy_curr.horizon_steps} Giorni | Ritardi VAR (p): {dy_curr.var_lags}
+- Diagnosi Direzionale: {dy_curr.executive_diagnosis}
+- Ruoli Sistemici dei Nodi (Trasmettitori Netti vs Ricevitori):
+{chr(10).join(f"  * [{p.symbol:8s}] {p.name:32s}: Net Spillover {p.net_spillover_pct:+5.1f}% (TO: {p.to_others_pct:4.1f}% | FROM: {p.from_others_pct:4.1f}%) -> {p.role_badge}" for p in dy_curr.nodes_profile)}
+
+9. DISTRIBUZIONE & DIAGNOSI Z-SCORE DEGLI INDICATORI (30 NODI)
 --------------------------------------------------------------------------------
 - Metodologia: Standardizzazione statistica rolling 1Y Z = (X_t - μ) / σ
 - Soglie Quantitative e Codifica Cromatica Grafica:
@@ -1524,6 +1646,25 @@ with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
             "Stato_Allocativo": it.allocation_status,
         })
     pd.DataFrame(rp_export_data).to_excel(writer, index=False, sheet_name="Risk_Parity_Allocation")
+    # Tabella Profili Spillover Diebold-Yilmaz
+    dy_export_data = []
+    for p in dy_curr.nodes_profile:
+        dy_export_data.append({
+            "Versione_SPIDER": APP_VERSION,
+            "Symbol": p.symbol,
+            "Nome_Nodo": p.name,
+            "Varianza_Propria_Pct": p.own_variance_pct,
+            "Trasmesso_Ad_Altri_TO_Pct": p.to_others_pct,
+            "Ricevuto_Da_Altri_FROM_Pct": p.from_others_pct,
+            "Spillover_Netto_Pct": p.net_spillover_pct,
+            "Ruolo_Sistemico": p.role_badge,
+            "Is_Transmitter": p.is_net_transmitter,
+        })
+    pd.DataFrame(dy_export_data).to_excel(writer, index=False, sheet_name="Profili_Spillover_Diebold")
+    if not dy_curr.spillover_matrix.empty:
+        df_dy_mat = dy_curr.spillover_matrix.copy().reset_index()
+        df_dy_mat.rename(columns={"index": "Source_Node (FROM)"}, inplace=True)
+        df_dy_mat.to_excel(writer, index=False, sheet_name="Matrice_Spillover_Diebold")
     pd.DataFrame([{
         "Versione_SPIDER": APP_VERSION,
         "Data_Snapshot": now_iso,
@@ -1535,6 +1676,12 @@ with pd.ExcelWriter(excel_b_buffer, engine="openpyxl") as writer:
         "Risk_Parity_Cyclical_Exposure": rp_state_curr.cyclical_exposure_pct,
         "Risk_Parity_Defensive_Exposure": rp_state_curr.defensive_exposure_pct,
         "Risk_Parity_Sharpe": rp_state_curr.sharpe_ratio,
+        "Diebold_TCI_Pct": dy_curr.total_connectedness_index,
+        "Diebold_TCI_Regime": dy_curr.tci_regime,
+        "Diebold_Top_Transmitter": dy_curr.top_transmitters[0].symbol if dy_curr.top_transmitters else "",
+        "Diebold_Top_Transmitter_Net_Pct": dy_curr.top_transmitters[0].net_spillover_pct if dy_curr.top_transmitters else 0.0,
+        "Diebold_Top_Receiver": dy_curr.top_receivers[0].symbol if dy_curr.top_receivers else "",
+        "Diebold_Top_Receiver_Net_Pct": dy_curr.top_receivers[0].net_spillover_pct if dy_curr.top_receivers else 0.0,
         "CISS_Score_BCE": core_state.ciss.ciss_score,
         "CISS_Stato": core_state.ciss.ciss_status,
         "CISS_Contagion_Contribution_Pct": core_state.ciss.contagion_contribution_pct,

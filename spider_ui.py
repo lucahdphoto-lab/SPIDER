@@ -1490,6 +1490,108 @@ def build_efficient_frontier_figure(rp_state: Any, dark_mode: bool = True) -> go
     return fig
 
 
+def build_diebold_yilmaz_heatmap(dy_state: Any, dark_mode: bool = True) -> go.Figure:
+    """Builds the N x N Directional Spillover Heatmap (from column j to row i)."""
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "rgba(15, 23, 42, 0.7)" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+
+    df_mat = dy_state.spillover_matrix
+    x_labels = [f"Da: {c}" for c in df_mat.columns]
+    y_labels = [f"A: {r}" for r in df_mat.index]
+    z_vals = df_mat.values
+
+    # Custom colorscale: darker navy to vibrant yellow/crimson
+    colorscale = [
+        [0.0, "#0F172A"],
+        [0.15, "#1E293B"],
+        [0.35, "#0284C7"],
+        [0.60, "#F59E0B"],
+        [1.0, "#EF4444"],
+    ]
+
+    fig = go.Figure(data=go.Heatmap(
+        z=z_vals,
+        x=x_labels,
+        y=y_labels,
+        colorscale=colorscale,
+        text=np.round(z_vals, 1),
+        texttemplate="%{text}%",
+        textfont={"size": 11, "family": "JetBrains Mono, monospace"},
+        colorbar=dict(
+            title=dict(text="Spillover %", font=dict(color=text_color, size=11)),
+            tickfont=dict(color="#CBD5E1"),
+        ),
+        hovertemplate="<b>Trasmesso da:</b> %{x}<br><b>Ricevuto da:</b> %{y}<br><b>Quotas Varianza:</b> %{z:.1f}%<extra></extra>",
+    ))
+
+    fig.update_layout(
+        title=dict(
+            text="<b>Matrice di Contagio Direzionale Diebold-Yılmaz (GFEVD Table % da Colonna a Riga)</b>",
+            font=dict(size=14, color=text_color),
+            x=0.03,
+            y=0.96,
+        ),
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=380,
+        margin=dict(l=85, r=35, t=50, b=45),
+        xaxis=dict(tickfont=dict(color="#CBD5E1", size=11), side="bottom"),
+        yaxis=dict(tickfont=dict(color="#CBD5E1", size=11), autorange="reversed"),
+        font=dict(family="Inter, sans-serif"),
+    )
+    return fig
+
+
+def build_spillover_net_transmission_figure(dy_state: Any, dark_mode: bool = True) -> go.Figure:
+    """Builds horizontal bar chart of Net Spillover (TO - FROM). Red = Transmitters, Green/Blue = Receivers."""
+    bg_color = "#0B0F19" if dark_mode else "#F8FAFC"
+    card_bg = "rgba(15, 23, 42, 0.7)" if dark_mode else "#FFFFFF"
+    text_color = "#F8FAFC" if dark_mode else "#0F172A"
+    grid_color = "rgba(255, 255, 255, 0.08)" if dark_mode else "rgba(15, 23, 42, 0.08)"
+
+    # Sort profiles by net spillover
+    sorted_nodes = sorted(dy_state.nodes_profile, key=lambda p: p.net_spillover_pct, reverse=False)
+    names = [p.name.split("(")[0].strip() + f" ({p.symbol})" for p in sorted_nodes]
+    net_vals = [p.net_spillover_pct for p in sorted_nodes]
+    colors = ["#EF4444" if v > 0 else "#10B981" for v in net_vals]
+
+    fig = go.Figure(data=go.Bar(
+        y=names,
+        x=net_vals,
+        orientation="h",
+        marker_color=colors,
+        text=[f"+{v:.1f}%" if v > 0 else f"{v:.1f}%" for v in net_vals],
+        textposition="outside",
+        hovertemplate="<b>Asset:</b> %{y}<br><b>Net Spillover:</b> %{x:+.1f}%<br>(TO: trasmette agli altri - FROM: subisce dagli altri)<extra></extra>",
+    ))
+
+    # Add vertical zero reference line
+    fig.add_vline(x=0, line_width=1.5, line_color="#94A3B8")
+
+    fig.update_layout(
+        title=dict(
+            text="<b>Net Spillover Index (Chi Contagia Chi: Trasmettitori Netti vs Assorbitori)</b>",
+            font=dict(size=14, color=text_color),
+            x=0.03,
+            y=0.96,
+        ),
+        paper_bgcolor=bg_color,
+        plot_bgcolor=card_bg,
+        height=380,
+        margin=dict(l=150, r=45, t=50, b=35),
+        xaxis=dict(
+            title="Net Spillover % (Positivo = Trasmettitore di Shock, Negativo = Ricevitore)",
+            gridcolor=grid_color,
+            tickfont=dict(color="#CBD5E1"),
+        ),
+        yaxis=dict(gridcolor=grid_color, tickfont=dict(color="#CBD5E1", size=11)),
+        font=dict(family="Inter, sans-serif"),
+    )
+    return fig
+
+
+
 
 
 
