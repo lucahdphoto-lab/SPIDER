@@ -1638,7 +1638,7 @@ def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True) -> go.
         rad = np.radians(stk.angle_deg)
         node_coords[stk.ticker] = (float(r * np.cos(rad)), float(r * np.sin(rad)))
 
-    # 2. Draw Supply Chain & Radial Links
+    # 2. Draw Supply Chain & Radial Links with Distinct Tratto, Spessore e Colore
     for lnk in si_state.spider_links:
         src = lnk["source"]
         tgt = lnk["target"]
@@ -1646,19 +1646,82 @@ def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True) -> go.
             x0, y0 = node_coords[src]
             x1, y1 = node_coords[tgt]
             is_hub = (src == "SI_CORE")
-            
-            line_color = "rgba(56, 189, 248, 0.22)" if is_hub else "rgba(168, 85, 247, 0.45)"
-            line_dash = "solid" if not is_hub else "dot"
-            line_width = 1.0 if is_hub else 2.0
+            l_type = lnk.get("type", "RADIAL_HUB")
+            corr = lnk.get("correlation", 0.5)
+
+            # Differenziazione visiva profonda:
+            if is_hub:
+                # Raggio Radiale verso SI_CORE (ancoraggio all'indice)
+                line_color = "rgba(56, 189, 248, 0.40)"
+                line_dash = "dot"
+                line_width = 1.3
+                link_cat_label = "Raggio Radiale SI_CORE"
+            elif src in ["TSM", "ASML"]:
+                # Manifattura, Wafer Sub-3nm & Litografia EUV
+                line_color = "#06B6D4"  # Cyan vibrante
+                line_dash = "dash"
+                line_width = 2.4
+                link_cat_label = "Fornitura Silicio & Scanner EUV (TSMC / ASML)"
+            elif src in ["MU", "WDC", "STX"]:
+                # Memorie HBM & Storage Flash
+                line_color = "#F59E0B"  # Amber / Arancio caldo
+                line_dash = "dashdot"
+                line_width = 2.4
+                link_cat_label = "Fornitura Memorie HBM & Enterprise Storage"
+            elif corr >= 0.35:
+                # Flussi Capex Primari & Alta Correlazione Diretta
+                line_color = "#A855F7"  # Viola Neon
+                line_dash = "solid"
+                line_width = 3.2
+                link_cat_label = "Flusso Capex Primario & Forte Correlazione"
+            else:
+                # Flussi Capex Secondari / Bassa o Moderata Correlazione
+                line_color = "rgba(148, 163, 184, 0.65)"  # Slate argentato
+                line_dash = "dot"
+                line_width = 1.6
+                link_cat_label = "Flusso Capex Moderato / Divergenza Relativa"
+
+            # Alone sfumato di sottofondo per fili principali
+            if line_width >= 2.4:
+                glow_col = "rgba(168, 85, 247, 0.15)" if "#A855F7" in line_color else ("rgba(6, 182, 212, 0.15)" if "#06B6D4" in line_color else "rgba(245, 158, 11, 0.15)")
+                fig.add_trace(go.Scatter(
+                    x=[x0, x1], y=[y0, y1],
+                    mode="lines",
+                    line=dict(color=glow_col, width=line_width * 2.8),
+                    hoverinfo="skip",
+                    showlegend=False,
+                ))
 
             fig.add_trace(go.Scatter(
                 x=[x0, x1], y=[y0, y1],
                 mode="lines",
                 line=dict(color=line_color, width=line_width, dash=line_dash),
                 hoverinfo="text",
-                hovertext=f"<b>Catena AI:</b> {lnk['label']}<br>Correlazione Prezzo: {lnk.get('correlation', 0.7):+.2f}",
+                hovertext=(
+                    f"<b>Catena AI:</b> {lnk['label']}<br>"
+                    f"<b>Tipologia:</b> {link_cat_label}<br>"
+                    f"<b>Correlazione Prezzo:</b> {corr:+.2f}<br>"
+                    f"<b>Stile Tracciato:</b> {line_dash.upper()} (Spessore: {line_width}px)"
+                ),
                 showlegend=False,
             ))
+
+    # Trace Legenda Dinamica per Collegamenti (Elementi invisibili per la legenda Plotly)
+    legend_items = [
+        {"name": "Capex Primario (Solid, 3.2px, Viola)", "color": "#A855F7", "dash": "solid", "width": 3.2},
+        {"name": "Fonderia & Litografia EUV (Dash, 2.4px, Ciano)", "color": "#06B6D4", "dash": "dash", "width": 2.4},
+        {"name": "Memorie HBM & Storage (Dash-Dot, 2.4px, Ambra)", "color": "#F59E0B", "dash": "dashdot", "width": 2.4},
+        {"name": "Capex Moderato (Dot, 1.6px, Grigio)", "color": "#94A3B8", "dash": "dot", "width": 1.6},
+        {"name": "Raggio Radiale SI_CORE (Fine Dot, 1.3px, Azzurro)", "color": "rgba(56, 189, 248, 0.6)", "dash": "dot", "width": 1.3},
+    ]
+    for leg in legend_items:
+        fig.add_trace(go.Scatter(
+            x=[None], y=[None],
+            mode="lines",
+            line=dict(color=leg["color"], width=leg["width"], dash=leg["dash"]),
+            name=leg["name"],
+            showlegend=True,
+        ))
 
     # 3. Central Node: SI_CORE
     fig.add_trace(go.Scatter(
@@ -1741,19 +1804,30 @@ def build_spider_si_network_figure(si_state: Any, dark_mode: bool = True) -> go.
 
     fig.update_layout(
         title=dict(
-            text="<b>SPIDER SI (Super Intelligence): Rete Radiale dei 10 Giganti dell'Intelligenza Artificiale</b>",
+            text="<b>SPIDER SI (Super Intelligence): Rete Radiale dei 13 Giganti dell'Intelligenza Artificiale</b>",
             font=dict(size=14, color=text_color),
             x=0.03,
-            y=0.97,
+            y=0.98,
         ),
         paper_bgcolor=bg_color,
         plot_bgcolor=card_bg,
-        height=580,
-        margin=dict(l=30, r=30, t=50, b=30),
+        height=620,
+        margin=dict(l=30, r=30, t=50, b=50),
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-3.4, 3.4]),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-3.4, 3.4], scaleanchor="x", scaleratio=1),
         font=dict(family="Inter, sans-serif"),
-        showlegend=False,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.14,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=10.5, color="#CBD5E1" if dark_mode else "#334155"),
+            bgcolor="rgba(15, 23, 42, 0.85)" if dark_mode else "rgba(241, 245, 249, 0.85)",
+            bordercolor="rgba(255, 255, 255, 0.15)" if dark_mode else "rgba(0, 0, 0, 0.15)",
+            borderwidth=1,
+        ),
         dragmode="pan",
     )
 
@@ -1810,7 +1884,7 @@ def build_spider_si_network_3d_figure(si_state: Any, dark_mode: bool = True) -> 
             showlegend=False,
         ))
 
-    # 3. Disegno dei collegamenti 3D (Supply-Chain & Radial Hub)
+    # 3. Disegno dei collegamenti 3D (Supply-Chain & Radial Hub) con Differenziazione Cromatica e Calibro
     for lnk in si_state.spider_links:
         src = lnk["source"]
         tgt = lnk["target"]
@@ -1818,18 +1892,59 @@ def build_spider_si_network_3d_figure(si_state: Any, dark_mode: bool = True) -> 
             x0, y0, z0 = coords_3d[src]
             x1, y1, z1 = coords_3d[tgt]
             is_hub = (src == "SI_CORE")
+            corr = lnk.get("correlation", 0.5)
 
-            line_color = "rgba(56, 189, 248, 0.28)" if is_hub else "rgba(168, 85, 247, 0.65)"
-            line_width = 2.0 if is_hub else 4.5
+            if is_hub:
+                line_color = "rgba(56, 189, 248, 0.40)"
+                line_width = 1.8
+                link_cat_label = "Raggio Radiale SI_CORE"
+            elif src in ["TSM", "ASML"]:
+                line_color = "#06B6D4"  # Cyan
+                line_width = 4.8
+                link_cat_label = "Fornitura Fonderie & EUV (TSMC / ASML)"
+            elif src in ["MU", "WDC", "STX"]:
+                line_color = "#F59E0B"  # Amber
+                line_width = 4.8
+                link_cat_label = "Fornitura Memorie HBM & Storage"
+            elif corr >= 0.35:
+                line_color = "#A855F7"  # Purple Neon
+                line_width = 6.0
+                link_cat_label = "Flusso Capex Primario & Forte Correlazione"
+            else:
+                line_color = "rgba(148, 163, 184, 0.60)"  # Slate
+                line_width = 2.4
+                link_cat_label = "Flusso Capex Moderato"
 
             fig.add_trace(go.Scatter3d(
                 x=[x0, x1], y=[y0, y1], z=[z0, z1],
                 mode="lines",
                 line=dict(color=line_color, width=line_width),
                 hoverinfo="text",
-                hovertext=f"<b>Catena AI 3D:</b> {lnk['label']}<br>Correlazione Prezzo: {lnk.get('correlation', 0.7):+.2f}",
+                hovertext=(
+                    f"<b>Catena AI 3D:</b> {lnk['label']}<br>"
+                    f"<b>Categoria:</b> {link_cat_label}<br>"
+                    f"<b>Correlazione Prezzo:</b> {corr:+.2f}<br>"
+                    f"<b>Spessore Tridimensionale:</b> {line_width}px"
+                ),
                 showlegend=False,
             ))
+
+    # Trace Legenda 3D per Collegamenti
+    legend_3d_items = [
+        {"name": "Capex Primario (Spessore 6px, Viola)", "color": "#A855F7", "width": 6.0},
+        {"name": "Fonderia Sub-3nm & EUV (Spessore 4.8px, Ciano)", "color": "#06B6D4", "width": 4.8},
+        {"name": "Memorie HBM & Storage (Spessore 4.8px, Ambra)", "color": "#F59E0B", "width": 4.8},
+        {"name": "Capex Moderato (Spessore 2.4px, Grigio)", "color": "#94A3B8", "width": 2.4},
+        {"name": "Raggio Radiale SI_CORE (Spessore 1.8px, Azzurro)", "color": "rgba(56, 189, 248, 0.7)", "width": 1.8},
+    ]
+    for leg3 in legend_3d_items:
+        fig.add_trace(go.Scatter3d(
+            x=[None], y=[None], z=[None],
+            mode="lines",
+            line=dict(color=leg3["color"], width=leg3["width"]),
+            name=leg3["name"],
+            showlegend=True,
+        ))
 
     # 4. Nodo Centrale SI_CORE 3D
     core_x, core_y, core_z = coords_3d["SI_CORE"]
@@ -1921,6 +2036,18 @@ def build_spider_si_network_3d_figure(si_state: Any, dark_mode: bool = True) -> 
         ),
         margin=dict(l=0, r=0, t=10, b=10),
         height=620,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=0.01,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=10, color="#CBD5E1" if dark_mode else "#334155"),
+            bgcolor="rgba(15, 23, 42, 0.85)" if dark_mode else "rgba(241, 245, 249, 0.85)",
+            bordercolor="rgba(255, 255, 255, 0.15)" if dark_mode else "rgba(0, 0, 0, 0.15)",
+            borderwidth=1,
+        ),
         hoverlabel=dict(
             bgcolor="rgba(15, 23, 42, 0.95)",
             bordercolor="#8B5CF6",

@@ -1429,7 +1429,33 @@ def show_super_intelligence_modal():
             },
             key=f"plotly_modal_si_chart_{'3d' if is_modal_3d else '2d'}"
         )
-        st.caption("ℹ️ **Legenda Tela SI:** Al centro SI_CORE. Anello 1 = Silicio & Fonderia; Anello 2 = Memorie HBM & Cloud Specializzato; Anello 3 = Hyperscalers & Software. I fili viola evidenziano i flussi di fornitura e ordini Capex tra le aziende.")
+        st.markdown("""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 10px 14px; margin-top: 8px; font-size: 11px; line-height: 1.6;">
+            <div style="font-weight: 700; color: #38BDF8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                🕸️ Guida & Legenda della Rete Radiale SPIDER SI
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px;">
+                <div>
+                    <span style="color: #A855F7; font-weight: 700;">━━━ Tratto Continuo Viola (3.2px):</span> Flussi Capex Primari & Alta Correlazione Diretta (&ge; +0.35) tra Hyperscaler e Chipmaker.
+                </div>
+                <div>
+                    <span style="color: #06B6D4; font-weight: 700;">- - - Tratto Tratteggiato Ciano (2.4px):</span> Fornitura Monopolistica Silicio & Scanner EUV (TSMC & ASML).
+                </div>
+                <div>
+                    <span style="color: #F59E0B; font-weight: 700;">- • - Tratto Misto Ambra (2.4px):</span> Fornitura Memorie HBM ad altissima densità & Enterprise SSD (MU, WDC, STX).
+                </div>
+                <div>
+                    <span style="color: #94A3B8; font-weight: 700;">······ Tratto Puntinato Grigio (1.6px):</span> Flussi Capex Secondari o Divergenze di Prezzo Relative.
+                </div>
+                <div>
+                    <span style="color: #38BDF8; font-weight: 700;">······ Raggi Radiali Azzurri (1.3px):</span> Ancoraggio sistemico di ciascun titolo all'indice <b>SI_CORE</b>.
+                </div>
+                <div>
+                    <span style="color: #E2E8F0; font-weight: 700;">⭕ Anelli Concentrici:</span> Anello 1 (Silicio & Fonderie Sub-3nm) &bull; Anello 2 (Memorie HBM & Storage Flash) &bull; Anello 3 (Hyperscalers & Software).
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     with m_tab2:
         df_si_table = []
         for s in sorted(si_state.stocks, key=lambda x: x.market_cap_b, reverse=True):
@@ -4127,7 +4153,33 @@ with tabs[8]:
             },
             key=f"tab_si_fig_network_{'3d' if is_tab_3d else '2d'}"
         )
-        st.caption("I 3 anelli concentrici rappresentano i livelli gerarchici dell'infrastruttura AI: Anello 1 (Silicio & Fonderie TSM/NVDA/AVGO/AMD), Anello 2 (Memorie HBM MU & Cloud Specializzato ORCL), Anello 3 (Hyperscalers MSFT/GOOGL/AMZN/META). Le linee mostrano i flussi di fornitura di silicio e capex di acquisto GPU.")
+        st.markdown("""
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 10px 14px; margin-top: 8px; font-size: 11px; line-height: 1.6;">
+            <div style="font-weight: 700; color: #38BDF8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                🕸️ Guida & Legenda della Rete Radiale SPIDER SI
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px;">
+                <div>
+                    <span style="color: #A855F7; font-weight: 700;">━━━ Tratto Continuo Viola (3.2px):</span> Flussi Capex Primari & Alta Correlazione Diretta (&ge; +0.35) tra Hyperscaler e Chipmaker.
+                </div>
+                <div>
+                    <span style="color: #06B6D4; font-weight: 700;">- - - Tratto Tratteggiato Ciano (2.4px):</span> Fornitura Monopolistica Silicio & Scanner EUV (TSMC & ASML).
+                </div>
+                <div>
+                    <span style="color: #F59E0B; font-weight: 700;">- • - Tratto Misto Ambra (2.4px):</span> Fornitura Memorie HBM ad altissima densità & Enterprise SSD (MU, WDC, STX).
+                </div>
+                <div>
+                    <span style="color: #94A3B8; font-weight: 700;">······ Tratto Puntinato Grigio (1.6px):</span> Flussi Capex Secondari o Divergenze di Prezzo Relative.
+                </div>
+                <div>
+                    <span style="color: #38BDF8; font-weight: 700;">······ Raggi Radiali Azzurri (1.3px):</span> Ancoraggio sistemico di ciascun titolo all'indice <b>SI_CORE</b>.
+                </div>
+                <div>
+                    <span style="color: #E2E8F0; font-weight: 700;">⭕ Anelli Concentrici:</span> Anello 1 (Silicio & Fonderie Sub-3nm) &bull; Anello 2 (Memorie HBM & Storage Flash) &bull; Anello 3 (Hyperscalers & Software).
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with col_chart_right:
         st.markdown("##### 📊 Dinamiche Inter-Company & Sotto-Settoriali")
