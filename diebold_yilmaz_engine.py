@@ -56,6 +56,11 @@ class SpilloverNodeProfile:
     top_transmission_target: str  # Who it contaminates the most
     top_infection_source: str     # Who contaminates it the most
 
+    @property
+    def is_net_transmitter(self) -> bool:
+        """True if node transmits more spillover than it receives."""
+        return self.net_spillover_pct > 0
+
 
 @dataclass
 class PairwiseLink:

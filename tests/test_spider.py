@@ -200,6 +200,10 @@ class TestSpiderArchitecture(unittest.TestCase):
         net_sum = sum(p.net_spillover_pct for p in dy.nodes_profile)
         self.assertAlmostEqual(net_sum, 0.0, delta=0.5)
 
+        # Verify is_net_transmitter property consistency
+        for p in dy.nodes_profile:
+            self.assertEqual(p.is_net_transmitter, p.net_spillover_pct > 0)
+
         # Links for directional graph
         self.assertGreater(len(dy.pairwise_links), 5)
         for lnk in dy.pairwise_links:
